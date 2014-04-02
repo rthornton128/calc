@@ -40,13 +40,15 @@ func (f *File) AddError(p Pos, msg string) {
 }
 
 func (f *File) Position(p Pos) (col, row uint) {
+	start := Pos(0)
 	col, row = uint(p), 1
 
 	for i, nl := range f.newlines {
-		if p < nl {
-			col, row = uint(nl-p), uint(i+1)
+		if p <= nl {
+			col, row = uint(p-start), uint(i+1)
 			break
 		}
+		start = nl
 	}
 
 	return
