@@ -10,24 +10,35 @@ var test_expr = "(+ 2 3)\n(- 5 4)"
 
 func TestFilePosition(t *testing.T) {
 	var tests = []struct {
-		col, row uint
+		col, row int
 		pos      token.Pos
 	}{
 		{1, 1, token.Pos(1)},
 		{1, 2, token.Pos(8)},
 		{7, 2, token.Pos(14)},
 	}
-	f, err := token.NewFile("test", test_expr, 1)
-	if err != nil {
-		t.Fatal(err)
+	f := token.NewFile("", "")
+	f.AddLine(token.Pos(1))
+	p := f.Position(token.Pos(1))
+	if p.String() != "1:1" {
+		t.Fatal("Nameless file: Expected: 1:1, Got:", p.String())
 	}
+
+	f = token.NewFile("test.calc", "")
+	f.AddLine(token.Pos(1))
+	p = f.Position(token.Pos(1))
+	if p.String() != "test.calc:1:1" {
+		t.Fatal("Nameless file: Expected: test.calc:1:1, Got:", p.String())
+	}
+
+	f = token.NewFile("test", test_expr)
 	f.AddLine(token.Pos(7))
 	f.AddLine(token.Pos(14))
 	for _, v := range tests {
-		col, row := f.Position(v.pos)
-		if col != v.col || row != v.row {
+		p := f.Position(v.pos)
+		if p.Col != v.col || p.Row != v.row {
 			t.Fatal("For:", v.pos, "Expected:", v.col, "and", v.row, "Got:",
-				col, "and", row)
+				p.Col, "and", p.Row)
 		}
 	}
 }
