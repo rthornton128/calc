@@ -32,11 +32,17 @@ type Expression struct {
 	Closing token.Pos
 }
 
+type File struct {
+	Root Expr
+}
+
 func (b *BasicLit) Pos() token.Pos   { return b.LitPos }
 func (e *Expression) Pos() token.Pos { return e.Opening }
+func (f *File) Pos() token.Pos       { return f.Root.Pos() }
 
 func (b *BasicLit) End() token.Pos   { return b.LitPos + token.Pos(len(b.Lit)) }
 func (e *Expression) End() token.Pos { return e.Closing }
+func (f *File) End() token.Pos       { return f.Root.End() }
 
 func (b *BasicLit) exprNode()   {}
 func (e *Expression) exprNode() {}
