@@ -33,7 +33,7 @@ func (p *parser) expect(tok token.Token) token.Pos {
 
 func (p *parser) init(fname, src string) {
 	p.file = token.NewFile(fname, src)
-	p.scanner.Init(src)
+	p.scanner.Init(p.file, src)
 	p.next()
 }
 
