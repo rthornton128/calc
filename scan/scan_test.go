@@ -7,7 +7,7 @@ import (
   "github.com/rthornton128/calc1/token"
 )
 
-var src = "(+ 2 (- 4 1) (* 6 5) (% 10 2) (/ 9 3))"
+var src = "(+ 2 (- 4 1) (* 6 5) (% 10 2) (/ 9 3)); comment\n"
 
 func TestScan(t *testing.T) {
   var expected = []token.Token{
@@ -37,8 +37,8 @@ func TestScan(t *testing.T) {
     token.RPAREN,
   }
 
-  s := &scan.Scanner{}
-  s.Init(src)
+  var s scan.Scanner
+  s.Init(token.NewFile("", src), src)
 
   _, tok, pos := s.Scan()
   for i := 0; tok != token.EOF; i++ {
