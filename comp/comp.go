@@ -6,7 +6,6 @@ import (
 
 	"github.com/rthornton128/calc1/ast"
 	"github.com/rthornton128/calc1/parse"
-	//"github.com/rthornton128/calc1/token"
 )
 
 type compiler struct {
@@ -51,9 +50,9 @@ func (c *compiler) binaryExpr(b *ast.BinaryExpr) {
 		}
 	}
 
-	fmt.Fprintln(c.fp, "edx = pop();")
+	fmt.Fprintln(c.fp, "eax = pop();")
   for i := 0; i < len(b.List[1:]); i++ {
-		fmt.Fprintln(c.fp, "eax = pop();")
+		fmt.Fprintln(c.fp, "edx = pop();")
 		fmt.Fprint(c.fp, "edx ", b.Op, "= eax;\n")
 	}
   fmt.Fprintln(c.fp, "push(edx);")
