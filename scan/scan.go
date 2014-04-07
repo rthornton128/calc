@@ -10,9 +10,9 @@ type Scanner struct {
 	ch      rune
 	offset  int
 	roffset int
-  src     string
+	src     string
 	errors  ErrorList
-	file *token.File
+	file    *token.File
 }
 
 func isDigit(r rune) bool {
@@ -20,12 +20,12 @@ func isDigit(r rune) bool {
 }
 
 func (s *Scanner) Init(file *token.File, src string) {
-  s.file = file
-  s.offset, s.roffset = 0, 0
-  s.src = src
-  s.errors = make(ErrorList, 16)
+	s.file = file
+	s.offset, s.roffset = 0, 0
+	s.src = src
+	s.errors = make(ErrorList, 16)
 
-  s.next()
+	s.next()
 }
 
 func (s *Scanner) Scan() (lit string, tok token.Token, pos token.Pos) {
@@ -35,7 +35,7 @@ func (s *Scanner) Scan() (lit string, tok token.Token, pos token.Pos) {
 		return s.scanNumber()
 	}
 
-	lit, pos = string(s.ch), token.Pos(s.offset)
+	lit, pos = string(s.ch), s.file.Pos(s.offset)
 	switch s.ch {
 	case '(':
 		tok = token.LPAREN
@@ -51,9 +51,9 @@ func (s *Scanner) Scan() (lit string, tok token.Token, pos token.Pos) {
 		tok = token.QUO
 	case '%':
 		tok = token.REM
-  case ';':
-    s.skipComment()
-    return s.Scan()
+	case ';':
+		s.skipComment()
+		return s.Scan()
 	default:
 		lit = ""
 		if s.offset >= len(s.src)-1 {
@@ -69,15 +69,15 @@ func (s *Scanner) Scan() (lit string, tok token.Token, pos token.Pos) {
 }
 
 func (s *Scanner) next() {
-  s.ch = rune(0)
-  if s.roffset < len(s.src) {
-    s.offset = s.roffset
-    if s.ch == '\n' || s.offset >= len(s.src)-1 {
-      s.file.AddLine(token.Pos(s.offset))
-    }
-    s.ch = rune(s.src[s.offset])
-    s.roffset++
-  }
+	s.ch = rune(0)
+	if s.roffset < len(s.src) {
+		s.offset = s.roffset
+		if s.ch == '\n' || s.offset >= len(s.src)-1 {
+			s.file.AddLine(token.Pos(s.offset))
+		}
+		s.ch = rune(s.src[s.offset])
+		s.roffset++
+	}
 }
 
 func (s *Scanner) scanNumber() (string, token.Token, token.Pos) {
@@ -87,13 +87,13 @@ func (s *Scanner) scanNumber() (string, token.Token, token.Pos) {
 		s.next()
 	}
 
-	return s.src[start:s.offset], token.INTEGER, token.Pos(start)
+	return s.src[start:s.offset], token.INTEGER, s.file.Pos(start)
 }
 
 func (s *Scanner) skipComment() {
-  for s.ch != '\n' && s.offset < len(s.src) {
-    s.next()
-  }
+	for s.ch != '\n' && s.offset < len(s.src) {
+		s.next()
+	}
 }
 
 func (s *Scanner) skipWhitespace() {

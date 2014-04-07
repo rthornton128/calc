@@ -17,7 +17,7 @@ type Position struct {
 
 func (p Position) String() string {
 	if p.Filename == "" {
-		return fmt.Sprintf("%d:%d", p.Col, p.Row)
+		return fmt.Sprintf("%d:%d", p.Row, p.Col)
 	}
-	return fmt.Sprintf("%s:%d:%d", p.Filename, p.Col, p.Row)
+	return fmt.Sprintf("%s:%d:%d", p.Filename, p.Row, p.Col)
 }
