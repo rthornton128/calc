@@ -3,9 +3,11 @@ package comp
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/rthornton128/calc1/ast"
 	"github.com/rthornton128/calc1/parse"
+	"github.com/rthornton128/calc1/token"
 )
 
 type compiler struct {
@@ -22,47 +24,52 @@ func CompileFile(fname, src string) {
 		os.Exit(1)
 	}
 	c.fp = fp
-  c.compile(f)
+	c.compFile(f)
 }
 
-func (c *compiler) compile(node ast.Node) {
+func (c *compiler) compNode(node ast.Node) int {
 	switch n := node.(type) {
-	case *ast.File:
-		c.file(n)
 	case *ast.BasicLit:
-		c.basicLit(n)
+		i, err := strconv.Atoi(n.Lit)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		return i
 	case *ast.BinaryExpr:
-		c.binaryExpr(n)
+		return c.compBinaryExpr(n)
+	default:
+		return 0 /* can't be reached */
 	}
 }
 
-func (c *compiler) basicLit(b *ast.BasicLit) {
-	fmt.Fprint(c.fp, "push(", b.Lit, ");\n")
-}
+func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) int {
+	var tmp int
 
-func (c *compiler) binaryExpr(b *ast.BinaryExpr) {
-	for _, node := range b.List {
-		switch n := node.(type) {
-		case *ast.BasicLit:
-			c.basicLit(n)
-		case *ast.BinaryExpr:
-			c.binaryExpr(n)
+	tmp = c.compNode(b.List[0])
+
+	for _, node := range b.List[1:] {
+		switch b.Op {
+		case token.ADD:
+			tmp += c.compNode(node)
+		case token.SUB:
+			tmp -= c.compNode(node)
+		case token.MUL:
+			tmp *= c.compNode(node)
+		case token.QUO:
+			tmp /= c.compNode(node)
+		case token.REM:
+			tmp %= c.compNode(node)
 		}
 	}
 
-	fmt.Fprintln(c.fp, "eax = pop();")
-  for i := 0; i < len(b.List[1:]); i++ {
-		fmt.Fprintln(c.fp, "edx = pop();")
-		fmt.Fprint(c.fp, "edx ", b.Op, "= eax;\n")
-	}
-  fmt.Fprintln(c.fp, "push(edx);")
+	return tmp
 }
 
-func (c *compiler) file(f *ast.File) {
-	fmt.Fprintln(c.fp, "#include \"runtime.h\"")
+func (c *compiler) compFile(f *ast.File) {
+	fmt.Fprintln(c.fp, "#include <stdio.h>")
 	fmt.Fprintln(c.fp, "int main(void) {")
-  c.compile(f.Root)
-  fmt.Fprintln(c.fp, "eax = pop();")
-	fmt.Fprintln(c.fp, "return eax;")
+	fmt.Fprintf(c.fp, "printf(\"%%d\", %d);\n", c.compNode(f.Root))
+	fmt.Fprintln(c.fp, "return 0;")
 	fmt.Fprintln(c.fp, "}")
 }
