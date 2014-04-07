@@ -1,6 +1,8 @@
 package parse
 
 import (
+	"os"
+
 	"github.com/rthornton128/calc1/ast"
 	"github.com/rthornton128/calc1/scan"
 	"github.com/rthornton128/calc1/token"
@@ -9,7 +11,12 @@ import (
 func ParseFile(filename, src string) *ast.File {
 	var p parser
 	p.init(filename, src)
-	return p.parseFile()
+	f := p.parseFile()
+	if p.errors.Count() > 0 {
+		p.errors.Print()
+		os.Exit(1)
+	}
+	return f
 }
 
 type parser struct {
@@ -22,10 +29,19 @@ type parser struct {
 	lit string
 }
 
+func (p *parser) addError(msg string) {
+	p.errors.Add(p.file.Position(p.pos), msg)
+	if p.errors.Count() >= 10 {
+		p.errors.Print()
+		os.Exit(1)
+	}
+}
+
 func (p *parser) expect(tok token.Token) token.Pos {
 	pos := p.pos
 	if p.tok != tok {
-		p.errors.Add(p.file.Position(pos), "'"+tok.String()+"'")
+		p.addError("Expected: '" + tok.String() + "', Got: '" +
+			p.tok.String() + "'")
 	}
 	p.next()
 	return pos
@@ -39,9 +55,6 @@ func (p *parser) init(fname, src string) {
 
 func (p *parser) next() {
 	p.lit, p.tok, p.pos = p.scanner.Scan()
-	if p.tok == token.COMMENT {
-		p.next()
-	}
 }
 
 func (p *parser) parseBasicLit() *ast.BasicLit {
@@ -79,8 +92,7 @@ func (p *parser) parseExpr() ast.Expr {
 		expr = p.parseBasicLit()
 		p.next()
 	default:
-		p.errors.Add(p.file.Position(p.pos), "Expected expression, got"+
-			p.tok.String())
+		p.addError("Expected: Integer or Expression, got:" + p.tok.String())
 	}
 
 	return expr
@@ -94,6 +106,8 @@ func (p *parser) parseExpression() ast.Expr {
 	case token.ADD, token.SUB, token.MUL, token.QUO, token.REM:
 		expr = p.parseBinaryExpr(pos)
 	default:
+		p.addError("Illegal token '" + p.tok.String() +
+			"', expected binary operator")
 	}
 
 	return expr

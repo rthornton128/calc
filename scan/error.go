@@ -17,10 +17,16 @@ func (e Error) Error() string {
 
 type ErrorList []*Error
 
-func (el ErrorList) ErrorCount() int {
+func (el ErrorList) Count() int {
 	return len(el)
 }
 
 func (el *ErrorList) Add(p token.Position, msg string) {
 	*el = append(*el, &Error{p, msg})
+}
+
+func (el *ErrorList) Print() {
+	for _, err := range *el {
+		fmt.Println(err)
+	}
 }
