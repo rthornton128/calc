@@ -40,7 +40,7 @@ func (p *parser) addError(msg string) {
 func (p *parser) expect(tok token.Token) token.Pos {
 	pos := p.pos
 	if p.tok != tok {
-		p.addError("Expected '" + tok.String() + "' got '" + p.tok.String() + "'")
+		p.addError("Expected '" + tok.String() + "' got '" + p.lit + "'")
 	}
 	p.next()
 	return pos
@@ -67,7 +67,7 @@ func (p *parser) parseBinaryExpr(open token.Pos) *ast.BinaryExpr {
 
 	var list []ast.Expr
 	for p.tok != token.RPAREN && p.tok != token.EOF {
-		list = append(list, p.parseExpr())
+		list = append(list, p.parseGenExpr())
 	}
 	end := p.expect(token.RPAREN)
 	return &ast.BinaryExpr{
@@ -81,12 +81,12 @@ func (p *parser) parseBinaryExpr(open token.Pos) *ast.BinaryExpr {
 	}
 }
 
-func (p *parser) parseExpr() ast.Expr {
+func (p *parser) parseGenExpr() ast.Expr {
 	var expr ast.Expr
 
 	switch p.tok {
 	case token.LPAREN:
-		expr = p.parseGenExpr()
+		expr = p.parseExpr()
 	case token.INTEGER:
 		expr = p.parseBasicLit()
 		p.next()
@@ -99,7 +99,7 @@ func (p *parser) parseExpr() ast.Expr {
 	return expr
 }
 
-func (p *parser) parseGenExpr() ast.Expr {
+func (p *parser) parseExpr() ast.Expr {
 	var expr ast.Expr
 
 	pos := p.expect(token.LPAREN)
@@ -116,5 +116,8 @@ func (p *parser) parseGenExpr() ast.Expr {
 func (p *parser) parseFile() *ast.File {
 	var expr ast.Expr
 	expr = p.parseExpr()
+	if p.tok != token.EOF {
+		p.addError("Expected EOF, got '" + p.lit + "'")
+	}
 	return &ast.File{Root: expr}
 }

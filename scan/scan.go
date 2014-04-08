@@ -85,7 +85,9 @@ func (s *Scanner) scanNumber() (string, token.Token, token.Pos) {
 	for isDigit(s.ch) {
 		s.next()
 	}
-
+	if start == s.offset {
+		return string(s.src[start]), token.INTEGER, s.file.Pos(start)
+	}
 	return s.src[start:s.offset], token.INTEGER, s.file.Pos(start)
 }
 
