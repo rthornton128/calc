@@ -55,7 +55,6 @@ func (s *Scanner) Scan() (lit string, tok token.Token, pos token.Pos) {
 		s.skipComment()
 		return s.Scan()
 	default:
-		lit = ""
 		if s.offset >= len(s.src)-1 {
 			tok = token.EOF
 		} else {

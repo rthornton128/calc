@@ -14,7 +14,7 @@ func ParseFile(filename, src string) *ast.File {
 	f := p.parseFile()
 	if p.errors.Count() > 0 {
 		p.errors.Print()
-		os.Exit(1)
+		return nil
 	}
 	return f
 }
@@ -40,8 +40,7 @@ func (p *parser) addError(msg string) {
 func (p *parser) expect(tok token.Token) token.Pos {
 	pos := p.pos
 	if p.tok != tok {
-		p.addError("Expected: '" + tok.String() + "', Got: '" +
-			p.tok.String() + "'")
+		p.addError("Expected '" + tok.String() + "' got '" + p.tok.String() + "'")
 	}
 	p.next()
 	return pos
@@ -67,7 +66,7 @@ func (p *parser) parseBinaryExpr(open token.Pos) *ast.BinaryExpr {
 	p.next()
 
 	var list []ast.Expr
-	for p.tok != token.RPAREN {
+	for p.tok != token.RPAREN && p.tok != token.EOF {
 		list = append(list, p.parseExpr())
 	}
 	end := p.expect(token.RPAREN)
@@ -87,18 +86,20 @@ func (p *parser) parseExpr() ast.Expr {
 
 	switch p.tok {
 	case token.LPAREN:
-		expr = p.parseExpression()
+		expr = p.parseGenExpr()
 	case token.INTEGER:
 		expr = p.parseBasicLit()
 		p.next()
 	default:
-		p.addError("Expected: Integer or Expression, got:" + p.tok.String())
+		p.addError("Expected '" + token.LPAREN.String() + "' or '" +
+			token.INTEGER.String() + "' got '" + p.lit + "'")
+		p.next()
 	}
 
 	return expr
 }
 
-func (p *parser) parseExpression() ast.Expr {
+func (p *parser) parseGenExpr() ast.Expr {
 	var expr ast.Expr
 
 	pos := p.expect(token.LPAREN)
@@ -106,8 +107,7 @@ func (p *parser) parseExpression() ast.Expr {
 	case token.ADD, token.SUB, token.MUL, token.QUO, token.REM:
 		expr = p.parseBinaryExpr(pos)
 	default:
-		p.addError("Illegal token '" + p.tok.String() +
-			"', expected binary operator")
+		p.addError("Expected binary operator but got '" + p.lit + "'")
 	}
 
 	return expr

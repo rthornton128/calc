@@ -63,3 +63,25 @@ func TestParseNested(t *testing.T) {
 		i++
 	})
 }
+
+func TestTemp(t *testing.T) {
+	var tests = []string{
+		"+ 3 5)",
+		"(3 5 +)",
+		"(3 + 4)",
+		"(+ 6 2",
+		"(d",
+		"(* a 3)",
+		"(/ 5 b)",
+		"(% / d)",
+		"(& 3 5)",
+		"((+ 3 5) 5)",
+		"(* (- 2 6) (+ 4 2)())",
+	}
+	for _, src := range tests {
+		if f := parse.ParseFile("test", src); f != nil {
+			t.Log(src, "- not nil")
+			t.Fail()
+		}
+	}
+}
