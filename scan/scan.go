@@ -11,7 +11,6 @@ type Scanner struct {
 	offset  int
 	roffset int
 	src     string
-	errors  ErrorList
 	file    *token.File
 }
 
@@ -23,7 +22,6 @@ func (s *Scanner) Init(file *token.File, src string) {
 	s.file = file
 	s.offset, s.roffset = 0, 0
 	s.src = src
-	s.errors = make(ErrorList, 16)
 
 	s.next()
 }
