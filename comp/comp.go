@@ -15,7 +15,6 @@ type compiler struct {
 }
 
 func CompileFile(fname, src string) {
-	f := parse.ParseFile(fname, src)
 
 	var c compiler
 	fp, err := os.Create(fname + ".c")
@@ -23,6 +22,9 @@ func CompileFile(fname, src string) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	defer f.Close()
+
+	f := parse.ParseFile(fname, src)
 	c.fp = fp
 	c.compFile(f)
 }

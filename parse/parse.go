@@ -115,7 +115,7 @@ func (p *parser) parseExpr() ast.Expr {
 
 func (p *parser) parseFile() *ast.File {
 	var expr ast.Expr
-	expr = p.parseExpr()
+	expr = p.parseGenExpr()
 	if p.tok != token.EOF {
 		p.addError("Expected EOF, got '" + p.lit + "'")
 	}

@@ -66,8 +66,8 @@ func TestParseNested(t *testing.T) {
 
 func TestTemp(t *testing.T) {
 	var tests = []string{
-		"4",
 		"+ 3 5)",
+		"(- 5)",
 		"(3 5 +)",
 		"(3 + 4)",
 		"(+ 6 2",
