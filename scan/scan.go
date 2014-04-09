@@ -92,7 +92,7 @@ func (s *Scanner) scanNumber() (string, token.Token, token.Pos) {
 }
 
 func (s *Scanner) skipComment() {
-	for s.ch != '\n' && s.offset < len(s.src) {
+	for s.ch != '\n' && s.offset < len(s.src)-1 {
 		s.next()
 	}
 }

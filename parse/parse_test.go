@@ -39,7 +39,7 @@ func TestParseFileBasic(t *testing.T) {
 }
 
 func TestParseNested(t *testing.T) {
-	f := parse.ParseFile("test.calc", "(+ (/ 9 3) 5 (- 3 1))")
+	f := parse.ParseFile("test.calc", ";comment\n(+ (/ 9 3) 5 (- 3 1))")
 	i := 0
 
 	var types = []int{FILE, BINARY, BINARY, BASIC, BASIC, BASIC, BINARY,
@@ -79,6 +79,7 @@ func TestTemp(t *testing.T) {
 		"(& 3 5)",
 		"((+ 3 5) 5)",
 		"(* (- 2 6) (+ 4 2)())",
+		";comment",
 	}
 	for _, src := range tests {
 		if f := parse.ParseFile("test", src); f != nil {
