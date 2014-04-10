@@ -69,6 +69,9 @@ func (p *parser) parseBinaryExpr(open token.Pos) *ast.BinaryExpr {
 	for p.tok != token.RPAREN && p.tok != token.EOF {
 		list = append(list, p.parseGenExpr())
 	}
+	if len(list) < 2 {
+		p.addError("binary expression must have at least two operands")
+	}
 	end := p.expect(token.RPAREN)
 	return &ast.BinaryExpr{
 		Expression: ast.Expression{
