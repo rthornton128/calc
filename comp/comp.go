@@ -32,6 +32,9 @@ func CompileFile(fname, src string) {
 	defer fp.Close()
 
 	f := parse.ParseFile(fname, src)
+	if f == nil {
+		os.Exit(1)
+	}
 	c.fp = fp
 	c.compFile(f)
 }
