@@ -29,7 +29,7 @@ func CompileFile(fname, src string) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	defer f.Close()
+	defer fp.Close()
 
 	f := parse.ParseFile(fname, src)
 	c.fp = fp
