@@ -58,6 +58,7 @@ func (s *Scanner) Scan() (lit string, tok token.Token, pos token.Pos) {
 		tok = token.REM
 	case ';':
 		s.skipComment()
+		s.next()
 		return s.Scan()
 	default:
 		if s.offset >= len(s.src)-1 {

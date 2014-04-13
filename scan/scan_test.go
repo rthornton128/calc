@@ -14,10 +14,21 @@ import (
 	"github.com/rthornton128/calc1/token"
 )
 
-var src = "(+ 2 (- 4 1) (* 6 5) (% 10 2) (/ 9 3)); comment\n"
+func test_handler(t *testing.T, src string, expected []token.Token) {
+	var s scan.Scanner
+	s.Init(token.NewFile("", src), src)
+	lit, tok, pos := s.Scan()
+	for i := 0; tok != token.EOF; i++ {
+		if tok != expected[i] {
+			t.Fatal(pos, "Expected:", expected[i], "Got:", tok, lit)
+		}
+		lit, tok, pos = s.Scan()
+	}
+}
 
 func TestScan(t *testing.T) {
-	var expected = []token.Token{
+	src := "(+ 2 (- 4 1) (* 6 5) (% 10 2) (/ 9 3)); comment"
+	expected := []token.Token{
 		token.LPAREN,
 		token.ADD,
 		token.INTEGER,
@@ -42,16 +53,32 @@ func TestScan(t *testing.T) {
 		token.INTEGER,
 		token.RPAREN,
 		token.RPAREN,
+		token.EOF,
 	}
+	test_handler(t, src, expected)
+}
 
-	var s scan.Scanner
-	s.Init(token.NewFile("", src), src)
-
-	_, tok, pos := s.Scan()
-	for i := 0; tok != token.EOF; i++ {
-		if tok != expected[i] {
-			t.Fatal(pos, "Expected:", expected[i], "Got:", tok)
-		}
-		_, tok, pos = s.Scan()
+func TestScanAllTokens(t *testing.T) {
+	src := "()+-*/% 1 12\t 12345 123456789 | a as ! \\ \r ;"
+	expected := []token.Token{
+		token.LPAREN,
+		token.RPAREN,
+		token.ADD,
+		token.SUB,
+		token.MUL,
+		token.QUO,
+		token.REM,
+		token.INTEGER,
+		token.INTEGER,
+		token.INTEGER,
+		token.INTEGER,
+		token.ILLEGAL,
+		token.ILLEGAL,
+		token.ILLEGAL,
+		token.ILLEGAL,
+		token.ILLEGAL,
+		token.ILLEGAL,
+		token.EOF,
 	}
+	test_handler(t, src, expected)
 }
