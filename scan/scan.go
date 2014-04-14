@@ -87,10 +87,11 @@ func (s *Scanner) scanNumber() (string, token.Token, token.Pos) {
 	for unicode.IsDigit(s.ch) {
 		s.next()
 	}
-	if start == s.offset {
-		return string(s.src[start]), token.INTEGER, s.file.Pos(start)
+	offset := s.offset
+	if s.ch == rune(0) {
+		offset++
 	}
-	return s.src[start:s.offset], token.INTEGER, s.file.Pos(start)
+	return s.src[start:offset], token.INTEGER, s.file.Pos(start)
 }
 
 func (s *Scanner) skipComment() {
