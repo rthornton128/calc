@@ -21,10 +21,6 @@ type Scanner struct {
 	file    *token.File
 }
 
-func isDigit(r rune) bool {
-	return unicode.IsDigit(r)
-}
-
 func (s *Scanner) Init(file *token.File, src string) {
 	s.file = file
 	s.offset, s.roffset = 0, 0
@@ -36,7 +32,7 @@ func (s *Scanner) Init(file *token.File, src string) {
 func (s *Scanner) Scan() (lit string, tok token.Token, pos token.Pos) {
 	s.skipWhitespace()
 
-	if isDigit(s.ch) {
+	if unicode.IsDigit(s.ch) {
 		return s.scanNumber()
 	}
 
@@ -88,7 +84,7 @@ func (s *Scanner) next() {
 func (s *Scanner) scanNumber() (string, token.Token, token.Pos) {
 	start := s.offset
 
-	for isDigit(s.ch) {
+	for unicode.IsDigit(s.ch) {
 		s.next()
 	}
 	if start == s.offset {

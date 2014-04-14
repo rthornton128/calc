@@ -26,6 +26,16 @@ func test_handler(t *testing.T, src string, expected []token.Token) {
 	}
 }
 
+func TestNumber(t *testing.T) {
+	src := "9"
+	expected := []token.Token{
+		token.INTEGER,
+		token.EOF,
+	}
+
+	test_handler(t, src, expected)
+}
+
 func TestScan(t *testing.T) {
 	src := "(+ 2 (- 4 1) (* 6 5) (% 10 2) (/ 9 3)); comment"
 	expected := []token.Token{
