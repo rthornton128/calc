@@ -35,7 +35,7 @@ func (f *File) Base() int {
 }
 
 func (f *File) Pos(offset int) Pos {
-	if offset > len(f.src) {
+	if offset < 0 || offset >= len(f.src) {
 		panic("illegal file offset")
 	}
 	return Pos(f.base + offset)
