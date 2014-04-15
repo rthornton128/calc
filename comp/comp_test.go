@@ -10,10 +10,20 @@ package comp_test
 import (
 	"os"
 	"os/exec"
+	"runtime"
 	"testing"
 
 	"github.com/rthornton128/calc1/comp"
 )
+
+var ext string
+
+func init() {
+	ext = ""
+	if runtime.GOOS == "windows" {
+		ext = ".exe"
+	}
+}
 
 func TestInteger(t *testing.T) {
 	test_handler(t, "42", "42")
@@ -36,15 +46,22 @@ func test_handler(t *testing.T, src, expected string) {
 
 	comp.CompileFile("test", src)
 
-	out, err := exec.Command("gcc.exe", "-Wall", "-Wextra", "-std=c99",
-		"-o test.exe", "test.c").CombinedOutput()
+	out, err := exec.Command("gcc"+ext, "-Wall", "-Wextra", "-std=c99",
+		"--output=test"+ext, "test.c").CombinedOutput()
 
 	if err != nil {
 		t.Log(string(out))
 		t.Fatal(err)
 	}
 	var output []byte
-	output, err = exec.Command(" test.exe").Output()
+
+	switch runtime.GOOS {
+	case "windows":
+		output, err = exec.Command("test" + ext).Output()
+	default:
+		output, err = exec.Command("./test").Output()
+	}
+
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,5 +72,5 @@ func test_handler(t *testing.T, src, expected string) {
 
 func tearDown() {
 	os.Remove("test.c")
-	os.Remove(" test.exe")
+	os.Remove("test" + ext)
 }
