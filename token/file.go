@@ -10,16 +10,16 @@ package token
 type File struct {
 	base     int
 	name     string
-	src      string
 	newlines []Pos
+	size     int
 }
 
-func NewFile(name, src string) *File {
+func NewFile(name string, base, size int) *File {
 	return &File{
-		base:     1,
+		base:     base,
 		name:     name,
-		src:      src,
 		newlines: make([]Pos, 0, 16),
+		size:     size,
 	}
 }
 
@@ -35,7 +35,7 @@ func (f *File) Base() int {
 }
 
 func (f *File) Pos(offset int) Pos {
-	if offset < 0 || offset >= len(f.src) {
+	if offset < 0 || offset >= f.size {
 		panic("illegal file offset")
 	}
 	return Pos(f.base + offset)
@@ -57,5 +57,5 @@ func (f *File) Position(p Pos) Position {
 }
 
 func (f *File) Size() int {
-	return len(f.src)
+	return f.size
 }
