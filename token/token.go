@@ -17,6 +17,7 @@ const (
 	COMMENT
 
 	lit_start
+	IDENT
 	INTEGER
 	lit_end
 
@@ -28,7 +29,25 @@ const (
 	MUL
 	QUO
 	REM
+
+	ASSIGN
+
+	AND
+	OR
+
+	EQL
+	NEQ
+	LST
+	GTT
+	LTE
+	GTE
 	op_end
+
+	key_start
+	DEFINE
+	IF
+	FOR
+	key_end
 
 	tok_end
 )
@@ -37,6 +56,7 @@ var tok_strings = map[Token]string{
 	EOF:     "EOF",
 	ILLEGAL: "Illegal",
 	COMMENT: "Comment",
+	IDENT:   "Identifier",
 	INTEGER: "Integer",
 	LPAREN:  "(",
 	RPAREN:  ")",
@@ -45,6 +65,17 @@ var tok_strings = map[Token]string{
 	MUL:     "*",
 	QUO:     "/",
 	REM:     "%",
+	AND:     "&&",
+	OR:      "||",
+	EQL:     "==",
+	NEQ:     "!=",
+	LST:     "<",
+	GTT:     ">",
+	LTE:     "<=",
+	GTE:     ">=",
+	DEFINE:  "def",
+	IF:      "if",
+	FOR:     "for",
 }
 
 func (t Token) IsLiteral() bool {
@@ -53,6 +84,10 @@ func (t Token) IsLiteral() bool {
 
 func (t Token) IsOperator() bool {
 	return t > op_start && t < op_end
+}
+
+func (t Token) IsKeyword() bool {
+	return t > key_start && t < key_end
 }
 
 func Lookup(str string) Token {
