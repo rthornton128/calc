@@ -10,8 +10,8 @@ package scan_test
 import (
 	"testing"
 
-	"github.com/rthornton128/calc1/scan"
-	"github.com/rthornton128/calc1/token"
+	"github.com/rthornton128/calc/scan"
+	"github.com/rthornton128/calc/token"
 )
 
 func test_handler(t *testing.T, src string, expected []token.Token) {

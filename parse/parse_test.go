@@ -10,8 +10,8 @@ package parse_test
 import (
 	"testing"
 
-	"github.com/rthornton128/calc1/ast"
-	"github.com/rthornton128/calc1/parse"
+	"github.com/rthornton128/calc/ast"
+	"github.com/rthornton128/calc/parse"
 )
 
 const (

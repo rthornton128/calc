@@ -10,7 +10,7 @@ package token_test
 import (
 	"testing"
 
-	"github.com/rthornton128/calc1/token"
+	"github.com/rthornton128/calc/token"
 )
 
 var test_expr = "(+ 2 3)\n(- 5 4)"

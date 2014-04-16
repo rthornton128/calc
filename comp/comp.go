@@ -12,9 +12,9 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/rthornton128/calc1/ast"
-	"github.com/rthornton128/calc1/parse"
-	"github.com/rthornton128/calc1/token"
+	"github.com/rthornton128/calc/ast"
+	"github.com/rthornton128/calc/parse"
+	"github.com/rthornton128/calc/token"
 )
 
 type compiler struct {
