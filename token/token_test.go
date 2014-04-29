@@ -24,21 +24,21 @@ func TestFilePosition(t *testing.T) {
 		{1, 2, token.Pos(8)},
 		{7, 2, token.Pos(14)},
 	}
-	f := token.NewFile("", "")
+	f := token.NewFile("", 1, 15)
 	f.AddLine(token.Pos(1))
 	p := f.Position(token.Pos(1))
 	if p.String() != "1:1" {
 		t.Fatal("Nameless file: Expected: 1:1, Got:", p.String())
 	}
 
-	f = token.NewFile("test.calc", "")
+	f = token.NewFile("test.calc", 1, 15)
 	f.AddLine(token.Pos(1))
 	p = f.Position(token.Pos(1))
 	if p.String() != "test.calc:1:1" {
 		t.Fatal("Nameless file: Expected: test.calc:1:1, Got:", p.String())
 	}
 
-	f = token.NewFile("test", test_expr)
+	f = token.NewFile("test", 1, len(test_expr))
 	f.AddLine(token.Pos(7))
 	f.AddLine(token.Pos(14))
 	for _, v := range tests {
@@ -48,6 +48,12 @@ func TestFilePosition(t *testing.T) {
 				p.Col, "and", p.Row)
 		}
 	}
+}
+
+func TestFileSetPosition(t *testing.T) {
+	fs := token.NewFileSet()
+	fs.AddFile("testA.calc", len(test_expr))
+	fs.AddFile("testB.calc", len(test_expr))
 }
 
 func TestLookup(t *testing.T) {
@@ -78,8 +84,12 @@ func TestIsLiteral(t *testing.T) {
 		{token.ADD, false},
 		{token.REM, false},
 		{token.EOF, false},
+		{token.IDENT, true},
 		{token.INTEGER, true},
+		{token.IDENT, true},
 		{token.COMMENT, false},
+		{token.FOR, false},
+		{token.ASSIGN, false},
 	}
 
 	for _, v := range tests {
@@ -99,10 +109,33 @@ func TestIsOperator(t *testing.T) {
 		{token.EOF, false},
 		{token.INTEGER, false},
 		{token.COMMENT, false},
+		{token.FOR, false},
+		{token.ASSIGN, false},
 	}
 
 	for _, v := range tests {
 		if res := v.tok.IsOperator(); res != v.exp {
+			t.Fatal(v.tok, "- Expected:", v.exp, "Got:", res)
+		}
+	}
+}
+
+func TestIsKeyword(t *testing.T) {
+	var tests = []struct {
+		tok token.Token
+		exp bool
+	}{
+		{token.ADD, false},
+		{token.REM, false},
+		{token.EOF, false},
+		{token.INTEGER, false},
+		{token.COMMENT, false},
+		{token.FOR, true},
+		{token.ASSIGN, false},
+	}
+
+	for _, v := range tests {
+		if res := v.tok.IsKeyword(); res != v.exp {
 			t.Fatal(v.tok, "- Expected:", v.exp, "Got:", res)
 		}
 	}

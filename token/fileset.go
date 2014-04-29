@@ -18,14 +18,19 @@ func NewFileSet() *FileSet {
 
 func (fs *FileSet) AddFile(name, src string) {
 	size := len(src)
-	files = append(files, NewFile(name, base, size))
-	base += size
+	fs.files = append(fs.files, NewFile(name, fs.base, size))
+	fs.base += size
 }
 
 func (fs *FileSet) Position(p Pos) Position {
+	var pos Position
+	if !p.Valid() {
+		panic("invalid position")
+	}
 	for _, f := range fs.files {
 		if p >= Pos(f.Base()) && p < Pos(f.Base()+f.Size()) {
-			return f.Position(p)
+			pos = f.Position(p)
 		}
 	}
+	return pos
 }
