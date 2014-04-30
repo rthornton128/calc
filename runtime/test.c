@@ -4,7 +4,7 @@
 #include "stack.h"
 
 #include <assert.h>
-#include <stdio.h>
+//#include <stdio.h>
 
 void cmp_tests() {
 	int a = 1, b = 2;
@@ -64,17 +64,17 @@ void instructions_tests() {
 
 void stack_tests() {
 	stack_init();
-	printf("%p, %p\n", ebp, esp);
+	//printf("%p, %p\n", ebp, esp);
 	enter(16);
-	printf("%p, %p\n", ebp, esp);
+	//printf("%p, %p\n", ebp, esp);
 	setl(24, ebp+0);
 	setl(18, ebp+4);
 	movl(ebp+4, edx);
 	movl(ebp+0, eax);
 	addl(edx, eax);
-	printf("%p, %p\n", ebp, esp);
+	//printf("%p, %p\n", ebp, esp);
 	leave();
-	printf("%p, %p\n", ebp, esp);
+	//printf("%p, %p\n", ebp, esp);
 	stack_end();
 	assert(*(int32_t *)eax == 42);
 }
