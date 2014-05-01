@@ -52,8 +52,8 @@ func TestFilePosition(t *testing.T) {
 
 func TestFileSetPosition(t *testing.T) {
 	fs := token.NewFileSet()
-	fs.AddFile("testA.calc", len(test_expr))
-	fs.AddFile("testB.calc", len(test_expr))
+	fs.AddFile("testA.calc", test_expr)
+	fs.AddFile("testB.calc", test_expr)
 }
 
 func TestLookup(t *testing.T) {
@@ -88,7 +88,7 @@ func TestIsLiteral(t *testing.T) {
 		{token.INTEGER, true},
 		{token.IDENT, true},
 		{token.COMMENT, false},
-		{token.FOR, false},
+		{token.VAR, false},
 		{token.ASSIGN, false},
 	}
 
@@ -109,13 +109,13 @@ func TestIsOperator(t *testing.T) {
 		{token.EOF, false},
 		{token.INTEGER, false},
 		{token.COMMENT, false},
-		{token.FOR, false},
-		{token.ASSIGN, false},
+		{token.VAR, false},
+		{token.ASSIGN, true},
 	}
 
 	for _, v := range tests {
 		if res := v.tok.IsOperator(); res != v.exp {
-			t.Fatal(v.tok, "- Expected:", v.exp, "Got:", res)
+			t.Fatal(int(v.tok), "- Expected:", v.exp, "Got:", res)
 		}
 	}
 }
@@ -130,7 +130,7 @@ func TestIsKeyword(t *testing.T) {
 		{token.EOF, false},
 		{token.INTEGER, false},
 		{token.COMMENT, false},
-		{token.FOR, true},
+		{token.VAR, true},
 		{token.ASSIGN, false},
 	}
 

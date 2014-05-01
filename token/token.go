@@ -44,9 +44,9 @@ const (
 	op_end
 
 	key_start
-	DEFINE
+	DECL
 	IF
-	FOR
+	VAR
 	key_end
 
 	tok_end
@@ -73,9 +73,9 @@ var tok_strings = map[Token]string{
 	GTT:     ">",
 	LTE:     "<=",
 	GTE:     ">=",
-	DEFINE:  "def",
+	DECL:    "decl",
 	IF:      "if",
-	FOR:     "for",
+	VAR:     "var",
 }
 
 func (t Token) IsLiteral() bool {
