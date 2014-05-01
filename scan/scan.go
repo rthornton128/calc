@@ -32,6 +32,10 @@ func (s *Scanner) Init(file *token.File, src string) {
 func (s *Scanner) Scan() (lit string, tok token.Token, pos token.Pos) {
 	s.skipWhitespace()
 
+	if unicode.IsLetter(s.ch) {
+		return s.scanIdentifier()
+	}
+
 	if unicode.IsDigit(s.ch) {
 		return s.scanNumber()
 	}
@@ -79,6 +83,19 @@ func (s *Scanner) next() {
 		s.ch = rune(s.src[s.offset])
 		s.roffset++
 	}
+}
+
+func (s *Scanner) scanIdentifier() (string, token.Token, token.Pos) {
+	start := s.offset
+
+	for unicode.IsLetter(s.ch) || unicode.IsDigit(s.ch) {
+		s.next()
+	}
+	offset := s.offset
+	if s.ch == rune(0) {
+		offset++
+	}
+	return s.src[start:offset], token.IDENT, s.file.Pos(start)
 }
 
 func (s *Scanner) scanNumber() (string, token.Token, token.Pos) {

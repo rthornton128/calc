@@ -16,7 +16,7 @@ import (
 
 func test_handler(t *testing.T, src string, expected []token.Token) {
 	var s scan.Scanner
-	s.Init(token.NewFile("", src), src)
+	s.Init(token.NewFile("", 1, len(src)), src)
 	lit, tok, pos := s.Scan()
 	for i := 0; tok != token.EOF; i++ {
 		if tok != expected[i] {
@@ -24,6 +24,19 @@ func test_handler(t *testing.T, src string, expected []token.Token) {
 		}
 		lit, tok, pos = s.Scan()
 	}
+}
+
+func TestIdentifier(t *testing.T) {
+	src := "a A z23 Zasdf"
+	expected := []token.Token{
+		token.IDENT,
+		token.IDENT,
+		token.IDENT,
+		token.IDENT,
+		token.EOF,
+	}
+
+	test_handler(t, src, expected)
 }
 
 func TestNumber(t *testing.T) {
@@ -83,8 +96,9 @@ func TestScanAllTokens(t *testing.T) {
 		token.INTEGER,
 		token.INTEGER,
 		token.ILLEGAL,
-		token.ILLEGAL,
-		token.ILLEGAL,
+		token.IDENT,
+		token.IDENT,
+		token.IDENT,
 		token.ILLEGAL,
 		token.ILLEGAL,
 		token.ILLEGAL,
