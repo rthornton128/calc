@@ -7,20 +7,16 @@
 
 /* stack */
 void enter(const int32_t n) {
-	setl(bpi, esp);
-	spi += 4;
-	bpi = spi;
-	spi += n;
-	ebp = &ss[bpi];
-	esp = &ss[spi];
+	setl(ebp-&ss[0], esp);
+	esp += 4;
+	ebp = esp;
+	esp += n;
 }
 
 void leave() {
-	spi = bpi;
-	spi -= 4;
-	esp = &ss[spi];
-	movl(esp, (char *)&bpi);
-	ebp = &ss[bpi];
+	esp = ebp;
+	esp -= 4;
+	ebp = &ss[0]+(int)*esp;
 }
 
 /* memory */

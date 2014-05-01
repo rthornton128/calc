@@ -69,10 +69,21 @@ void stack_tests() {
 	//printf("%p, %p\n", ebp, esp);
 	setl(24, ebp+0);
 	setl(18, ebp+4);
-	movl(ebp+4, edx);
-	movl(ebp+0, eax);
-	addl(edx, eax);
+
+	/* simulate another function call */
+	enter(16);
 	//printf("%p, %p\n", ebp, esp);
+	setl(5, ebp+0);
+	setl(3, ebp+4);
+	movl(ebp+4, eax);
+	addl(ebp+0, eax);
+	leave();
+	//printf("%p, %p\n", ebp, esp);
+	assert(*(int32_t *)eax == 8);
+	/* end inner function */
+
+	movl(ebp+4, eax);
+	addl(ebp+0, eax);
 	leave();
 	//printf("%p, %p\n", ebp, esp);
 	stack_end();
