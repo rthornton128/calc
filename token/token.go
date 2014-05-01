@@ -24,6 +24,8 @@ const (
 	op_start
 	LPAREN
 	RPAREN
+	COMMA
+
 	ADD
 	SUB
 	MUL
@@ -60,6 +62,7 @@ var tok_strings = map[Token]string{
 	INTEGER: "Integer",
 	LPAREN:  "(",
 	RPAREN:  ")",
+	COMMA:   ",",
 	ADD:     "+",
 	SUB:     "-",
 	MUL:     "*",

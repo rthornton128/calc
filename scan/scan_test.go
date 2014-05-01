@@ -82,7 +82,8 @@ func TestScan(t *testing.T) {
 }
 
 func TestScanAllTokens(t *testing.T) {
-	src := "()+-*/% 1 12\t 12345 123456789 | a as ! \\ \r ;"
+	src := "()+-*/% 1 12\t 12345 123456789 | a as ! != < <=! = == > >= & &&" +
+		"| || , \\ \r ;"
 	expected := []token.Token{
 		token.LPAREN,
 		token.RPAREN,
@@ -98,8 +99,20 @@ func TestScanAllTokens(t *testing.T) {
 		token.ILLEGAL,
 		token.IDENT,
 		token.IDENT,
-		token.IDENT,
 		token.ILLEGAL,
+		token.NEQ,
+		token.LST,
+		token.LTE,
+		token.ILLEGAL,
+		token.ASSIGN,
+		token.EQL,
+		token.GTT,
+		token.GTE,
+		token.ILLEGAL,
+		token.AND,
+		token.ILLEGAL,
+		token.OR,
+		token.COMMA,
 		token.ILLEGAL,
 		token.ILLEGAL,
 		token.EOF,

@@ -40,12 +40,16 @@ func (s *Scanner) Scan() (lit string, tok token.Token, pos token.Pos) {
 		return s.scanNumber()
 	}
 
+	ch := s.ch
 	lit, pos = string(s.ch), s.file.Pos(s.offset)
-	switch s.ch {
+	s.next()
+	switch ch {
 	case '(':
 		tok = token.LPAREN
 	case ')':
 		tok = token.RPAREN
+	case ',':
+		tok = token.COMMA
 	case '+':
 		tok = token.ADD
 	case '-':
@@ -56,6 +60,48 @@ func (s *Scanner) Scan() (lit string, tok token.Token, pos token.Pos) {
 		tok = token.QUO
 	case '%':
 		tok = token.REM
+	case '<':
+		if s.ch == '=' {
+			tok = token.LTE
+			s.next()
+		} else {
+			tok = token.LST
+		}
+	case '>':
+		if s.ch == '=' {
+			tok = token.GTE
+			s.next()
+		} else {
+			tok = token.GTT
+		}
+	case '=':
+		if s.ch == '=' {
+			tok = token.EQL
+			s.next()
+		} else {
+			tok = token.ASSIGN
+		}
+	case '!':
+		if s.ch == '=' {
+			tok = token.NEQ
+			s.next()
+		} else {
+			tok = token.ILLEGAL
+		}
+	case '&':
+		if s.ch == '&' {
+			tok = token.AND
+			s.next()
+		} else {
+			tok = token.ILLEGAL
+		}
+	case '|':
+		if s.ch == '|' {
+			tok = token.OR
+			s.next()
+		} else {
+			tok = token.ILLEGAL
+		}
 	case ';':
 		s.skipComment()
 		s.next()
@@ -67,8 +113,6 @@ func (s *Scanner) Scan() (lit string, tok token.Token, pos token.Pos) {
 			tok = token.ILLEGAL
 		}
 	}
-
-	s.next()
 
 	return
 }
