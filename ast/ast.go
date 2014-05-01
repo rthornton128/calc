@@ -21,6 +21,8 @@ type Expr interface {
 	exprNode()
 }
 
+type AssignExpr struct{}
+
 type BasicLit struct {
 	LitPos token.Pos
 	Kind   token.Token
@@ -34,6 +36,13 @@ type BinaryExpr struct {
 	List  []Expr
 }
 
+type CallExpr struct{}
+
+type DeclExpr struct {
+	Name *Ident
+	/* Type, Params, decl keyword */
+}
+
 type Expression struct {
 	Opening token.Pos
 	Closing token.Pos
@@ -42,6 +51,25 @@ type Expression struct {
 type File struct {
 	Root Expr
 }
+
+type Ident struct {
+	NamePos token.Pos
+	Name    string
+	Value   Expr
+}
+
+type IfExpr struct {
+	Expression
+	If   token.Pos
+	Cond Expr
+	Then Expr
+	Else Expr
+	// needs Type field
+}
+
+type Scope struct{}
+
+type VarExpr struct{}
 
 func (b *BasicLit) Pos() token.Pos   { return b.LitPos }
 func (e *Expression) Pos() token.Pos { return e.Opening }

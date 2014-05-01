@@ -71,7 +71,7 @@ func TestParseNested(t *testing.T) {
 	})
 }
 
-func TestTemp(t *testing.T) {
+func TestExpectFail(t *testing.T) {
 	var tests = []string{
 		"+ 3 5)",
 		"(- 5)",
