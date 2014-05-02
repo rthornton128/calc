@@ -11,10 +11,10 @@ import "fmt"
 
 type Pos uint
 
-var illegalPos = Pos(0)
+var NoPos = Pos(0)
 
 func (p Pos) Valid() bool {
-	return p != illegalPos
+	return p != NoPos
 }
 
 type Position struct {
