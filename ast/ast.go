@@ -53,7 +53,7 @@ type DeclExpr struct {
 	Name   *Ident
 	Type   *Ident
 	Params []*Ident
-	Body   ExprList
+	Body   Expr
 }
 
 type Expression struct {
@@ -73,7 +73,7 @@ type File struct {
 type Ident struct {
 	NamePos token.Pos
 	Name    string
-	Value   Expr
+	Type    *Ident
 }
 
 type IfExpr struct {
@@ -81,8 +81,8 @@ type IfExpr struct {
 	If   token.Pos
 	Type *Ident
 	Cond Expr
-	Then ExprList
-	Else ExprList
+	Then Expr
+	Else Expr
 }
 
 type Package struct {
@@ -106,16 +106,19 @@ type VarExpr struct {
 func (b *BasicLit) Pos() token.Pos   { return b.LitPos }
 func (e *Expression) Pos() token.Pos { return e.Opening }
 func (f *File) Pos() token.Pos       { return token.NoPos }
+func (i *Ident) Pos() token.Pos      { return i.NamePos }
 func (p *Package) Pos() token.Pos    { return token.NoPos }
 
 func (b *BasicLit) End() token.Pos   { return b.LitPos + token.Pos(len(b.Lit)) }
 func (e *Expression) End() token.Pos { return e.Closing }
 func (f *File) End() token.Pos       { return token.NoPos }
+func (i *Ident) End() token.Pos      { return i.NamePos + token.Pos(len(i.Name)) }
 func (p *Package) End() token.Pos    { return token.NoPos }
 
 func (b *BasicLit) exprNode()   {}
 func (e *Expression) exprNode() {}
 func (e *ExprList) exprNode()   {}
+func (i *Ident) exprNode()      {}
 
 func NewScope(parent *Scope) *Scope {
 	return &Scope{parent: parent, table: make(map[string]Expr)}
