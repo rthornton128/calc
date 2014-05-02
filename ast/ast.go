@@ -67,7 +67,7 @@ type ExprList struct {
 }
 
 type File struct {
-	/* Empty */
+	Scope *Scope
 }
 
 type Ident struct {

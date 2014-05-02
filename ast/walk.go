@@ -19,7 +19,9 @@ func Walk(node Node, f Func) {
 	}
 	switch n := node.(type) {
 	case *File:
-		//Walk(n.Root, f)
+		for _, v := range n.Scope.table {
+			Walk(v, f)
+		}
 	case *BinaryExpr:
 		for _, v := range n.List {
 			Walk(v, f)
