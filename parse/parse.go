@@ -54,7 +54,7 @@ func (p *parser) expect(tok token.Token) token.Pos {
 }
 
 func (p *parser) init(fname, src string) {
-	p.file = token.NewFile(fname, src)
+	p.file = token.NewFile(fname, 1, len(src))
 	p.scanner.Init(p.file, src)
 	p.next()
 }
@@ -129,5 +129,8 @@ func (p *parser) parseFile() *ast.File {
 	if p.tok != token.EOF {
 		p.addError("Expected EOF, got '" + p.lit + "'")
 	}
-	return &ast.File{Root: expr}
+	scope := ast.NewScope(nil)
+	scope.Insert(&ast.Ident{NamePos: token.NoPos, Name: "main", Value: nil},
+		expr)
+	return &ast.File{Scope: scope}
 }
