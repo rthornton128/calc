@@ -87,7 +87,7 @@ type IfExpr struct {
 
 type Package struct {
 	Scope *Scope
-	Files map[string]*File
+	//Files map[string]*File
 }
 
 type Scope struct {
@@ -105,12 +105,12 @@ type VarExpr struct {
 
 func (b *BasicLit) Pos() token.Pos   { return b.LitPos }
 func (e *Expression) Pos() token.Pos { return e.Opening }
-func (f *File) Pos() token.Pos       { return f.Root.Pos() }
+func (f *File) Pos() token.Pos       { return token.NoPos }
 func (p *Package) Pos() token.Pos    { return token.NoPos }
 
 func (b *BasicLit) End() token.Pos   { return b.LitPos + token.Pos(len(b.Lit)) }
 func (e *Expression) End() token.Pos { return e.Closing }
-func (f *File) End() token.Pos       { return f.Root.End() }
+func (f *File) End() token.Pos       { return token.NoPos }
 func (p *Package) End() token.Pos    { return token.NoPos }
 
 func (b *BasicLit) exprNode()   {}
@@ -118,7 +118,7 @@ func (e *Expression) exprNode() {}
 func (e *ExprList) exprNode()   {}
 
 func NewScope(parent *Scope) *Scope {
-	return &Scope{parent: parent, make(map[string]Expr)}
+	return &Scope{parent: parent, table: make(map[string]Expr)}
 }
 
 func (s *Scope) Insert(ident *Ident, exp Expr) {
