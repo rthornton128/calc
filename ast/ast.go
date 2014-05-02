@@ -21,7 +21,12 @@ type Expr interface {
 	exprNode()
 }
 
-type AssignExpr struct{}
+type AssignExpr struct {
+	Expression
+	Equal token.Pos
+	Name  *Ident
+	Value Expr
+}
 
 type BasicLit struct {
 	LitPos token.Pos
@@ -36,11 +41,19 @@ type BinaryExpr struct {
 	List  []Expr
 }
 
-type CallExpr struct{}
+type CallExpr struct {
+	Expression
+	Name *Ident
+	Args []Expr
+}
 
 type DeclExpr struct {
-	Name *Ident
-	/* Type, Params, decl keyword */
+	Expression
+	Decl   token.Pos
+	Name   *Ident
+	Type   *Ident
+	Params []*Ident
+	Body   ExprList
 }
 
 type Expression struct {
@@ -48,8 +61,13 @@ type Expression struct {
 	Closing token.Pos
 }
 
+type ExprList struct {
+	Expression
+	List []Expr
+}
+
 type File struct {
-	Root Expr
+	/* Empty */
 }
 
 type Ident struct {
@@ -61,23 +79,60 @@ type Ident struct {
 type IfExpr struct {
 	Expression
 	If   token.Pos
+	Type *Ident
 	Cond Expr
-	Then Expr
-	Else Expr
-	// needs Type field
+	Then ExprList
+	Else ExprList
 }
 
-type Scope struct{}
+type Package struct {
+	Scope *Scope
+	Files map[string]*File
+}
 
-type VarExpr struct{}
+type Scope struct {
+	parent *Scope
+	table  map[string]Expr
+}
+
+type VarExpr struct {
+	Expression
+	Var   token.Pos
+	Name  *Ident
+	Type  *Ident
+	Value Expr
+}
 
 func (b *BasicLit) Pos() token.Pos   { return b.LitPos }
 func (e *Expression) Pos() token.Pos { return e.Opening }
 func (f *File) Pos() token.Pos       { return f.Root.Pos() }
+func (p *Package) Pos() token.Pos    { return token.NoPos }
 
 func (b *BasicLit) End() token.Pos   { return b.LitPos + token.Pos(len(b.Lit)) }
 func (e *Expression) End() token.Pos { return e.Closing }
 func (f *File) End() token.Pos       { return f.Root.End() }
+func (p *Package) End() token.Pos    { return token.NoPos }
 
 func (b *BasicLit) exprNode()   {}
 func (e *Expression) exprNode() {}
+func (e *ExprList) exprNode()   {}
+
+func NewScope(parent *Scope) *Scope {
+	return &Scope{parent: parent, make(map[string]Expr)}
+}
+
+func (s *Scope) Insert(ident *Ident, exp Expr) {
+	s.table[ident.Name] = exp
+}
+
+func (s *Scope) Lookup(ident string) Expr {
+	var exp Expr
+	var ok bool
+	if exp, ok = s.table[ident]; !ok {
+		if s.parent == nil {
+			return nil
+		}
+		return s.parent.Lookup(ident)
+	}
+	return exp
+}
