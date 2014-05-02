@@ -18,13 +18,48 @@ func Walk(node Node, f Func) {
 		f(node)
 	}
 	switch n := node.(type) {
-	case *File:
-		for _, v := range n.Scope.table {
-			Walk(v, f)
-		}
+	case *AssignExpr:
+		Walk(n.Name, f)
+		Walk(n.Value, f)
 	case *BinaryExpr:
 		for _, v := range n.List {
 			Walk(v, f)
 		}
+	case *CallExpr:
+		Walk(n.Name, f)
+		for _, v := range n.Args {
+			Walk(v, f)
+		}
+	case *DeclExpr:
+		Walk(n.Name, f)
+		Walk(n.Type, f)
+		for _, v := range n.Params {
+			Walk(v, f)
+		}
+		Walk(n.Body, f)
+	case *ExprList:
+		for _, v := range n.List {
+			Walk(v, f)
+		}
+	case *File:
+		for _, v := range n.Scope.table {
+			Walk(v, f)
+		}
+	case *Ident:
+		if n.Type != nil {
+			Walk(n.Type, f)
+		}
+	case *IfExpr:
+		Walk(n.Cond, f)
+		Walk(n.Then, f)
+		Walk(n.Else, f)
+	case *Package:
+		for _, v := range n.Scope.table {
+			Walk(v, f)
+		}
+	case *VarExpr:
+		Walk(n.Name, f)
+		Walk(n.Type, f)
+		Walk(n.Value, f)
 	}
 }
