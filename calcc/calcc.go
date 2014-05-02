@@ -12,7 +12,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 
 	"github.com/rthornton128/calc/comp"
 )
@@ -29,13 +31,24 @@ func printVersion() {
 }
 
 func main() {
+	ext = ""
+	if runtime.GOOS == "windows" {
+		ext = ".exe"
+	}
 	flag.Usage = func() {
 		printVersion()
 		fmt.Fprintln(os.Stderr, "\nUsage of:", os.Args[0])
 		fmt.Fprintln(os.Stderr, os.Args[0], "[flags] <filename>")
 		flag.PrintDefaults()
 	}
-	ver := flag.Bool("version", false, "Print version number and exit")
+	var (
+		cc   = flag.String("cc", "gcc", "C compiler to use")
+		cfl  = flag.String("cflags", "-c -std=gnu99", "C compiler flags")
+		cout = flag.String("cout", "--output=", "C compiler output flag")
+		ld   = flag.String("ld", "gcc", "linker")
+		ldf  = flag.String("ldflags", "", "linker flags")
+		ver  = flag.Bool("version", false, "Print version number and exit")
+	)
 	flag.Parse()
 
 	if *ver {
@@ -59,5 +72,25 @@ func main() {
 	}
 	fmt.Println("Compiling:", filename)
 
-	comp.CompileFile(filename[:len(filename)-len(calcExt)], string(src))
+	filename = filename[:len(filename)-len(calcExt)]
+	comp.CompileFile(filename, string(src))
+
+	/* compile to object code */
+	var out string
+	args := cfl + " " + cout + filename + ".o " + filename + ".c"
+	out, err = exec.Command(cc+ext, strings.Split(args)...).CombinedOutput()
+	if err != nil {
+		os.Remove(filename + ".c")
+		log.Fatal(err)
+	}
+
+	/* link to executable */
+	var out string
+	args = ldf + " " + cout + filename + ext + " " + filename + ".o"
+	out, err = exec.Command(ld+ext, strings.Split(args)...).CombinedOutput()
+	if err != nil {
+		os.Remove(filename + ".c")
+		os.Remove(filename + ".o")
+		log.Fatal(err)
+	}
 }
