@@ -130,7 +130,8 @@ func (p *parser) parseFile() *ast.File {
 		p.addError("Expected EOF, got '" + p.lit + "'")
 	}
 	scope := ast.NewScope(nil)
-	scope.Insert(&ast.Ident{NamePos: token.NoPos, Name: "main", Value: nil},
+	scope.Insert(&ast.Ident{NamePos: token.NoPos, Name: "main",
+		Type: &ast.Ident{NamePos: token.NoPos, Name: "int", Type: nil}},
 		expr)
 	return &ast.File{Scope: scope}
 }
