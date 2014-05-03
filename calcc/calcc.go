@@ -15,23 +15,42 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/rthornton128/calc/comp"
 )
 
 var calcExt = ".calc"
 
+func cleanup(filename string) {
+	os.Remove(filename + ".c")
+	os.Remove(filename + ".o")
+}
+
 func fatal(args ...interface{}) {
 	fmt.Fprintln(os.Stderr, args...)
 	os.Exit(1)
 }
 
+func make_args(options ...string) string {
+	var args string
+	for i, opt := range options {
+		if len(opt) > 0 {
+			args += opt
+			if i < len(options)-1 {
+				args += " "
+			}
+		}
+	}
+	return args
+}
+
 func printVersion() {
-	fmt.Fprintln(os.Stderr, "Calc 1 Compiler Tool Version 1.0")
+	fmt.Fprintln(os.Stderr, "Calc 1 Compiler Tool Version 1.1")
 }
 
 func main() {
-	ext = ""
+	ext := ""
 	if runtime.GOOS == "windows" {
 		ext = ".exe"
 	}
@@ -75,22 +94,20 @@ func main() {
 	filename = filename[:len(filename)-len(calcExt)]
 	comp.CompileFile(filename, string(src))
 
+	defer cleanup(filename)
+
 	/* compile to object code */
-	var out string
-	args := cfl + " " + cout + filename + ".o " + filename + ".c"
-	out, err = exec.Command(cc+ext, strings.Split(args)...).CombinedOutput()
+	var out []byte
+	args := make_args(*cfl, *cout+filename+".o", filename+".c")
+	out, err = exec.Command(*cc+ext, strings.Split(args, " ")...).CombinedOutput()
 	if err != nil {
-		os.Remove(filename + ".c")
-		log.Fatal(err)
+		fatal(string(out))
 	}
 
 	/* link to executable */
-	var out string
-	args = ldf + " " + cout + filename + ext + " " + filename + ".o"
-	out, err = exec.Command(ld+ext, strings.Split(args)...).CombinedOutput()
+	args = make_args(*ldf, *cout+filename+ext, filename+".o")
+	out, err = exec.Command(*ld+ext, strings.Split(args, " ")...).CombinedOutput()
 	if err != nil {
-		os.Remove(filename + ".c")
-		os.Remove(filename + ".o")
-		log.Fatal(err)
+		fatal(string(out))
 	}
 }
