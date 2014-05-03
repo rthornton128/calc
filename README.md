@@ -15,8 +15,16 @@ the compiler script calc.bash.
 
 # Install
 
-$ git clone http://github.com/rthornton128/calc1
-$ cd github.com/rthornton128/calc1/calcc
+Depending on your needs, you probably want to clone a specific version of
+Calc. If you clone Calc without specifying a branch you will clone the master
+branch, which is unstable and likely not what you want.
+
+Choose the version of Calc you want to install and insert the branch name of
+the corresponding version you want. In the example below, Calc 1 has been used:
+
+ # $mkdir -p github.com/rthornton128
+ # #cd github.com/rthornton128
+ # $git clone -b calc1 http://github.com/rthornton128/calc
 
 Check both install.bash and calc.bash to ensure they are setup correctly.
 There will be a few options at the top of each script that can be tailored

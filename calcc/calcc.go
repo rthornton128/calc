@@ -94,20 +94,21 @@ func main() {
 	filename = filename[:len(filename)-len(calcExt)]
 	comp.CompileFile(filename, string(src))
 
-	defer cleanup(filename)
-
 	/* compile to object code */
 	var out []byte
 	args := make_args(*cfl, *cout+filename+".o", filename+".c")
 	out, err = exec.Command(*cc+ext, strings.Split(args, " ")...).CombinedOutput()
 	if err != nil {
-		fatal(string(out))
+		cleanup(filename)
+		fatal(string(out), err)
 	}
 
 	/* link to executable */
 	args = make_args(*ldf, *cout+filename+ext, filename+".o")
 	out, err = exec.Command(*ld+ext, strings.Split(args, " ")...).CombinedOutput()
 	if err != nil {
-		fatal(string(out))
+		cleanup(filename)
+		fatal(string(out), err)
 	}
+	cleanup(filename)
 }
