@@ -31,6 +31,9 @@ type parser struct {
 	errors  scan.ErrorList
 	scanner scan.Scanner
 
+	curScope *ast.Scope
+	topScope *ast.Scope
+
 	pos token.Pos
 	tok token.Token
 	lit string
@@ -56,11 +59,21 @@ func (p *parser) expect(tok token.Token) token.Pos {
 func (p *parser) init(fname, src string) {
 	p.file = token.NewFile(fname, 1, len(src))
 	p.scanner.Init(p.file, src)
+	p.curScope = ast.NewScope(nil)
+	p.topScope = p.curScope
 	p.next()
 }
 
 func (p *parser) next() {
 	p.lit, p.tok, p.pos = p.scanner.Scan()
+}
+
+func (p *parser) openScope() {
+	p.curScope = ast.NewScope(p.curScope)
+}
+
+func (p *parser) closeScope() {
+	p.curScope = p.curScope.Parent()
 }
 
 func (p *parser) parseBasicLit() *ast.BasicLit {
