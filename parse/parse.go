@@ -114,7 +114,8 @@ func (p *parser) parseExpr() ast.Expr {
 
 	pos := p.expect(token.LPAREN)
 	switch p.tok {
-	case token.ADD, token.SUB, token.MUL, token.QUO, token.REM:
+	case token.ADD, token.SUB, token.MUL, token.QUO, token.REM,
+		token.EQL, token.GTE, token.GTT, token.NEQ, token.LST, token.LTE:
 		expr = p.parseBinaryExpr(pos)
 	default:
 		p.addError("Expected binary operator but got '" + p.lit + "'")
