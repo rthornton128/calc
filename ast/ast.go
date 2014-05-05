@@ -73,7 +73,7 @@ type File struct {
 type Ident struct {
 	NamePos token.Pos
 	Name    string
-	Type    *Ident
+	Type    *Ident // TODO: object; to hold type (once set), value ptr, etc
 }
 
 type IfExpr struct {

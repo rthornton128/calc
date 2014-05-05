@@ -130,6 +130,8 @@ func (p *parser) parseExpr() ast.Expr {
 	case token.ADD, token.SUB, token.MUL, token.QUO, token.REM,
 		token.EQL, token.GTE, token.GTT, token.NEQ, token.LST, token.LTE:
 		expr = p.parseBinaryExpr(pos)
+	case token.VAR:
+		expr = p.parseVarExpr(pos)
 	default:
 		p.addError("Expected binary operator but got '" + p.lit + "'")
 	}
@@ -148,4 +150,27 @@ func (p *parser) parseFile() *ast.File {
 		Type: &ast.Ident{NamePos: token.NoPos, Name: "int", Type: nil}},
 		expr)
 	return &ast.File{Scope: scope}
+}
+
+func (p *parser) parseIdent() *ast.Ident {
+	pos := p.expect(token.IDENT)
+	return &ast.Ident{NamePos: pos, Name: p.lit, Type: nil} // TODO: NewObject?
+}
+
+func (p *parser) parseVarExpr(lparen token.Pos) *ast.VarExpr {
+	varpos := p.expect(token.VAR)
+	nam := p.parseIdent()
+	typ := p.parseIdent()
+	val := p.parseGenExpr()
+	rparen := p.expect(token.RPAREN)
+
+	// p.curScope.Insert(...)
+
+	return &ast.VarExpr{
+		Expression: ast.Expression{Opening: lparen, Closing: rparen},
+		Var:        varpos,
+		Name:       nam,
+		Type:       typ,
+		Value:      val,
+	}
 }
