@@ -139,3 +139,7 @@ func (s *Scope) Lookup(ident string) Expr {
 	}
 	return exp
 }
+
+func (s *Scope) Parent() *Scope {
+	return s.parent
+}
