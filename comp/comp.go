@@ -81,7 +81,7 @@ func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) int {
 func (c *compiler) compFile(f *ast.File) {
 	fmt.Fprintln(c.fp, "#include <stdio.h>")
 	fmt.Fprintln(c.fp, "int main(void) {")
-	fmt.Fprintf(c.fp, "printf(\"%%d\", %d);\n", c.compNode(f.Root))
+	fmt.Fprintf(c.fp, "printf(\"%%d\", %d);\n", c.compNode(f.Scope.Lookup("main")))
 	fmt.Fprintln(c.fp, "return 0;")
 	fmt.Fprintln(c.fp, "}")
 }
