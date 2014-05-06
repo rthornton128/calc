@@ -139,7 +139,8 @@ func (s *Scanner) scanIdentifier() (string, token.Token, token.Pos) {
 	if s.ch == rune(0) {
 		offset++
 	}
-	return s.src[start:offset], token.IDENT, s.file.Pos(start)
+	lit := s.src[start:offset]
+	return lit, token.Lookup(lit), s.file.Pos(start)
 }
 
 func (s *Scanner) scanNumber() (string, token.Token, token.Pos) {
