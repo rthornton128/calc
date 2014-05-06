@@ -99,7 +99,7 @@ func Lookup(str string) Token {
 			return t
 		}
 	}
-	return ILLEGAL
+	return IDENT
 }
 
 func (t Token) String() string {
