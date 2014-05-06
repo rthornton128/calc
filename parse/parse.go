@@ -77,7 +77,9 @@ func (p *parser) closeScope() {
 }
 
 func (p *parser) parseBasicLit() *ast.BasicLit {
-	return &ast.BasicLit{LitPos: p.pos, Kind: p.tok, Lit: p.lit}
+	pos, tok, lit := p.pos, p.tok, p.lit
+	p.next()
+	return &ast.BasicLit{LitPos: pos, Kind: tok, Lit: lit}
 }
 
 func (p *parser) parseBinaryExpr(open token.Pos) *ast.BinaryExpr {
@@ -112,7 +114,6 @@ func (p *parser) parseGenExpr() ast.Expr {
 		expr = p.parseExpr()
 	case token.INTEGER:
 		expr = p.parseBasicLit()
-		p.next()
 	default:
 		p.addError("Expected '" + token.LPAREN.String() + "' or '" +
 			token.INTEGER.String() + "' got '" + p.lit + "'")
@@ -154,7 +155,9 @@ func (p *parser) parseFile() *ast.File {
 
 func (p *parser) parseIdent() *ast.Ident {
 	pos := p.expect(token.IDENT)
-	return &ast.Ident{NamePos: pos, Name: p.lit, Type: nil} // TODO: NewObject?
+	name := p.lit
+	p.next()
+	return &ast.Ident{NamePos: pos, Name: name}
 }
 
 func (p *parser) parseVarExpr(lparen token.Pos) *ast.VarExpr {
