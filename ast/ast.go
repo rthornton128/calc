@@ -73,7 +73,7 @@ type File struct {
 type Ident struct {
 	NamePos token.Pos
 	Name    string
-	Type    *Ident // TODO: object; to hold type (once set), value ptr, etc
+	Object  *Object // may be nil (ie. Name is a type keyword)
 }
 
 type IfExpr struct {
@@ -85,6 +85,16 @@ type IfExpr struct {
 	Else Expr
 }
 
+type Object struct {
+	NamePos token.Pos
+	Name    string
+	Kind    ObKind
+	Type    *Ident // variable type, function return type, etc
+	Value   Expr
+}
+
+type ObKind int
+
 type Package struct {
 	Scope *Scope
 	//Files map[string]*File
@@ -92,15 +102,13 @@ type Package struct {
 
 type Scope struct {
 	parent *Scope
-	table  map[string]Expr
+	table  map[string]*Object
 }
 
 type VarExpr struct {
 	Expression
-	Var   token.Pos
-	Name  *Ident
-	Type  *Ident
-	Value Expr
+	Var  token.Pos
+	Name *Ident
 }
 
 func (b *BasicLit) Pos() token.Pos   { return b.LitPos }
@@ -120,24 +128,32 @@ func (e *Expression) exprNode() {}
 func (e *ExprList) exprNode()   {}
 func (i *Ident) exprNode()      {}
 
+const (
+	Decl ObKind = iota
+	Var
+)
+
 func NewScope(parent *Scope) *Scope {
-	return &Scope{parent: parent, table: make(map[string]Expr)}
+	return &Scope{parent: parent, table: make(map[string]*Object)}
 }
 
-func (s *Scope) Insert(ident *Ident, exp Expr) {
-	s.table[ident.Name] = exp
+func (s *Scope) Insert(ob *Object) *Object {
+	if old, ok := s.table[ob.Name]; ok {
+		return old
+	}
+	s.table[ob.Name] = ob
+	return nil
 }
 
-func (s *Scope) Lookup(ident string) Expr {
-	var exp Expr
-	var ok bool
-	if exp, ok = s.table[ident]; !ok {
+func (s *Scope) Lookup(ident string) *Object {
+	ob, ok := s.table[ident]
+	if !ok {
 		if s.parent == nil {
 			return nil
 		}
 		return s.parent.Lookup(ident)
 	}
-	return exp
+	return ob
 }
 
 func (s *Scope) Parent() *Scope {
