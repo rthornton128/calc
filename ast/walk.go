@@ -43,11 +43,8 @@ func Walk(node Node, f Func) {
 		}
 	case *File:
 		for _, v := range n.Scope.table {
-			Walk(v, f)
-		}
-	case *Ident:
-		if n.Type != nil {
-			Walk(n.Type, f)
+			Walk(v.Type, f)
+			Walk(v.Value, f)
 		}
 	case *IfExpr:
 		Walk(n.Cond, f)
@@ -55,11 +52,10 @@ func Walk(node Node, f Func) {
 		Walk(n.Else, f)
 	case *Package:
 		for _, v := range n.Scope.table {
-			Walk(v, f)
+			Walk(v.Type, f)
+			Walk(v.Value, f)
 		}
 	case *VarExpr:
 		Walk(n.Name, f)
-		Walk(n.Type, f)
-		Walk(n.Value, f)
 	}
 }
