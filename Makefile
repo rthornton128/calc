@@ -12,14 +12,13 @@ SRC=runtime/cmp.c\
     runtime/instructions.c\
     runtime/registers.c\
     runtime/stack.c
-
-ifeq ($(OS),Window_NT)
-	RM=del
-	RMFLAGS=/f
-	SRC=$(SRC:/=\\)
-endif
-
 OBJ=$(SRC:.c=.o)
+
+ifeq ($(OS),Windows_NT)
+RM=cmd /c del
+RMFLAGS=
+OBJ=$(subst /,\,$(SRC:.c=.o))
+endif
 
 all: $(LIB)
 
