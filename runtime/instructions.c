@@ -2,11 +2,16 @@
 #include "registers.h"
 #include "stack.h"
 
-#include <stdio.h> /* printf */
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 /* stack */
 void enter(const int32_t n) {
+	if ((esp - &ss[0]) + 4 + n >= scap) {
+		fprintf(stderr, "Stack overflow!\n");
+		exit(EXIT_FAILURE);
+	}
 	setl(ebp-&ss[0], esp);
 	esp += 4;
 	ebp = esp;

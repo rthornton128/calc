@@ -8,6 +8,7 @@
 #define MIN_STACK (size_t) 4096
 
 char *ss = NULL;
+size_t scap = 0;
 
 void stack_init() {
 	ss = malloc(MIN_STACK);
@@ -16,6 +17,7 @@ void stack_init() {
 		exit(EXIT_FAILURE);
 	}
 	memset(ss, 0, MIN_STACK);
+	scap = MIN_STACK;
 	ebp = &ss[0];
 	esp = &ss[0];
 }
