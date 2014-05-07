@@ -147,33 +147,57 @@ func (p *parser) parseFile() *ast.File {
 		p.addError("Expected EOF, got '" + p.lit + "'")
 	}
 	scope := ast.NewScope(nil)
-	scope.Insert(&ast.Ident{NamePos: token.NoPos, Name: "main",
-		Type: &ast.Ident{NamePos: token.NoPos, Name: "int", Type: nil}},
-		expr)
+	ob := &ast.Object{
+		NamePos: token.NoPos,
+		Name:    "main",
+		Kind:    ast.Decl,
+		Type:    &ast.Ident{NamePos: token.NoPos, Name: "int"},
+		Value:   expr,
+	}
+	scope.Insert(ob)
 	return &ast.File{Scope: scope}
 }
 
 func (p *parser) parseIdent() *ast.Ident {
-	pos := p.expect(token.IDENT)
+	pos := p.pos
 	name := p.lit
 	p.next()
 	return &ast.Ident{NamePos: pos, Name: name}
 }
 
 func (p *parser) parseVarExpr(lparen token.Pos) *ast.VarExpr {
+	var (
+		typ *ast.Ident
+		val ast.Expr
+	)
 	varpos := p.expect(token.VAR)
+	if p.tok != token.IDENT {
+		p.expect(token.IDENT)
+	}
 	nam := p.parseIdent()
-	typ := p.parseIdent()
-	val := p.parseGenExpr()
+	switch p.tok {
+	case token.IDENT:
+		typ = p.parseIdent()
+	case token.RPAREN:
+		break
+	default:
+		val = p.parseGenExpr()
+	}
 	rparen := p.expect(token.RPAREN)
 
-	// p.curScope.Insert(...)
+	ob := &ast.Object{
+		NamePos: nam.NamePos,
+		Name:    nam.Name,
+		Kind:    ast.Var,
+		Type:    typ,
+		Value:   val,
+	}
+
+	p.curScope.Insert(ob)
 
 	return &ast.VarExpr{
 		Expression: ast.Expression{Opening: lparen, Closing: rparen},
 		Var:        varpos,
 		Name:       nam,
-		Type:       typ,
-		Value:      val,
 	}
 }
