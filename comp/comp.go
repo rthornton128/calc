@@ -78,10 +78,15 @@ func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) int {
 	return tmp
 }
 
+func (c *compiler) compDecl(ob *ast.Object) {
+	fmt.Fprintf(c.fp, "%s %s(void) {\n", ob.Type.Name, ob.Name)
+	fmt.Fprintf(c.fp, "printf(\"%%d\", %d);\n", c.compNode(ob.Value))
+	fmt.Fprintf(c.fp, "return *(int32_t *)eax;\n")
+	fmt.Fprintln(c.fp, "}")
+}
+
 func (c *compiler) compFile(f *ast.File) {
 	fmt.Fprintln(c.fp, "#include <stdio.h>")
-	fmt.Fprintln(c.fp, "int main(void) {")
-	fmt.Fprintf(c.fp, "printf(\"%%d\", %d);\n", c.compNode(f.Scope.Lookup("main")))
-	fmt.Fprintln(c.fp, "return 0;")
-	fmt.Fprintln(c.fp, "}")
+	fmt.Fprintln(c.fp, "#include \"runtime.h\"")
+	c.compDecl(f.Scope.Lookup("main"))
 }
