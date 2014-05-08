@@ -15,16 +15,17 @@ import (
 )
 
 const (
-	FILE = iota
-	BASIC
+	BASIC = iota
 	BINARY
+	IDENT
+	FILE
 )
 
 func TestParseFileBasic(t *testing.T) {
 	f := parse.ParseFile("test.calc", "(+ 3 5)")
 	i := 0
 
-	var types = []int{FILE, BINARY, BASIC, BASIC}
+	var types = []int{FILE, IDENT, BINARY, BASIC, BASIC}
 
 	ast.Walk(f, func(node ast.Node) {
 		switch node.(type) {
@@ -40,6 +41,12 @@ func TestParseFileBasic(t *testing.T) {
 			if types[i] != BINARY {
 				t.Fatal("Walk index:", i, "Expected:", types[i], "Got:", BINARY)
 			}
+		case *ast.Ident:
+			if types[i] != IDENT {
+				t.Fatal("Walk index:", i, "Expected:", types[i], "Got:", IDENT)
+			}
+		default:
+			t.Fatal("Walk index:", i, "Expected:", types[i], "Got: Unknown")
 		}
 		i++
 	})
@@ -49,7 +56,7 @@ func TestParseNested(t *testing.T) {
 	f := parse.ParseFile("test.calc", ";comment\n(+ (/ 9 3) 5 (- 3 1))")
 	i := 0
 
-	var types = []int{FILE, BINARY, BINARY, BASIC, BASIC, BASIC, BINARY,
+	var types = []int{FILE, IDENT, BINARY, BINARY, BASIC, BASIC, BASIC, BINARY,
 		BASIC, BASIC}
 
 	ast.Walk(f, func(node ast.Node) {
@@ -66,6 +73,12 @@ func TestParseNested(t *testing.T) {
 			if types[i] != BINARY {
 				t.Fatal("Walk index:", i, "Expected:", types[i], "Got:", BINARY)
 			}
+		case *ast.Ident:
+			if types[i] != IDENT {
+				t.Fatal("Walk index:", i, "Expected:", types[i], "Got:", IDENT)
+			}
+		default:
+			t.Fatal("Walk index:", i, "Expected:", types[i], "Got: Unknown")
 		}
 		i++
 	})
