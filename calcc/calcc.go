@@ -34,7 +34,7 @@ func fatal(args ...interface{}) {
 
 func findRuntime() string {
 	var paths []string
-	rpath := "/src/github.com/rthornton128/calc/runtime.a"
+	rpath := "/src/github.com/rthornton128/calc/runtime"
 	if runtime.GOOS == "Windows" {
 		paths = strings.Split(os.Getenv("GOPATH"), ";")
 	} else {
@@ -42,8 +42,10 @@ func findRuntime() string {
 	}
 	for _, path := range paths {
 		//fmt.Println("searching:", path+rpath)
-		if _, err := os.Stat(path + rpath); err == nil || os.IsExist(err) {
-			return path + rpath
+		path = filepath.Join(path, rpath)
+		_, err := os.Stat(filepath.Join(path, "runtime.a"))
+		if err == nil || os.IsExist(err) {
+			return path
 		}
 	}
 	return ""
@@ -104,8 +106,8 @@ func main() {
 
 	/* do a preemptive search to see if runtime can be found. Does not
 	 * guarantee it will be there at link time */
-	runtime := findRuntime()
-	if runtime == "" {
+	rpath := findRuntime()
+	if rpath == "" {
 		fatal("Unable to find runtime in GOPATH. Make sure 'make' command was " +
 			"run in source directory")
 	}
@@ -121,7 +123,7 @@ func main() {
 
 	/* compile to object code */
 	var out []byte
-	args := make_args(*cfl, *cout+filename+".o", filename+".c")
+	args := make_args(*cfl, "-I "+rpath, *cout+filename+".o", filename+".c")
 	out, err = exec.Command(*cc+ext, strings.Split(args, " ")...).CombinedOutput()
 	if err != nil {
 		cleanup(filename)
@@ -129,7 +131,8 @@ func main() {
 	}
 
 	/* link to executable */
-	args = make_args(*ldf, *cout+filename+ext, filename+".o", runtime)
+	args = make_args(*ldf, *cout+filename+ext, filename+".o", "-L "+rpath,
+		"runtime.a")
 	out, err = exec.Command(*ld+ext, strings.Split(args, " ")...).CombinedOutput()
 	if err != nil {
 		cleanup(filename)

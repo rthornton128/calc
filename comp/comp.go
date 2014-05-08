@@ -87,6 +87,6 @@ func (c *compiler) compDecl(ob *ast.Object) {
 
 func (c *compiler) compFile(f *ast.File) {
 	fmt.Fprintln(c.fp, "#include <stdio.h>")
-	fmt.Fprintln(c.fp, "#include \"runtime.h\"")
+	fmt.Fprintln(c.fp, "#include <runtime.h>")
 	c.compDecl(f.Scope.Lookup("main"))
 }
