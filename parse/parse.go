@@ -76,6 +76,34 @@ func (p *parser) closeScope() {
 	p.curScope = p.curScope.Parent()
 }
 
+func (p *parser) parseAssignExpr(open token.Pos) *ast.AssignExpr {
+	pos := p.expect(token.ASSIGN)
+	nam := p.parseIdent()
+	val := p.parseGenExpr()
+
+	ob := &ast.Object{
+		NamePos: nam.NamePos,
+		Name:    nam.Name,
+		Type:    nil,
+		Value:   val,
+	}
+	old := p.curScope.Lookup(nam.Name)
+	if old == nil {
+		p.addError("Cannot assign to undeclared identifier " + nam.Name)
+	}
+	if ob.Type.Name != old.Type.Name {
+		p.addError("Cannot assign " + ob.Name + " of type (" + ob.Type.Name +
+			") to " + old.Name + " of type (" + ob.Type.Name + ")")
+	}
+	end := p.expect(token.RPAREN)
+	return &ast.AssignExpr{
+		Expression: ast.Expression{Opening: open, Closing: end},
+		Equal:      pos,
+		Name:       nam,
+		Object:     ob,
+	}
+}
+
 func (p *parser) parseBasicLit() *ast.BasicLit {
 	pos, tok, lit := p.pos, p.tok, p.lit
 	p.next()
@@ -112,6 +140,8 @@ func (p *parser) parseGenExpr() ast.Expr {
 	switch p.tok {
 	case token.LPAREN:
 		expr = p.parseExpr()
+	case token.IDENT:
+		expr = p.parseIdent()
 	case token.INTEGER:
 		expr = p.parseBasicLit()
 	default:
@@ -159,9 +189,8 @@ func (p *parser) parseFile() *ast.File {
 }
 
 func (p *parser) parseIdent() *ast.Ident {
-	pos := p.pos
 	name := p.lit
-	p.next()
+	pos := p.expect(token.IDENT)
 	return &ast.Ident{NamePos: pos, Name: name}
 }
 
@@ -203,7 +232,10 @@ func (p *parser) parseVarExpr(lparen token.Pos) *ast.VarExpr {
 		Value:   val,
 	}
 
-	p.curScope.Insert(ob)
+	if old := p.curScope.Insert(ob); old != nil {
+		p.addError("Identifier " + nam.Name + " redeclared; original " +
+			"declaration at " + p.file.Position(old.NamePos).String())
+	}
 
 	return &ast.VarExpr{
 		Expression: ast.Expression{Opening: lparen, Closing: rparen},
