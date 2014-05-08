@@ -175,14 +175,24 @@ func (p *parser) parseVarExpr(lparen token.Pos) *ast.VarExpr {
 		p.expect(token.IDENT)
 	}
 	nam := p.parseIdent()
-	switch p.tok {
-	case token.IDENT:
+
+	// TODO: Needs improvement; maybe a p.tryTypeOrExpression?
+	if p.tok == token.RPAREN {
+		p.addError("Expected type, expression or literal, got: )")
+	}
+
+	if p.tok == token.IDENT {
 		typ = p.parseIdent()
-	case token.RPAREN:
-		break
-	default:
+	}
+
+	if p.tok != token.RPAREN {
 		val = p.parseGenExpr()
 	}
+
+	if p.tok != token.RPAREN {
+		typ = p.parseIdent()
+	}
+	// TODO: end
 	rparen := p.expect(token.RPAREN)
 
 	ob := &ast.Object{
@@ -199,5 +209,6 @@ func (p *parser) parseVarExpr(lparen token.Pos) *ast.VarExpr {
 		Expression: ast.Expression{Opening: lparen, Closing: rparen},
 		Var:        varpos,
 		Name:       nam,
+		Object:     ob,
 	}
 }
