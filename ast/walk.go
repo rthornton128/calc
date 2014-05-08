@@ -57,5 +57,11 @@ func Walk(node Node, f Func) {
 		}
 	case *VarExpr:
 		Walk(n.Name, f)
+		if n.Object.Type != nil {
+			Walk(n.Object.Type, f)
+		}
+		if n.Object.Value != nil {
+			Walk(n.Object.Value, f)
+		}
 	}
 }

@@ -107,8 +107,9 @@ type Scope struct {
 
 type VarExpr struct {
 	Expression
-	Var  token.Pos
-	Name *Ident
+	Var    token.Pos
+	Name   *Ident
+	Object *Object
 }
 
 func (b *BasicLit) Pos() token.Pos   { return b.LitPos }
