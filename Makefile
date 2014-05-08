@@ -7,7 +7,7 @@ ARFLAGS=crv
 RM=rm
 RMFLAGS=-vf
 
-LIB=runtime.a
+LIB=runtime/runtime.a
 SRC=runtime/cmp.c\
     runtime/instructions.c\
     runtime/registers.c\
