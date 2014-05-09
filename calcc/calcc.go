@@ -131,8 +131,7 @@ func main() {
 	}
 
 	/* link to executable */
-	args = make_args(*ldf, *cout+filename+ext, filename+".o", "-L "+rpath,
-		"runtime.a")
+	args = make_args(*ldf, *cout+filename+ext, filename+".o", rpath+"/runtime.a")
 	out, err = exec.Command(*ld+ext, strings.Split(args, " ")...).CombinedOutput()
 	if err != nil {
 		cleanup(filename)
