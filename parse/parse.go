@@ -39,6 +39,8 @@ type parser struct {
 	lit string
 }
 
+/* Utility */
+
 func (p *parser) addError(msg string) {
 	p.errors.Add(p.file.Position(p.pos), msg)
 	if p.errors.Count() >= 10 {
@@ -68,6 +70,8 @@ func (p *parser) next() {
 	p.lit, p.tok, p.pos = p.scanner.Scan()
 }
 
+/* Scope */
+
 func (p *parser) openScope() {
 	p.curScope = ast.NewScope(p.curScope)
 }
@@ -76,32 +80,18 @@ func (p *parser) closeScope() {
 	p.curScope = p.curScope.Parent()
 }
 
+/* Parsing */
+
 func (p *parser) parseAssignExpr(open token.Pos) *ast.AssignExpr {
 	pos := p.expect(token.ASSIGN)
 	nam := p.parseIdent()
 	val := p.parseGenExpr()
-
-	ob := &ast.Object{
-		NamePos: nam.NamePos,
-		Name:    nam.Name,
-		Type:    nil,
-		Value:   val,
-	}
-	old := p.curScope.Lookup(nam.Name)
-	if old == nil {
-		p.addError("Cannot assign to undeclared identifier " + nam.Name)
-	}
-	/*
-		if ob.Type.Name != old.Type.Name {
-			p.addError("Cannot assign " + ob.Name + " of type (" + ob.Type.Name +
-				") to " + old.Name + " of type (" + ob.Type.Name + ")")
-		}*/
 	end := p.expect(token.RPAREN)
 	return &ast.AssignExpr{
 		Expression: ast.Expression{Opening: open, Closing: end},
 		Equal:      pos,
 		Name:       nam,
-		Object:     ob,
+		Value:      val,
 	}
 }
 
@@ -142,10 +132,6 @@ func (p *parser) parseCallExpr(open token.Pos) *ast.CallExpr {
 	var list []ast.Expr
 	for p.tok != token.RPAREN && p.tok != token.EOF {
 		list = append(list, p.parseGenExpr())
-	}
-	ob := p.curScope.Lookup(nam.Name)
-	if ob.Kind != ast.Decl {
-		p.addError("call to undeclared expression")
 	}
 	end := p.expect(token.RPAREN)
 	return &ast.CallExpr{
@@ -328,9 +314,6 @@ func (p *parser) parseVarExpr(lparen token.Pos) *ast.VarExpr {
 		val ast.Expr
 	)
 	varpos := p.expect(token.VAR)
-	if p.tok != token.IDENT {
-		p.expect(token.IDENT)
-	}
 	nam := p.parseIdent()
 
 	// TODO: Needs improvement; maybe a p.tryTypeOrExpression?
