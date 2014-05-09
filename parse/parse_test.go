@@ -14,21 +14,39 @@ import (
 	"github.com/rthornton128/calc/parse"
 )
 
+type Type int
+
 const (
-	BASIC = iota
+	ASSIGN Type = iota
+	BASIC
 	BINARY
 	IDENT
+	IF
 	FILE
+	LIST
 	VAR
 )
 
-func nodeTest(types []int, t *testing.T) func(node ast.Node) {
+var typeStrings = []string{
+	ASSIGN: "assignexpr",
+	BASIC:  "basiclit",
+	BINARY: "binaryexpr",
+	IDENT:  "ident",
+	IF:     "if",
+	FILE:   "file",
+	LIST:   "exprlist",
+	VAR:    "var",
+}
+
+func (t Type) String() string { return typeStrings[int(t)] }
+
+func nodeTest(types []Type, t *testing.T) func(node ast.Node) {
 	i := 0
 	return func(node ast.Node) {
 		switch node.(type) {
-		case *ast.File:
-			if types[i] != FILE {
-				t.Fatal("Walk index:", i, "Expected:", types[i], "Got:", FILE)
+		case *ast.AssignExpr:
+			if types[i] != ASSIGN {
+				t.Fatal("Walk index:", i, "Expected:", types[i], "Got:", ASSIGN)
 			}
 		case *ast.BasicLit:
 			if types[i] != BASIC {
@@ -38,9 +56,21 @@ func nodeTest(types []int, t *testing.T) func(node ast.Node) {
 			if types[i] != BINARY {
 				t.Fatal("Walk index:", i, "Expected:", types[i], "Got:", BINARY)
 			}
+		case *ast.ExprList:
+			if types[i] != LIST {
+				t.Fatal("Walk index:", i, "Expected:", types[i], "Got:", LIST)
+			}
+		case *ast.File:
+			if types[i] != FILE {
+				t.Fatal("Walk index:", i, "Expected:", types[i], "Got:", FILE)
+			}
 		case *ast.Ident:
 			if types[i] != IDENT {
 				t.Fatal("Walk index:", i, "Expected:", types[i], "Got:", IDENT)
+			}
+		case *ast.IfExpr:
+			if types[i] != IF {
+				t.Fatal("Walk index:", i, "Expected:", types[i], "Got:", IF)
 			}
 		case *ast.VarExpr:
 			if types[i] != VAR {
@@ -54,29 +84,45 @@ func nodeTest(types []int, t *testing.T) func(node ast.Node) {
 }
 
 func TestParseFileBasic(t *testing.T) {
-	var types = []int{FILE, IDENT, BINARY, BASIC, BASIC}
+	var types = []Type{FILE, IDENT, BINARY, BASIC, BASIC}
 
 	f := parse.ParseFile("test.calc", "(+ 3 5)")
 	ast.Walk(f, nodeTest(types, t))
 }
 
 func TestParseNested(t *testing.T) {
-	var types = []int{FILE, IDENT, BINARY, BINARY, BASIC, BASIC, BASIC, BINARY,
+	var types = []Type{FILE, IDENT, BINARY, BINARY, BASIC, BASIC, BASIC, BINARY,
 		BASIC, BASIC}
 	f := parse.ParseFile("test.calc", ";comment\n(+ (/ 9 3) 5 (- 3 1))")
 	ast.Walk(f, nodeTest(types, t))
 }
 
+func TestParseIf(t *testing.T) {
+	var types = []Type{FILE, IDENT, IF, IDENT, IDENT, BASIC}
+	f := parse.ParseFile("test.calc", "(if true int 3)")
+	ast.Walk(f, nodeTest(types, t))
+
+	types = []Type{FILE, IDENT, IF, BINARY, IDENT, IDENT, IDENT, IDENT, LIST,
+		BINARY, IDENT, BASIC, IDENT}
+	f = parse.ParseFile("test.calc", "(if (< a b) int a ((+ b 1) b))")
+	ast.Walk(f, nodeTest(types, t))
+
+	types = []Type{FILE, IDENT, IF, BINARY, IDENT, IDENT, LIST, IDENT, LIST,
+		IDENT}
+	f = parse.ParseFile("test.calc", "(if (< a b) (a) (a))")
+	ast.Walk(f, nodeTest(types, t))
+}
+
 func TestParseVar(t *testing.T) {
-	var types = []int{FILE, IDENT, VAR, IDENT, IDENT, BASIC}
+	var types = []Type{FILE, IDENT, VAR, IDENT, IDENT, BASIC}
 	f := parse.ParseFile("test.calc", "(var a 5 int)")
 	ast.Walk(f, nodeTest(types, t))
 
-	types = []int{FILE, IDENT, VAR, IDENT, IDENT}
+	types = []Type{FILE, IDENT, VAR, IDENT, IDENT}
 	f = parse.ParseFile("test.calc", "(var a int)")
 	ast.Walk(f, nodeTest(types, t))
 
-	types = []int{FILE, IDENT, VAR, IDENT, BASIC}
+	types = []Type{FILE, IDENT, VAR, IDENT, BASIC}
 	f = parse.ParseFile("test.calc", "(var a 5)")
 	ast.Walk(f, nodeTest(types, t))
 
