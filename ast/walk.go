@@ -7,11 +7,13 @@
 
 package ast
 
+import "reflect"
+
 type Func func(Node)
 
 func Walk(node Node, f Func) {
-	if node == nil {
-		panic("Node is nil!")
+	if node == nil || reflect.ValueOf(node).IsNil() {
+		return
 	}
 
 	if f != nil {
@@ -20,9 +22,7 @@ func Walk(node Node, f Func) {
 	switch n := node.(type) {
 	case *AssignExpr:
 		Walk(n.Name, f)
-		if n.Object.Type != nil {
-			Walk(n.Object.Type, f)
-		}
+		Walk(n.Object.Type, f)
 		Walk(n.Object.Value, f)
 	case *BinaryExpr:
 		for _, v := range n.List {
@@ -51,6 +51,7 @@ func Walk(node Node, f Func) {
 		}
 	case *IfExpr:
 		Walk(n.Cond, f)
+		Walk(n.Type, f)
 		Walk(n.Then, f)
 		Walk(n.Else, f)
 	case *Package:
@@ -60,11 +61,7 @@ func Walk(node Node, f Func) {
 		}
 	case *VarExpr:
 		Walk(n.Name, f)
-		if n.Object.Type != nil {
-			Walk(n.Object.Type, f)
-		}
-		if n.Object.Value != nil {
-			Walk(n.Object.Value, f)
-		}
+		Walk(n.Object.Type, f)
+		Walk(n.Object.Value, f)
 	}
 }
