@@ -43,6 +43,7 @@ type BinaryExpr struct {
 
 type CallExpr struct {
 	Expression
+	Call token.Pos
 	Name *Ident
 	Args []Expr
 }
