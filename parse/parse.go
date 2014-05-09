@@ -91,10 +91,11 @@ func (p *parser) parseAssignExpr(open token.Pos) *ast.AssignExpr {
 	if old == nil {
 		p.addError("Cannot assign to undeclared identifier " + nam.Name)
 	}
-	if ob.Type.Name != old.Type.Name {
-		p.addError("Cannot assign " + ob.Name + " of type (" + ob.Type.Name +
-			") to " + old.Name + " of type (" + ob.Type.Name + ")")
-	}
+	/*
+		if ob.Type.Name != old.Type.Name {
+			p.addError("Cannot assign " + ob.Name + " of type (" + ob.Type.Name +
+				") to " + old.Name + " of type (" + ob.Type.Name + ")")
+		}*/
 	end := p.expect(token.RPAREN)
 	return &ast.AssignExpr{
 		Expression: ast.Expression{Opening: open, Closing: end},
@@ -132,6 +133,92 @@ func (p *parser) parseBinaryExpr(open token.Pos) *ast.BinaryExpr {
 		OpPos: pos,
 		List:  list,
 	}
+}
+
+func (p *parser) parseCallExpr(open token.Pos) *ast.CallExpr {
+	pos := p.pos
+	nam := p.parseIdent()
+
+	var list []ast.Expr
+	for p.tok != token.RPAREN && p.tok != token.EOF {
+		list = append(list, p.parseGenExpr())
+	}
+	ob := p.curScope.Lookup(nam.Name)
+	if ob.Kind != ast.Decl {
+		p.addError("call to undeclared expression")
+	}
+	end := p.expect(token.RPAREN)
+	return &ast.CallExpr{
+		Expression: ast.Expression{
+			Opening: open,
+			Closing: end,
+		},
+		Call: pos,
+		Name: nam,
+		Args: list,
+	}
+}
+
+func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
+
+	pos := p.pos
+	nam := p.parseIdent()
+
+	p.openScope()
+
+	var list []*ast.Ident
+	if p.tok == token.LPAREN {
+		p.next()
+		list = p.parseParamList()
+	}
+
+	typ := p.parseIdent()
+	bod := p.parseExprList()
+
+	p.closeScope()
+
+	decl := &ast.DeclExpr{
+		Decl:   pos,
+		Name:   nam,
+		Type:   typ,
+		Params: list,
+		Body:   bod,
+	}
+	ob := &ast.Object{
+		NamePos: nam.NamePos,
+		Name:    nam.Name,
+		Kind:    ast.Decl,
+		Type:    typ,
+		Value:   decl,
+	}
+
+	if old := p.curScope.Insert(ob); old != nil {
+		p.addError("identifier already exists")
+	}
+
+	return decl
+}
+
+func (p *parser) parseExprList() ast.Expr {
+	open := p.expect(token.LPAREN)
+	if p.tok == token.LPAREN {
+		var list []ast.Expr
+		for p.tok != token.RPAREN {
+			list = append(list, p.parseGenExpr())
+		}
+		if len(list) < 1 {
+			p.addError("empty expression list not allowed")
+		}
+		end := p.expect(token.RPAREN)
+		return &ast.ExprList{
+			Expression: ast.Expression{
+				Opening: open,
+				Closing: end,
+			},
+			List: list,
+		}
+	}
+	return p.parseGenExpr()
 }
 
 func (p *parser) parseGenExpr() ast.Expr {
@@ -192,6 +279,15 @@ func (p *parser) parseIdent() *ast.Ident {
 	name := p.lit
 	pos := p.expect(token.IDENT)
 	return &ast.Ident{NamePos: pos, Name: name}
+}
+
+func (p *parser) parseParamList() []*ast.Ident {
+	// TODO: finish
+	var list []*ast.Ident
+	for p.tok != token.RPAREN {
+		list = append(list, p.parseIdent())
+	}
+	return list
 }
 
 func (p *parser) parseVarExpr(lparen token.Pos) *ast.VarExpr {
