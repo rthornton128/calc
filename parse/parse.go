@@ -199,9 +199,30 @@ func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
 	return decl
 }
 
+func (p *parser) parseExpr() ast.Expr {
+	var expr ast.Expr
+
+	pos := p.expect(token.LPAREN)
+	switch p.tok {
+	case token.ADD, token.SUB, token.MUL, token.QUO, token.REM,
+		token.EQL, token.GTE, token.GTT, token.NEQ, token.LST, token.LTE:
+		expr = p.parseBinaryExpr(pos)
+	case token.ASSIGN:
+		expr = p.parseAssignExpr(pos)
+	case token.IF:
+		expr = p.parseIfExpr(pos)
+	case token.VAR:
+		expr = p.parseVarExpr(pos)
+	default:
+		p.addError("Expected binary operator but got '" + p.lit + "'")
+	}
+
+	return expr
+}
+
 func (p *parser) parseExprList() ast.Expr {
-	open := p.expect(token.LPAREN)
 	if p.tok == token.LPAREN {
+		open := p.expect(token.LPAREN)
 		var list []ast.Expr
 		for p.tok != token.RPAREN {
 			list = append(list, p.parseGenExpr())
@@ -240,23 +261,6 @@ func (p *parser) parseGenExpr() ast.Expr {
 	return expr
 }
 
-func (p *parser) parseExpr() ast.Expr {
-	var expr ast.Expr
-
-	pos := p.expect(token.LPAREN)
-	switch p.tok {
-	case token.ADD, token.SUB, token.MUL, token.QUO, token.REM,
-		token.EQL, token.GTE, token.GTT, token.NEQ, token.LST, token.LTE:
-		expr = p.parseBinaryExpr(pos)
-	case token.VAR:
-		expr = p.parseVarExpr(pos)
-	default:
-		p.addError("Expected binary operator but got '" + p.lit + "'")
-	}
-
-	return expr
-}
-
 func (p *parser) parseFile() *ast.File {
 	var expr ast.Expr
 	expr = p.parseGenExpr()
@@ -288,6 +292,34 @@ func (p *parser) parseParamList() []*ast.Ident {
 		list = append(list, p.parseIdent())
 	}
 	return list
+}
+
+func (p *parser) parseIfExpr(open token.Pos) *ast.IfExpr {
+	pos := p.expect(token.IF)
+	cond := p.parseGenExpr()
+
+	var typ *ast.Ident
+	if p.tok == token.IDENT {
+		typ = p.parseIdent()
+	}
+
+	then := p.parseExprList()
+	var els ast.Expr
+	if p.tok != token.RPAREN {
+		els = p.parseExprList()
+	}
+	end := p.expect(token.RPAREN)
+	return &ast.IfExpr{
+		Expression: ast.Expression{
+			Opening: open,
+			Closing: end,
+		},
+		If:   pos,
+		Type: typ,
+		Cond: cond,
+		Then: then,
+		Else: els,
+	}
 }
 
 func (p *parser) parseVarExpr(lparen token.Pos) *ast.VarExpr {
