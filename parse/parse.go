@@ -30,6 +30,7 @@ type parser struct {
 	file    *token.File
 	errors  scan.ErrorList
 	scanner scan.Scanner
+	listok  bool
 
 	curScope *ast.Scope
 	topScope *ast.Scope
@@ -61,6 +62,7 @@ func (p *parser) expect(tok token.Token) token.Pos {
 func (p *parser) init(fname, src string) {
 	p.file = token.NewFile(fname, 1, len(src))
 	p.scanner.Init(p.file, src)
+	p.listok = false
 	p.curScope = ast.NewScope(nil)
 	p.topScope = p.curScope
 	p.next()
@@ -146,8 +148,7 @@ func (p *parser) parseCallExpr(open token.Pos) *ast.CallExpr {
 }
 
 func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
-
-	pos := p.pos
+	pos := p.expect(token.DECL)
 	nam := p.parseIdent()
 
 	p.openScope()
@@ -159,11 +160,17 @@ func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
 	}
 
 	typ := p.parseIdent()
-	bod := p.parseExprList()
+	bod := p.tryExprOrList()
 
 	p.closeScope()
 
+	end := p.expect(token.RPAREN)
+
 	decl := &ast.DeclExpr{
+		Expression: ast.Expression{
+			Opening: open,
+			Closing: end,
+		},
 		Decl:   pos,
 		Name:   nam,
 		Type:   typ,
@@ -187,45 +194,55 @@ func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
 
 func (p *parser) parseExpr() ast.Expr {
 	var expr ast.Expr
+	listok := p.listok
 
 	pos := p.expect(token.LPAREN)
+	if p.listok && p.tok == token.LPAREN {
+		expr = p.parseExprList(pos)
+		return expr
+	}
+	p.listok = false
 	switch p.tok {
 	case token.ADD, token.SUB, token.MUL, token.QUO, token.REM,
 		token.EQL, token.GTE, token.GTT, token.NEQ, token.LST, token.LTE:
 		expr = p.parseBinaryExpr(pos)
 	case token.ASSIGN:
 		expr = p.parseAssignExpr(pos)
+	case token.DECL:
+		expr = p.parseDeclExpr(pos)
 	case token.IF:
 		expr = p.parseIfExpr(pos)
 	case token.VAR:
 		expr = p.parseVarExpr(pos)
 	default:
-		p.addError("Expected binary operator but got '" + p.lit + "'")
+		if listok {
+			p.addError("Expected expression but got '" + p.lit + "'")
+		} else {
+			p.addError("Expected operator, keyword or identifier but got '" + p.lit +
+				"'")
+		}
 	}
 
 	return expr
 }
 
-func (p *parser) parseExprList() ast.Expr {
-	if p.tok == token.LPAREN {
-		open := p.expect(token.LPAREN)
-		var list []ast.Expr
-		for p.tok != token.RPAREN {
-			list = append(list, p.parseGenExpr())
-		}
-		if len(list) < 1 {
-			p.addError("empty expression list not allowed")
-		}
-		end := p.expect(token.RPAREN)
-		return &ast.ExprList{
-			Expression: ast.Expression{
-				Opening: open,
-				Closing: end,
-			},
-			List: list,
-		}
+func (p *parser) parseExprList(open token.Pos) ast.Expr {
+	p.listok = false
+	var list []ast.Expr
+	for p.tok != token.RPAREN {
+		list = append(list, p.parseGenExpr())
 	}
-	return p.parseGenExpr()
+	if len(list) < 1 {
+		p.addError("empty expression list not allowed")
+	}
+	end := p.expect(token.RPAREN)
+	return &ast.ExprList{
+		Expression: ast.Expression{
+			Opening: open,
+			Closing: end,
+		},
+		List: list,
+	}
 }
 
 func (p *parser) parseGenExpr() ast.Expr {
@@ -243,6 +260,7 @@ func (p *parser) parseGenExpr() ast.Expr {
 			token.INTEGER.String() + "' got '" + p.lit + "'")
 		p.next()
 	}
+	p.listok = false
 
 	return expr
 }
@@ -271,15 +289,6 @@ func (p *parser) parseIdent() *ast.Ident {
 	return &ast.Ident{NamePos: pos, Name: name}
 }
 
-func (p *parser) parseParamList() []*ast.Ident {
-	// TODO: finish
-	var list []*ast.Ident
-	for p.tok != token.RPAREN {
-		list = append(list, p.parseIdent())
-	}
-	return list
-}
-
 func (p *parser) parseIfExpr(open token.Pos) *ast.IfExpr {
 	pos := p.expect(token.IF)
 	cond := p.parseGenExpr()
@@ -289,10 +298,10 @@ func (p *parser) parseIfExpr(open token.Pos) *ast.IfExpr {
 		typ = p.parseIdent()
 	}
 
-	then := p.parseExprList()
+	then := p.tryExprOrList()
 	var els ast.Expr
 	if p.tok != token.RPAREN {
-		els = p.parseExprList()
+		els = p.tryExprOrList()
 	}
 	end := p.expect(token.RPAREN)
 	return &ast.IfExpr{
@@ -306,6 +315,31 @@ func (p *parser) parseIfExpr(open token.Pos) *ast.IfExpr {
 		Then: then,
 		Else: els,
 	}
+}
+
+func (p *parser) parseParamList() []*ast.Ident {
+	var list []*ast.Ident
+	count, start := 0, 0
+	for p.tok != token.RPAREN {
+		ident := p.parseIdent()
+		count++
+		if p.tok == token.COMMA || p.tok == token.RPAREN {
+			for _, param := range list[start:] {
+				if param.Object == nil {
+					param.Object = &ast.Object{
+						Kind: ast.Var,
+						Name: param.Name,
+					}
+				}
+				param.Object.Type = ident
+			}
+			start = count
+			continue
+		}
+		list = append(list, ident)
+	}
+	p.expect(token.RPAREN)
+	return list
 }
 
 func (p *parser) parseVarExpr(lparen token.Pos) *ast.VarExpr {
@@ -354,4 +388,9 @@ func (p *parser) parseVarExpr(lparen token.Pos) *ast.VarExpr {
 		Name:       nam,
 		Object:     ob,
 	}
+}
+
+func (p *parser) tryExprOrList() ast.Expr {
+	p.listok = true
+	return p.parseGenExpr()
 }

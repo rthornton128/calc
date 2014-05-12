@@ -20,6 +20,7 @@ const (
 	ASSIGN Type = iota
 	BASIC
 	BINARY
+	DECL
 	IDENT
 	IF
 	FILE
@@ -31,6 +32,7 @@ var typeStrings = []string{
 	ASSIGN: "assignexpr",
 	BASIC:  "basiclit",
 	BINARY: "binaryexpr",
+	DECL:   "declexpr",
 	IDENT:  "ident",
 	IF:     "if",
 	FILE:   "file",
@@ -56,6 +58,10 @@ func nodeTest(types []Type, t *testing.T) func(node ast.Node) {
 			if types[i] != BINARY {
 				t.Fatal("Walk index:", i, "Expected:", types[i], "Got:", BINARY)
 			}
+		case *ast.DeclExpr:
+			if types[i] != DECL {
+				t.Fatal("Walk index:", i, "Expected:", types[i], "Got:", DECL)
+			}
 		case *ast.ExprList:
 			if types[i] != LIST {
 				t.Fatal("Walk index:", i, "Expected:", types[i], "Got:", LIST)
@@ -65,6 +71,7 @@ func nodeTest(types []Type, t *testing.T) func(node ast.Node) {
 				t.Fatal("Walk index:", i, "Expected:", types[i], "Got:", FILE)
 			}
 		case *ast.Ident:
+			t.Log("ident:", node.(*ast.Ident).Name)
 			if types[i] != IDENT {
 				t.Fatal("Walk index:", i, "Expected:", types[i], "Got:", IDENT)
 			}
@@ -86,47 +93,88 @@ func nodeTest(types []Type, t *testing.T) func(node ast.Node) {
 func TestParseFileBasic(t *testing.T) {
 	var types = []Type{FILE, IDENT, BINARY, BASIC, BASIC}
 
-	f := parse.ParseFile("test.calc", "(+ 3 5)")
+	f := parse.ParseFile("basic.calc", "(+ 3 5)")
+	if f == nil {
+		t.Fatal("Failed to parse")
+	}
+	ast.Walk(f, nodeTest(types, t))
+}
+
+func TestParseDecl(t *testing.T) {
+	var types = []Type{FILE, IDENT, DECL, IDENT, IDENT, BINARY, BASIC, BASIC}
+	f := parse.ParseFile("decl1.calc", "(decl five int (+ 2 3))")
+	if f == nil {
+		t.Fatal("Failed to parse")
+	}
+	ast.Walk(f, nodeTest(types, t))
+
+	types = []Type{FILE, IDENT, DECL, IDENT, IDENT, IDENT, IDENT, BINARY,
+		IDENT, IDENT}
+	f = parse.ParseFile("decl2.calc", "(decl add(a b int) int (+ a b))")
+	if f == nil {
+		t.Fatal("Failed to parse")
+	}
+	ast.Walk(f, nodeTest(types, t))
+}
+
+func TestParseIf(t *testing.T) {
+	types := []Type{FILE, IDENT, IF, IDENT, IDENT, BASIC}
+	f := parse.ParseFile("if.calc", "(if true int 3)")
+	if f == nil {
+		t.Fatal("Failed to parse")
+	}
+	ast.Walk(f, nodeTest(types, t))
+
+	types = []Type{FILE, IDENT, IF, BINARY, IDENT, IDENT, IDENT, IDENT, LIST,
+		BINARY, IDENT, BASIC, IDENT}
+	f = parse.ParseFile("if2.calc", "(if (< a b) int a ((+ b 1) b))")
+	if f == nil {
+		t.Fatal("Failed to parse")
+	}
+	ast.Walk(f, nodeTest(types, t))
+
+	types = []Type{FILE, IDENT, IF, BINARY, IDENT, IDENT, LIST, ASSIGN, IDENT,
+		IDENT}
+	f = parse.ParseFile("if3.calc", "(if (< a b) ((= a b)))")
+	if f == nil {
+		t.Fatal("Failed to parse")
+	}
 	ast.Walk(f, nodeTest(types, t))
 }
 
 func TestParseNested(t *testing.T) {
 	var types = []Type{FILE, IDENT, BINARY, BINARY, BASIC, BASIC, BASIC, BINARY,
 		BASIC, BASIC}
-	f := parse.ParseFile("test.calc", ";comment\n(+ (/ 9 3) 5 (- 3 1))")
-	ast.Walk(f, nodeTest(types, t))
-}
-
-func TestParseIf(t *testing.T) {
-	var types = []Type{FILE, IDENT, IF, IDENT, IDENT, BASIC}
-	f := parse.ParseFile("test.calc", "(if true int 3)")
-	ast.Walk(f, nodeTest(types, t))
-
-	types = []Type{FILE, IDENT, IF, BINARY, IDENT, IDENT, IDENT, IDENT, LIST,
-		BINARY, IDENT, BASIC, IDENT}
-	f = parse.ParseFile("test.calc", "(if (< a b) int a ((+ b 1) b))")
-	ast.Walk(f, nodeTest(types, t))
-
-	types = []Type{FILE, IDENT, IF, BINARY, IDENT, IDENT, LIST, IDENT, LIST,
-		IDENT}
-	f = parse.ParseFile("test.calc", "(if (< a b) (a) (a))")
+	f := parse.ParseFile("nested.calc", ";comment\n(+ (/ 9 3) 5 (- 3 1))")
+	if f == nil {
+		t.Fatal("Failed to parse")
+	}
 	ast.Walk(f, nodeTest(types, t))
 }
 
 func TestParseVar(t *testing.T) {
 	var types = []Type{FILE, IDENT, VAR, IDENT, IDENT, BASIC}
-	f := parse.ParseFile("test.calc", "(var a 5 int)")
+	f := parse.ParseFile("var.calc", "(var a 5 int)")
+	if f == nil {
+		t.Fatal("Failed to parse")
+	}
 	ast.Walk(f, nodeTest(types, t))
 
 	types = []Type{FILE, IDENT, VAR, IDENT, IDENT}
-	f = parse.ParseFile("test.calc", "(var a int)")
+	f = parse.ParseFile("var2.calc", "(var a int)")
+	if f == nil {
+		t.Fatal("Failed to parse")
+	}
 	ast.Walk(f, nodeTest(types, t))
 
 	types = []Type{FILE, IDENT, VAR, IDENT, BASIC}
-	f = parse.ParseFile("test.calc", "(var a 5)")
+	f = parse.ParseFile("var3.calc", "(var a 5)")
+	if f == nil {
+		t.Fatal("Failed to parse")
+	}
 	ast.Walk(f, nodeTest(types, t))
 
-	f = parse.ParseFile("test.calc", "(var a)")
+	f = parse.ParseFile("var4.calc", "(var a)")
 	if f != nil {
 		t.Fatal("Parser returned valid object but expected nil")
 	}
