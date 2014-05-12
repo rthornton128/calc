@@ -22,8 +22,7 @@ func Walk(node Node, f Func) {
 	switch n := node.(type) {
 	case *AssignExpr:
 		Walk(n.Name, f)
-		Walk(n.Object.Type, f)
-		Walk(n.Object.Value, f)
+		Walk(n.Value, f)
 	case *BinaryExpr:
 		for _, v := range n.List {
 			Walk(v, f)
@@ -35,10 +34,10 @@ func Walk(node Node, f Func) {
 		}
 	case *DeclExpr:
 		Walk(n.Name, f)
-		Walk(n.Type, f)
 		for _, v := range n.Params {
 			Walk(v, f)
 		}
+		Walk(n.Type, f)
 		Walk(n.Body, f)
 	case *ExprList:
 		for _, v := range n.List {

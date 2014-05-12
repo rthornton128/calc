@@ -23,9 +23,9 @@ type Expr interface {
 
 type AssignExpr struct {
 	Expression
-	Equal  token.Pos
-	Name   *Ident
-	Object *Object
+	Equal token.Pos
+	Name  *Ident
+	Value Expr
 }
 
 type BasicLit struct {
