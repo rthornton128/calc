@@ -210,6 +210,8 @@ func (p *parser) parseExpr() ast.Expr {
 		expr = p.parseAssignExpr(pos)
 	case token.DECL:
 		expr = p.parseDeclExpr(pos)
+	case token.IDENT:
+		expr = p.parseCallExpr(pos)
 	case token.IF:
 		expr = p.parseIfExpr(pos)
 	case token.VAR:
@@ -329,7 +331,7 @@ func (p *parser) parseParamList() []*ast.Ident {
 		list = append(list, ident)
 	}
 	if len(list) < 1 {
-		p.addError("empty parameter list must not be empty")
+		p.addError("empty param list not allowed")
 	}
 	p.expect(token.RPAREN)
 	return list

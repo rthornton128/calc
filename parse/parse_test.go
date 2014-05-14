@@ -20,6 +20,7 @@ const (
 	ASSIGN Type = iota
 	BASIC
 	BINARY
+	CALL
 	DECL
 	IDENT
 	IF
@@ -32,6 +33,7 @@ var typeStrings = []string{
 	ASSIGN: "assignexpr",
 	BASIC:  "basiclit",
 	BINARY: "binaryexpr",
+	CALL:   "callexpr",
 	DECL:   "declexpr",
 	IDENT:  "ident",
 	IF:     "if",
@@ -57,6 +59,10 @@ func nodeTest(types []Type, t *testing.T) func(node ast.Node) {
 		case *ast.BinaryExpr:
 			if types[i] != BINARY {
 				t.Fatal("Walk index:", i, "Expected:", types[i], "Got:", BINARY)
+			}
+		case *ast.CallExpr:
+			if types[i] != CALL {
+				t.Fatal("Walk index:", i, "Expected:", types[i], "Got:", CALL)
 			}
 		case *ast.DeclExpr:
 			if types[i] != DECL {
@@ -93,6 +99,23 @@ func nodeTest(types []Type, t *testing.T) func(node ast.Node) {
 func TestParseFileBasic(t *testing.T) {
 	types := []Type{FILE, DECL, IDENT, IDENT, BINARY, BASIC, BASIC}
 	f := parse.ParseFile("basicdec", "(decl main int (+ 1 2))")
+	if f == nil {
+		t.Fatal("Failed to parse")
+	}
+	ast.Walk(f, nodeTest(types, t))
+}
+
+func TestParseCall(t *testing.T) {
+	types := []Type{FILE, DECL, IDENT, IDENT, CALL, IDENT, BASIC, BASIC,
+		BASIC, BASIC}
+	f := parse.ParseFile("call1", "(decl main int (add 1 2 3 4))")
+	if f == nil {
+		t.Fatal("Failed to parse")
+	}
+	ast.Walk(f, nodeTest(types, t))
+
+	types = []Type{FILE, DECL, IDENT, IDENT, CALL, IDENT}
+	f = parse.ParseFile("call1", "(decl main int (nothing))")
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
