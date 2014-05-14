@@ -79,7 +79,7 @@ func (p *parser) openScope() {
 }
 
 func (p *parser) closeScope() {
-	p.curScope = p.curScope.Parent()
+	p.curScope = p.curScope.Parent
 }
 
 /* Parsing */

@@ -102,8 +102,8 @@ type Package struct {
 }
 
 type Scope struct {
-	parent *Scope
-	table  map[string]*Object
+	Parent *Scope
+	Table  map[string]*Object
 }
 
 type VarExpr struct {
@@ -136,32 +136,28 @@ const (
 )
 
 func NewScope(parent *Scope) *Scope {
-	return &Scope{parent: parent, table: make(map[string]*Object)}
+	return &Scope{Parent: parent, Table: make(map[string]*Object)}
 }
 
 func (s *Scope) Insert(ob *Object) *Object {
-	if old, ok := s.table[ob.Name]; ok {
+	if old, ok := s.Table[ob.Name]; ok {
 		return old
 	}
-	s.table[ob.Name] = ob
+	s.Table[ob.Name] = ob
 	return nil
 }
 
 func (s *Scope) Lookup(ident string) *Object {
-	ob, ok := s.table[ident]
+	ob, ok := s.Table[ident]
 	if !ok {
-		if s.parent == nil {
+		if s.Parent == nil {
 			return nil
 		}
-		return s.parent.Lookup(ident)
+		return s.Parent.Lookup(ident)
 	}
 	return ob
 }
 
-func (s *Scope) Parent() *Scope {
-	return s.parent
-}
-
 func (s *Scope) Size() int {
-	return len(s.table)
+	return len(s.Table)
 }

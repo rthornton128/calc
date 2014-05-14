@@ -44,7 +44,7 @@ func Walk(node Node, f Func) {
 			Walk(v, f)
 		}
 	case *File:
-		for _, v := range n.Scope.table {
+		for _, v := range n.Scope.Table {
 			Walk(v.Value, f)
 		}
 	case *IfExpr:
@@ -53,7 +53,7 @@ func Walk(node Node, f Func) {
 		Walk(n.Then, f)
 		Walk(n.Else, f)
 	case *Package:
-		for _, v := range n.Scope.table {
+		for _, v := range n.Scope.Table {
 			Walk(v.Value, f)
 		}
 	case *VarExpr:
