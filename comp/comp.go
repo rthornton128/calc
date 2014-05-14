@@ -50,6 +50,8 @@ func (c *compiler) compNode(node ast.Node) int {
 		return i
 	case *ast.BinaryExpr:
 		return c.compBinaryExpr(n)
+	case *ast.DeclExpr:
+		return c.compDeclExpr(n)
 	default:
 		return 0 /* can't be reached */
 	}
@@ -78,15 +80,25 @@ func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) int {
 	return tmp
 }
 
-func (c *compiler) compDecl(ob *ast.Object) {
-	fmt.Fprintf(c.fp, "%s %s(void) {\n", ob.Type.Name, ob.Name)
-	fmt.Fprintf(c.fp, "printf(\"%%d\", %d);\n", c.compNode(ob.Value))
+func (c *compiler) compDeclExpr(d *ast.DeclExpr) int {
+	fmt.Fprintf(c.fp, "int %s(void) {\n", d.Name.Name)
+	fmt.Fprintf(c.fp, "printf(\"%%d\\n\", %d);\n", c.compNode(d.Body))
 	fmt.Fprintf(c.fp, "return *(int32_t *)eax;\n")
 	fmt.Fprintln(c.fp, "}")
+	return 0
+}
+
+func (c *compiler) compScopeDecls(scope *ast.Scope) {
+	for k, v := range scope.Table {
+		if v.Kind == ast.Decl {
+			fmt.Fprintf(c.fp, "int %s(void);\n", k)
+			defer c.compNode(v.Value)
+		}
+	}
 }
 
 func (c *compiler) compFile(f *ast.File) {
 	fmt.Fprintln(c.fp, "#include <stdio.h>")
 	fmt.Fprintln(c.fp, "#include <runtime.h>")
-	c.compDecl(f.Scope.Lookup("main"))
+	c.compScopeDecls(f.Scope)
 }
