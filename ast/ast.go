@@ -161,3 +161,7 @@ func (s *Scope) Lookup(ident string) *Object {
 func (s *Scope) Parent() *Scope {
 	return s.parent
 }
+
+func (s *Scope) Size() int {
+	return len(s.table)
+}

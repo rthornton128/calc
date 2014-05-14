@@ -268,9 +268,11 @@ func (p *parser) parseGenExpr() ast.Expr {
 }
 
 func (p *parser) parseFile() *ast.File {
-	p.parseGenExpr()
-	if p.tok != token.EOF {
-		p.addError("Expected EOF, got '" + p.lit + "'")
+	for p.tok != token.EOF {
+		p.parseGenExpr()
+	}
+	if p.topScope.Size() < 1 {
+		p.addError("reached end of file without any declarations")
 	}
 	return &ast.File{Scope: p.topScope}
 }
