@@ -266,21 +266,11 @@ func (p *parser) parseGenExpr() ast.Expr {
 }
 
 func (p *parser) parseFile() *ast.File {
-	var expr ast.Expr
-	expr = p.parseGenExpr()
+	p.parseGenExpr()
 	if p.tok != token.EOF {
 		p.addError("Expected EOF, got '" + p.lit + "'")
 	}
-	scope := ast.NewScope(nil)
-	ob := &ast.Object{
-		NamePos: token.NoPos,
-		Name:    "main",
-		Kind:    ast.Decl,
-		Type:    &ast.Ident{NamePos: token.NoPos, Name: "int"},
-		Value:   expr,
-	}
-	scope.Insert(ob)
-	return &ast.File{Scope: scope}
+	return &ast.File{Scope: p.topScope}
 }
 
 func (p *parser) parseIdent() *ast.Ident {
@@ -337,6 +327,9 @@ func (p *parser) parseParamList() []*ast.Ident {
 			continue
 		}
 		list = append(list, ident)
+	}
+	if len(list) < 1 {
+		p.addError("empty parameter list must not be empty")
 	}
 	p.expect(token.RPAREN)
 	return list
