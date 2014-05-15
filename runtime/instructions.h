@@ -12,6 +12,8 @@
 
 void enter(const int32_t n);
 void leave(void);
+void popl(char *dest);
+void pushl(const char *src);
 
 void movl(const char *src, char *dest);
 void setl(const int32_t n, char *dest);

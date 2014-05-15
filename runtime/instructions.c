@@ -31,6 +31,20 @@ void leave() {
 	ebp = &ss[0]+(int)*esp;
 }
 
+void popl(char *dest) {
+	esp -= 4;
+	movl(esp, dest);
+}
+
+void pushl(const char *src) {
+	if ((esp - &ss[0]) + 4 >= scap) {
+		fprintf(stderr, "Stack overflow!\n");
+		exit(EXIT_FAILURE);
+	}
+	movl(src, esp);
+	esp += 4;
+}
+
 /* memory */
 void movl(const char *src, char *dest) { memmove(dest, src, sizeof (int32_t)); }
 void setl(const int32_t n, char *dest) { movl((char *)&n, dest); }
