@@ -1,2 +1,2 @@
 ; Test script
-(decl main int (+ (* 1 5) (/ 9 3)))
+(decl main int (- (* 1 5) (/ 9 3)))
