@@ -39,6 +39,7 @@ func CompileFile(fname, src string) {
 	c.compFile(f)
 }
 
+/* Main Compiler */
 func (c *compiler) compNode(node ast.Node) int {
 	switch n := node.(type) {
 	case *ast.BasicLit:
@@ -60,20 +61,34 @@ func (c *compiler) compNode(node ast.Node) int {
 func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) int {
 	var tmp int
 
-	tmp = c.compNode(b.List[0])
+	switch n := b.List[0].(type) {
+	case *ast.BasicLit:
+		c.compInt(n, "eax")
+	case *ast.BinaryExpr:
+		c.compBinaryExpr(n)
+	}
 
 	for _, node := range b.List[1:] {
+		switch n := node.(type) {
+		case *ast.BasicLit:
+			c.compInt(n, "edx")
+		case *ast.BinaryExpr:
+			fmt.Fprintln(c.fp, "pushl(eax);")
+			c.compBinaryExpr(n)
+			fmt.Fprintln(c.fp, "movl(eax, edx);")
+			fmt.Fprintln(c.fp, "popl(eax);")
+		}
 		switch b.Op {
 		case token.ADD:
-			tmp += c.compNode(node)
+			fmt.Fprintln(c.fp, "addl(edx, eax);")
 		case token.SUB:
-			tmp -= c.compNode(node)
+			fmt.Fprintln(c.fp, "subl(edx, eax);")
 		case token.MUL:
-			tmp *= c.compNode(node)
+			fmt.Fprintln(c.fp, "mull(edx, eax);")
 		case token.QUO:
-			tmp /= c.compNode(node)
+			fmt.Fprintln(c.fp, "divl(edx, eax);")
 		case token.REM:
-			tmp %= c.compNode(node)
+			fmt.Fprintln(c.fp, "reml(edx, eax);")
 		}
 	}
 
@@ -82,10 +97,33 @@ func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) int {
 
 func (c *compiler) compDeclExpr(d *ast.DeclExpr) int {
 	fmt.Fprintf(c.fp, "int %s(void) {\n", d.Name.Name)
-	fmt.Fprintf(c.fp, "printf(\"%%d\\n\", %d);\n", c.compNode(d.Body))
+	if d.Name.Name == "main" {
+		fmt.Fprintln(c.fp, "stack_init();")
+	}
+	x := len(d.Params) // TODO: need to count all locals, calls
+	if x > 0 {
+		fmt.Fprintf(c.fp, "enter(%d);\n", x)
+		c.compNode(d.Body)
+		fmt.Fprintln(c.fp, "leave();")
+	} else {
+		c.compNode(d.Body)
+	}
+	if d.Name.Name == "main" {
+		fmt.Fprintln(c.fp, "printf(\"%d\\n\", *(int32_t *)eax);")
+		fmt.Fprintln(c.fp, "stack_end();")
+	}
 	fmt.Fprintf(c.fp, "return *(int32_t *)eax;\n")
 	fmt.Fprintln(c.fp, "}")
 	return 0
+}
+
+func (c *compiler) compInt(n *ast.BasicLit, reg string) {
+	i, err := strconv.Atoi(n.Lit)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	fmt.Fprintf(c.fp, "setl(%d, %s);\n", i, reg)
 }
 
 func (c *compiler) compScopeDecls(scope *ast.Scope) {
