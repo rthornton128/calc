@@ -1,4 +1,10 @@
 ; Test script
 (decl add (a b int) int (+ a b))
 
-(decl main int (- (add 10 8) (* 1 5) (/ 9 3 )))
+;(decl fib (n int) int (
+;	(if (<= n 0) int 0)
+;	(if (== n 1) int 1 (
+;		(+ n (fib (- n 1)))))))
+
+;(decl main int (- (add 10 8) (* 1 5) (/ 9 3 )))
+(decl main int (add 3 2))
