@@ -6,12 +6,16 @@
  * http://opensource.org/licenses/BSD-2-Clause */
 
 #include "cmp.h"
+#include "instructions.h"
 
 #include <string.h>
 
-int gel(char *a, char *b) { return gtl(a, b) || eql(a, b); }
-int gtl(char *a, char *b) { return memcmp(a, b, 4) == 1; }
-int lel(char *a, char *b) { return ltl(a, b) || eql(a, b); }
-int ltl(char *a, char *b) { return memcmp(a, b, 4) == -1; }
-int eql(char *a, char *b) { return memcmp(a, b, 4) == 0; }
-int nel(char *a, char *b) { return memcmp(a, b, 4) != 0; }
+void gel(char *a, char *b) { setl(memcmp(a, b, 4) != -1, b); }
+void gtl(char *a, char *b) { setl(memcmp(a, b, 4) == 1, b); }
+void lel(char *a, char *b) { setl(memcmp(a, b, 4) != 1, b); }
+void ltl(char *a, char *b) { setl(memcmp(a, b, 4) == -1, b); }
+void eql(char *a, char *b) { setl(memcmp(a, b, 4) == 0, b); }
+void nel(char *a, char *b) { setl(memcmp(a, b, 4) != 0, b); }
+
+void andl(char *a, char *b) {}
+void orl(char *a, char *b) {}
