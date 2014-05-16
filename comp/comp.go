@@ -19,7 +19,10 @@ import (
 )
 
 type compiler struct {
-	fp *os.File
+	fp       *os.File
+	curDecl  string
+	curScope *ast.Scope
+	symbols  map[string]int
 }
 
 func CompileFile(fname, src string) {
@@ -37,6 +40,7 @@ func CompileFile(fname, src string) {
 		os.Exit(1)
 	}
 	c.fp = fp
+	c.symbols = make(map[string]int)
 	c.compFile(f)
 }
 
@@ -52,20 +56,30 @@ func roundUp16(n int) int {
 /* Main Compiler */
 
 func (c *compiler) compNode(node ast.Node) int {
+	fmt.Println("compNode")
 	switch n := node.(type) {
-	case *ast.BasicLit: /* nop */
+	case *ast.BasicLit:
+		c.compInt(n, "eax")
 	case *ast.BinaryExpr:
 		return c.compBinaryExpr(n)
+	case *ast.CallExpr:
+		return c.compCallExpr(n)
 	case *ast.DeclExpr:
 		return c.compDeclExpr(n)
+	case *ast.ExprList:
+		for i := range n.List {
+			c.compNode(n.List[i])
+		}
+	case *ast.Ident:
+		c.compIdent(n, "movl(ebp+%d, eax);\n")
+	case *ast.IfExpr:
+		fmt.Println("if")
+		c.compIfExpr(n)
 	}
 	return 0
 }
 
 func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) int {
-	vars := map[string]int{}
-	noffset := 0
-
 	switch n := b.List[0].(type) {
 	case *ast.BasicLit:
 		c.compInt(n, "eax")
@@ -74,7 +88,7 @@ func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) int {
 	case *ast.CallExpr:
 		c.compCallExpr(n)
 	case *ast.Ident:
-		noffset = c.compIdent(n, noffset, vars, "movl(ebp+%d, eax);\n")
+		c.compIdent(n, "movl(ebp+%d, eax);\n")
 	}
 
 	for _, node := range b.List[1:] {
@@ -92,7 +106,7 @@ func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) int {
 			fmt.Fprintln(c.fp, "movl(eax, edx);")
 			fmt.Fprintln(c.fp, "popl(eax);")
 		case *ast.Ident:
-			noffset = c.compIdent(n, noffset, vars, "movl(ebp+%d, edx);\n")
+			c.compIdent(n, "movl(ebp+%d, edx);\n")
 		}
 		switch b.Op {
 		case token.ADD:
@@ -105,6 +119,22 @@ func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) int {
 			fmt.Fprintln(c.fp, "divl(edx, eax);")
 		case token.REM:
 			fmt.Fprintln(c.fp, "reml(edx, eax);")
+		case token.AND:
+			fmt.Fprintln(c.fp, "andl(eax, edx);")
+		case token.EQL:
+			fmt.Fprintln(c.fp, "eql(eax, edx);")
+		case token.GTE:
+			fmt.Fprintln(c.fp, "gel(eax, edx);")
+		case token.GTT:
+			fmt.Fprintln(c.fp, "gtl(eax, edx);")
+		case token.LST:
+			fmt.Fprintln(c.fp, "ltl(eax, edx);")
+		case token.LTE:
+			fmt.Fprintln(c.fp, "lel(eax, edx);")
+		case token.NEQ:
+			fmt.Fprintln(c.fp, "nel(eax, edx);")
+		case token.OR:
+			fmt.Fprintln(c.fp, "orl(eax, edx);")
 		}
 	}
 
@@ -112,7 +142,6 @@ func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) int {
 }
 
 func (c *compiler) compCallExpr(e *ast.CallExpr) int {
-	//vars := map[string]int{}
 	offset := 4
 
 	for _, v := range e.Args {
@@ -120,6 +149,8 @@ func (c *compiler) compCallExpr(e *ast.CallExpr) int {
 		case *ast.BasicLit:
 			c.compInt(n, fmt.Sprintf("esp+%d", offset))
 			offset += 4
+		default:
+			c.compNode(n)
 		}
 	}
 	fmt.Fprintf(c.fp, "%s();\n", e.Name.Name)
@@ -127,6 +158,12 @@ func (c *compiler) compCallExpr(e *ast.CallExpr) int {
 }
 
 func (c *compiler) compDeclExpr(d *ast.DeclExpr) int {
+	offset := 0
+	c.curDecl = d.Name.Name
+	for _, p := range d.Params {
+		c.symbols[c.curDecl+p.Name] = offset
+		offset += 4
+	}
 	if d.Name.Name == "main" {
 		fmt.Fprintf(c.fp, "int %s(void) {\n", d.Name.Name)
 		fmt.Fprintln(c.fp, "stack_init();")
@@ -136,6 +173,7 @@ func (c *compiler) compDeclExpr(d *ast.DeclExpr) int {
 	x := c.countVars(d)
 	if x > 0 {
 		fmt.Fprintf(c.fp, "enter(%d);\n", roundUp16(x))
+		fmt.Println("comp body")
 		c.compNode(d.Body)
 		fmt.Fprintln(c.fp, "leave();")
 	} else {
@@ -149,23 +187,39 @@ func (c *compiler) compDeclExpr(d *ast.DeclExpr) int {
 		fmt.Fprintf(c.fp, "return;\n")
 	}
 	fmt.Fprintln(c.fp, "}")
+	//c.curScope = c.curScope.Parent
 	return 0
 }
 
-func (c *compiler) compIdent(
-	n *ast.Ident,
-	noffset int,
-	vars map[string]int,
-	format string,
-) int {
-	offset, ok := vars[n.Name]
+func (c *compiler) compFile(f *ast.File) {
+	fmt.Fprintln(c.fp, "#include <stdio.h>")
+	fmt.Fprintln(c.fp, "#include <runtime.h>")
+	c.curScope = f.Scope
+	c.compScopeDecls()
+}
+
+func (c *compiler) compIdent(n *ast.Ident, format string) {
+	offset, ok := c.symbols[c.curDecl+n.Name]
 	if !ok {
-		offset = noffset
-		vars[n.Name] = offset
-		noffset += 4
+		fmt.Println("error: no offset")
 	}
 	fmt.Fprintf(c.fp, format, offset)
-	return noffset
+}
+
+func (c *compiler) compIfExpr(n *ast.IfExpr) {
+	switch e := n.Cond.(type) {
+	case *ast.BasicLit:
+		c.compInt(e, "eax")
+	case *ast.BinaryExpr:
+		c.compBinaryExpr(e)
+	}
+	fmt.Fprintln(c.fp, "if (*(int32_t *)eax != 0) {")
+	c.compNode(n.Then)
+	if n.Else != nil && !reflect.ValueOf(n.Else).IsNil() {
+		fmt.Fprintln(c.fp, "} else {")
+		c.compNode(n.Else)
+	}
+	fmt.Fprintln(c.fp, "}")
 }
 
 func (c *compiler) compInt(n *ast.BasicLit, reg string) {
@@ -177,8 +231,8 @@ func (c *compiler) compInt(n *ast.BasicLit, reg string) {
 	fmt.Fprintf(c.fp, "setl(%d, %s);\n", i, reg)
 }
 
-func (c *compiler) compScopeDecls(scope *ast.Scope) {
-	for k, v := range scope.Table {
+func (c *compiler) compScopeDecls() {
+	for k, v := range c.curScope.Table {
 		if v.Kind == ast.Decl {
 			if v.Name != "main" {
 				fmt.Fprintf(c.fp, "void %s(void);\n", k)
@@ -188,13 +242,17 @@ func (c *compiler) compScopeDecls(scope *ast.Scope) {
 	}
 }
 
-func (c *compiler) compFile(f *ast.File) {
-	fmt.Fprintln(c.fp, "#include <stdio.h>")
-	fmt.Fprintln(c.fp, "#include <runtime.h>")
-	c.compScopeDecls(f.Scope)
+func (c *compiler) compVar(n *ast.VarExpr) {
+	ob := n.Object
+	if ob.Value != nil && !reflect.ValueOf(ob.Value).IsNil() {
+		if ob.Type.Name != c.typeExpr(ob.Value) {
+			fmt.Println("danger will robinson!")
+		}
+	}
 }
 
 func (c *compiler) countVars(n ast.Node) (x int) {
+	/* TODO: assign var offset here? */
 	if n != nil && !reflect.ValueOf(n).IsNil() {
 		switch e := n.(type) {
 		case *ast.DeclExpr:
@@ -212,4 +270,28 @@ func (c *compiler) countVars(n ast.Node) (x int) {
 		}
 	}
 	return
+}
+
+func (c *compiler) typeExpr(e ast.Expr) string {
+	switch n := e.(type) {
+	case *ast.BasicLit:
+		switch n.Kind {
+		case token.INTEGER:
+			return "int"
+		}
+	case *ast.BinaryExpr:
+		return "int"
+	case *ast.CallExpr:
+		ob := c.curScope.Lookup(n.Name.Name)
+		return c.typeExpr(ob.Value)
+	case *ast.DeclExpr:
+		return n.Type.Name
+	case *ast.ExprList:
+		return c.typeExpr(n.List[len(n.List)-1])
+	case *ast.IfExpr:
+		return n.Type.Name
+	case *ast.VarExpr:
+		return c.typeExpr(n.Object.Value)
+	}
+	return ""
 }
