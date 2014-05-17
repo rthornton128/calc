@@ -66,7 +66,7 @@ func TestLookup(t *testing.T) {
 		{"EOF", token.EOF},
 		{"Integer", token.INTEGER},
 		{"Comment", token.COMMENT},
-		{"", token.ILLEGAL},
+		{"", token.IDENT},
 	}
 
 	for i, v := range tests {
