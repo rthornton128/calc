@@ -121,10 +121,10 @@ func (s *Scanner) next() {
 	s.ch = rune(0)
 	if s.roffset < len(s.src) {
 		s.offset = s.roffset
+		s.ch = rune(s.src[s.offset])
 		if s.ch == '\n' || s.offset >= len(s.src)-1 {
 			s.file.AddLine(token.Pos(s.offset))
 		}
-		s.ch = rune(s.src[s.offset])
 		s.roffset++
 	}
 }
