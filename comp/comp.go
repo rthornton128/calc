@@ -145,10 +145,11 @@ func (c *compiler) compCallExpr(e *ast.CallExpr) int {
 		switch n := v.(type) {
 		case *ast.BasicLit:
 			c.compInt(n, fmt.Sprintf("esp+%d", offset))
-			offset += 4
 		default:
 			c.compNode(n)
+			fmt.Fprintf(c.fp, "movl(eax, esp+%d);\n", offset)
 		}
+		offset += 4
 	}
 	fmt.Fprintf(c.fp, "%s();\n", e.Name.Name)
 	return 0
@@ -208,15 +209,23 @@ func (c *compiler) compIfExpr(n *ast.IfExpr) {
 	case *ast.BinaryExpr:
 		c.compBinaryExpr(e)
 	}
-	fmt.Fprintln(c.fp, "if (*(int32_t *)eax != 0) {")
+	fmt.Fprintln(c.fp, "if (*(int32_t *)ecx == 1) {")
 	c.openScope()
 	c.compNode(n.Then)
+	if n.Type != nil {
+		fmt.Fprintln(c.fp, "leave();")
+		fmt.Fprintln(c.fp, "return;")
+	}
 	c.closeScope()
 	if n.Else != nil && !reflect.ValueOf(n.Else).IsNil() {
 		fmt.Fprintln(c.fp, "} else {")
 		c.openScope()
 		c.compNode(n.Else)
 		c.closeScope()
+		if n.Type != nil {
+			fmt.Fprintln(c.fp, "leave();")
+			fmt.Fprintln(c.fp, "return;")
+		}
 	}
 	fmt.Fprintln(c.fp, "}")
 }
