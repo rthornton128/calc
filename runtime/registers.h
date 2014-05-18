@@ -9,6 +9,7 @@
 #define RT_REGISTERS_H
 
 extern char *eax; /* accumulator register */
+extern char *ecx; /* counter register */
 extern char *edx; /* data register */
 extern char *ebp; /* base pointer */
 extern char *esp; /* stack pointer */
