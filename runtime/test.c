@@ -11,28 +11,39 @@
 #include "stack.h"
 
 #include <assert.h>
-//#include <stdio.h>
+#include <stdio.h>
 
 void cmp_tests() {
 	int a = 1, b = 2;
 	
 	/* greater tests */
-	assert(gtl((char *)&a, (char *)&b) == 0);
-	assert(gtl((char *)&b, (char *)&a) == 1);
-	assert(gel((char *)&a, (char *)&b) == 0);
-	assert(gel((char *)&a, (char *)&a) == 1);
-	assert(gel((char *)&b, (char *)&a) == 1);
+	gtl((char *)&a, (char *)&b); assert(*(int32_t *)ecx == 0);
+	gtl((char *)&b, (char *)&a); assert(*(int32_t *)ecx == 1);
+	gel((char *)&a, (char *)&b); assert(*(int32_t *)ecx == 0);
+	gel((char *)&a, (char *)&a); assert(*(int32_t *)ecx == 1);
+	gel((char *)&b, (char *)&a); assert(*(int32_t *)ecx == 1);
 
 	/* less tests */
-	assert(ltl((char *)&a, (char *)&b) == 1);
-	assert(ltl((char *)&b, (char *)&a) == 0);
-	assert(lel((char *)&a, (char *)&b) == 1);
-	assert(lel((char *)&a, (char *)&a) == 1);
-	assert(lel((char *)&b, (char *)&a) == 0);
+	ltl((char *)&a, (char *)&b); assert(*(int32_t *)ecx == 1);
+	ltl((char *)&b, (char *)&a); assert(*(int32_t *)ecx == 0);
+	lel((char *)&a, (char *)&b); assert(*(int32_t *)ecx == 1);
+	lel((char *)&a, (char *)&a); assert(*(int32_t *)ecx == 1);
+	lel((char *)&b, (char *)&a); assert(*(int32_t *)ecx == 0);
 
-	/* not equal tests */
-	assert(nel((char *)&a, (char *)&b) == 1);
-	assert(nel((char *)&a, (char *)&a) == 0);
+	/* (not) equal tests */
+	eql((char *)&a, (char *)&b); assert(*(int32_t *)ecx == 0);
+	eql((char *)&b, (char *)&b); assert(*(int32_t *)ecx == 1);
+	nel((char *)&a, (char *)&b); assert(*(int32_t *)ecx == 1);
+	nel((char *)&a, (char *)&a); assert(*(int32_t *)ecx == 0);
+
+	/* and/or tests */
+	a = 0, b = 1;
+	andl((char *)&a, (char *)&a); assert(*(int32_t *)ecx == 0);
+	andl((char *)&a, (char *)&b); assert(*(int32_t *)ecx == 0);
+	andl((char *)&b, (char *)&b); assert(*(int32_t *)ecx == 1);
+	orl((char *)&a, (char *)&a); assert(*(int32_t *)ecx == 0);
+	orl((char *)&a, (char *)&b); assert(*(int32_t *)ecx == 1);
+	orl((char *)&b, (char *)&b); assert(*(int32_t *)ecx == 1);
 }
 
 void instructions_tests() {
