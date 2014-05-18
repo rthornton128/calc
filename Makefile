@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=
+CFLAGS=-I ./runtime
 LD=gcc
 LDFLAGS=
 AR=ar
@@ -13,11 +13,16 @@ SRC=runtime/cmp.c\
     runtime/registers.c\
     runtime/stack.c
 OBJ=$(SRC:.c=.o)
+TEST_SRC=runtime/test.c
+TEST_OBJ=runtime/test.o
 
 ifeq ($(OS),Windows_NT)
 RM=cmd /c del
 RMFLAGS=
 OBJ=$(subst /,\,$(SRC:.c=.o))
+TEST=test.exe
+else
+TEST=test
 endif
 
 all: $(LIB)
@@ -27,6 +32,9 @@ all: $(LIB)
 install:
 	go install ./calcc
 
+$(TEST): $(TEST_OBJ) $(LIB)
+	$(CC) $(LDFLAGS) -o $@ $^
+
 $(LIB): $(OBJ)
 	$(AR) $(ARFLAGS) $@ $^
 
@@ -34,7 +42,7 @@ $(LIB): $(OBJ)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	$(RM) $(RMFLAGS) $(OBJ)
+	$(RM) $(RMFLAGS) $(OBJ) $(TEST_OBJ) $(TEST)
 
 distclean: clean
 	$(RM) $(RMFLAGS) $(LIB)
