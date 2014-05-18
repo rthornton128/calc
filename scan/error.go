@@ -28,8 +28,8 @@ func (el ErrorList) Count() int {
 	return len(el)
 }
 
-func (el *ErrorList) Add(p token.Position, msg string) {
-	*el = append(*el, &Error{p, msg})
+func (el *ErrorList) Add(p token.Position, args ...interface{}) {
+	*el = append(*el, &Error{p, fmt.Sprint(args...)})
 }
 
 func (el *ErrorList) Print() {
