@@ -251,12 +251,7 @@ func (c *compiler) compScopeDecls(s *ast.Scope) {
 }
 
 func (c *compiler) compVar(n *ast.VarExpr) {
-	ob := n.Object
-	if ob.Value != nil && !reflect.ValueOf(ob.Value).IsNil() {
-		if ob.Type.Name != c.typeExpr(ob.Value) {
-			fmt.Println("danger will robinson!")
-		}
-	}
+
 }
 
 func (c *compiler) countVars(n ast.Node) (x int) {
@@ -277,28 +272,4 @@ func (c *compiler) countVars(n ast.Node) (x int) {
 		}
 	}
 	return
-}
-
-func (c *compiler) typeExpr(e ast.Expr) string {
-	switch n := e.(type) {
-	case *ast.BasicLit:
-		switch n.Kind {
-		case token.INTEGER:
-			return "int"
-		}
-	case *ast.BinaryExpr:
-		return "int"
-	case *ast.CallExpr:
-		//ob := c.curScope.Lookup(n.Name.Name)
-		//return c.typeExpr(ob.Value)
-	case *ast.DeclExpr:
-		return n.Type.Name
-	case *ast.ExprList:
-		return c.typeExpr(n.List[len(n.List)-1])
-	case *ast.IfExpr:
-		return n.Type.Name
-	case *ast.VarExpr:
-		return c.typeExpr(n.Object.Value)
-	}
-	return ""
 }
