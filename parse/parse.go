@@ -42,8 +42,8 @@ type parser struct {
 
 /* Utility */
 
-func (p *parser) addError(msg string) {
-	p.errors.Add(p.file.Position(p.pos), msg)
+func (p *parser) addError(args ...interface{}) {
+	p.errors.Add(p.file.Position(p.pos), args...)
 	if p.errors.Count() >= 10 {
 		p.errors.Print()
 		os.Exit(1)
@@ -72,6 +72,35 @@ func (p *parser) next() {
 	p.lit, p.tok, p.pos = p.scanner.Scan()
 }
 
+func (p *parser) typeOf(n ast.Node) string {
+	switch t := n.(type) {
+	case *ast.AssignExpr:
+		ob := p.curScope.Lookup(t.Name.Name)
+		return ob.Type.Name
+	case *ast.BasicLit, *ast.BinaryExpr:
+		return "int"
+	case *ast.CallExpr:
+		ob := p.curScope.Lookup(t.Name.Name)
+		return ob.Type.Name
+	case *ast.DeclExpr:
+		return t.Type.Name
+	case *ast.ExprList:
+		return p.typeOf(t.List[len(t.List)-1])
+	case *ast.Ident:
+		ob := p.curScope.Lookup(t.Name)
+		return ob.Type.Name
+	case *ast.IfExpr:
+		if t.Type != nil {
+			return t.Type.Name
+		}
+		return p.typeOf(t.Then)
+	case *ast.VarExpr:
+		ob := p.curScope.Lookup(t.Name.Name)
+		return ob.Type.Name
+	}
+	panic("unknown node, no return type")
+}
+
 /* Scope */
 
 func (p *parser) openScope() {
@@ -89,6 +118,16 @@ func (p *parser) parseAssignExpr(open token.Pos) *ast.AssignExpr {
 	nam := p.parseIdent()
 	val := p.parseGenExpr()
 	end := p.expect(token.RPAREN)
+
+	ob := p.curScope.Lookup(nam.Name)
+	if ob == nil {
+		p.addError("assignment to undeclared variable")
+	}
+	if vtype := p.typeOf(val); ob.Type.Name != vtype {
+		p.addError("assignment to variable with incompatible type: ",
+			ob.Type.Name, "vs.", vtype)
+	}
+
 	return &ast.AssignExpr{
 		Expression: ast.Expression{Opening: open, Closing: end},
 		Equal:      pos,
@@ -136,6 +175,7 @@ func (p *parser) parseCallExpr(open token.Pos) *ast.CallExpr {
 		list = append(list, p.parseGenExpr())
 	}
 	end := p.expect(token.RPAREN)
+
 	return &ast.CallExpr{
 		Expression: ast.Expression{
 			Opening: open,
@@ -186,7 +226,13 @@ func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
 	}
 
 	if old := p.curScope.Insert(ob); old != nil {
-		p.addError("identifier already exists")
+		p.addError("redeclaration of function not allowed, originally declared "+
+			"at: ", p.file.Position(old.NamePos))
+	}
+
+	if btype := p.typeOf(bod); typ.Name != btype {
+		p.addError("return value type does not match return type:",
+			typ.Name, " vs. ", btype)
 	}
 
 	return decl
@@ -292,12 +338,32 @@ func (p *parser) parseIfExpr(open token.Pos) *ast.IfExpr {
 		typ = p.parseIdent()
 	}
 
+	p.openScope()
 	then := p.tryExprOrList()
+	p.closeScope()
 	var els ast.Expr
 	if p.tok != token.RPAREN {
+		p.openScope()
 		els = p.tryExprOrList()
+		p.closeScope()
 	}
 	end := p.expect(token.RPAREN)
+
+	if typ != nil {
+		ttype := p.typeOf(then)
+		if ttype != typ.Name {
+			p.addError("return value of then clause does not match if type: ",
+				typ.Name, " vs. ", ttype)
+		}
+		if els != nil {
+			etype := p.typeOf(els)
+			if etype != typ.Name {
+				p.addError("return value of else clause does not match if type: ",
+					typ.Name, " vs. ", etype)
+			}
+		}
+	}
+
 	return &ast.IfExpr{
 		Expression: ast.Expression{
 			Opening: open,
@@ -375,8 +441,8 @@ func (p *parser) parseVarExpr(lparen token.Pos) *ast.VarExpr {
 	}
 
 	if old := p.curScope.Insert(ob); old != nil {
-		p.addError("Identifier " + nam.Name + " redeclared; original " +
-			"declaration at " + p.file.Position(old.NamePos).String())
+		p.addError("redeclaration of variable not allowed; original "+
+			"declaration at: ", p.file.Position(old.NamePos))
 	}
 
 	return &ast.VarExpr{
