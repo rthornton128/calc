@@ -151,7 +151,7 @@ func (c *compiler) compCallExpr(e *ast.CallExpr) int {
 		}
 		offset += 4
 	}
-	fmt.Fprintf(c.fp, "%s();\n", e.Name.Name)
+	fmt.Fprintf(c.fp, "_%s();\n", e.Name.Name)
 	return 0
 }
 
@@ -162,13 +162,9 @@ func (c *compiler) compDeclExpr(d *ast.DeclExpr) int {
 		c.curScope.Symbols[p.Name] = offset
 		offset += 4
 	}
-	if d.Name.Name == "main" {
-		fmt.Fprintf(c.fp, "int %s(void) {\n", d.Name.Name)
-		fmt.Fprintln(c.fp, "stack_init();")
-	} else {
-		fmt.Fprintf(c.fp, "void %s(void) {\n", d.Name.Name)
-	}
 	x := c.countVars(d)
+	fmt.Fprintf(c.fp, "void _%s(void) {\n", d.Name.Name)
+
 	if x > 0 {
 		fmt.Fprintf(c.fp, "enter(%d);\n", roundUp16(x))
 		c.compNode(d.Body)
@@ -176,13 +172,7 @@ func (c *compiler) compDeclExpr(d *ast.DeclExpr) int {
 	} else {
 		c.compNode(d.Body)
 	}
-	if d.Name.Name == "main" {
-		fmt.Fprintln(c.fp, "printf(\"%d\\n\", *(int32_t *)eax);")
-		fmt.Fprintln(c.fp, "stack_end();")
-		fmt.Fprintf(c.fp, "return *(int32_t *)eax;\n")
-	} else {
-		fmt.Fprintf(c.fp, "return;\n")
-	}
+
 	fmt.Fprintln(c.fp, "}")
 	c.closeScope()
 	return 0
@@ -192,6 +182,13 @@ func (c *compiler) compFile(f *ast.File) {
 	fmt.Fprintln(c.fp, "#include <stdio.h>")
 	fmt.Fprintln(c.fp, "#include <runtime.h>")
 	c.compScopeDecls(f.Scope)
+	fmt.Fprintln(c.fp, "int main(void) {")
+	fmt.Fprintln(c.fp, "stack_init();")
+	fmt.Fprintln(c.fp, "_main();")
+	fmt.Fprintln(c.fp, "printf(\"%d\\n\", *(int32_t *)eax);")
+	fmt.Fprintln(c.fp, "stack_end();")
+	fmt.Fprintln(c.fp, "return *(int32_t*) eax;")
+	fmt.Fprintln(c.fp, "}")
 }
 
 func (c *compiler) compIdent(n *ast.Ident, format string) {
@@ -242,9 +239,7 @@ func (c *compiler) compInt(n *ast.BasicLit, reg string) {
 func (c *compiler) compScopeDecls(s *ast.Scope) {
 	for k, v := range s.Table {
 		if v.Kind == ast.Decl {
-			if v.Name != "main" {
-				fmt.Fprintf(c.fp, "void %s(void);\n", k)
-			}
+			fmt.Fprintf(c.fp, "void _%s(void);\n", k)
 			defer c.compNode(v.Value)
 		}
 	}
