@@ -150,13 +150,10 @@ func (s *Scope) Insert(ob *Object) *Object {
 
 func (s *Scope) Lookup(ident string) *Object {
 	ob, ok := s.Table[ident]
-	if !ok {
-		if s.Parent == nil {
-			return nil
-		}
-		return s.Parent.Lookup(ident)
+	if ok || s.Parent == nil {
+		return ob
 	}
-	return ob
+	return s.Parent.Lookup(ident)
 }
 
 func (s *Scope) Size() int {
