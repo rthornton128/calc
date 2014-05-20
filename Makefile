@@ -20,6 +20,7 @@ ifeq ($(OS),Windows_NT)
 RM=cmd /c del
 RMFLAGS=
 OBJ=$(subst /,\,$(SRC:.c=.o))
+TEST_OBJ=$(subst /,\,$(TEST_SRC:.c=.o))
 TEST=test.exe
 else
 TEST=test
