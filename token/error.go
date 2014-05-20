@@ -5,16 +5,14 @@
 // or, if one is not included, you may also find a copy at
 // http://opensource.org/licenses/BSD-2-Clause
 
-package scan
+package token
 
 import (
 	"fmt"
-
-	"github.com/rthornton128/calc/token"
 )
 
 type Error struct {
-	pos token.Position
+	pos Position
 	msg string
 }
 
@@ -28,8 +26,8 @@ func (el ErrorList) Count() int {
 	return len(el)
 }
 
-func (el *ErrorList) Add(p token.Position, args ...interface{}) {
-	*el = append(*el, &Error{p, fmt.Sprint(args...)})
+func (el *ErrorList) Add(p Position, args ...interface{}) {
+	*el = append(*el, &Error{pos: p, msg: fmt.Sprint(args...)})
 }
 
 func (el *ErrorList) Print() {

@@ -28,7 +28,7 @@ func ParseFile(filename, src string) *ast.File {
 
 type parser struct {
 	file    *token.File
-	errors  scan.ErrorList
+	errors  token.ErrorList
 	scanner scan.Scanner
 	listok  bool
 
@@ -73,32 +73,38 @@ func (p *parser) next() {
 }
 
 func (p *parser) typeOf(n ast.Node) string {
+	var typename string
 	switch t := n.(type) {
 	case *ast.AssignExpr:
 		ob := p.curScope.Lookup(t.Name.Name)
-		return ob.Type.Name
+		typename = ob.Type.Name
 	case *ast.BasicLit, *ast.BinaryExpr:
-		return "int"
+		typename = "int"
 	case *ast.CallExpr:
 		ob := p.curScope.Lookup(t.Name.Name)
-		return ob.Type.Name
+		typename = ob.Type.Name
 	case *ast.DeclExpr:
-		return t.Type.Name
+		typename = t.Type.Name
 	case *ast.ExprList:
-		return p.typeOf(t.List[len(t.List)-1])
+		typename = p.typeOf(t.List[len(t.List)-1])
 	case *ast.Ident:
 		ob := p.curScope.Lookup(t.Name)
-		return ob.Type.Name
+		typename = ob.Type.Name
 	case *ast.IfExpr:
 		if t.Type != nil {
-			return t.Type.Name
+			typename = t.Type.Name
 		}
-		return p.typeOf(t.Then)
+		typename = p.typeOf(t.Then)
 	case *ast.VarExpr:
 		ob := p.curScope.Lookup(t.Name.Name)
-		return ob.Type.Name
+		typename = ob.Type.Name
+	default:
+		panic("unknown node, no return type")
 	}
-	panic("unknown node, no return type")
+	if !token.ValidType(typename) {
+		p.addError("invalid type:", typename)
+	}
+	return typename
 }
 
 /* Scope */
