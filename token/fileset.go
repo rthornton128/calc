@@ -16,10 +16,11 @@ func NewFileSet() *FileSet {
 	return &FileSet{base: 1}
 }
 
-func (fs *FileSet) AddFile(name, src string) {
-	size := len(src)
-	fs.files = append(fs.files, NewFile(name, fs.base, size))
-	fs.base += size
+func (fs *FileSet) Add(name, src string) *File {
+	f := NewFile(name, fs.base, len(src))
+	fs.files = append(fs.files, f)
+	fs.base += len(src)
+	return f
 }
 
 func (fs *FileSet) Position(p Pos) Position {
