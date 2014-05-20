@@ -128,7 +128,6 @@ func (p *Package) End() token.Pos    { return token.NoPos }
 
 func (b *BasicLit) exprNode()   {}
 func (e *Expression) exprNode() {}
-func (e *ExprList) exprNode()   {}
 func (i *Ident) exprNode()      {}
 
 const (
