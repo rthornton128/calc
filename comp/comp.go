@@ -20,6 +20,8 @@ import (
 
 type compiler struct {
 	fp       *os.File
+	fset     *token.FileSet
+	errors   token.ErrorList
 	curScope *Scope
 	topScope *Scope
 }
@@ -33,7 +35,8 @@ func CompileFile(fname, src string) {
 	}
 	defer fp.Close()
 
-	f := parse.ParseFile(fname, src)
+	c.fset = token.NewFileSet()
+	f := parse.ParseFile(c.fset.Add(fname, src), fname, src)
 	if f == nil {
 		os.Exit(1)
 	}

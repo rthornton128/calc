@@ -15,9 +15,9 @@ import (
 	"github.com/rthornton128/calc/token"
 )
 
-func ParseFile(filename, src string) *ast.File {
+func ParseFile(file *token.File, filename, src string) *ast.File {
 	var p parser
-	p.init(filename, src)
+	p.init(file, filename, src)
 	f := p.parseFile()
 	if p.errors.Count() > 0 {
 		p.errors.Print()
@@ -59,8 +59,8 @@ func (p *parser) expect(tok token.Token) token.Pos {
 	return pos
 }
 
-func (p *parser) init(fname, src string) {
-	p.file = token.NewFile(fname, 1, len(src))
+func (p *parser) init(file *token.File, fname, src string) {
+	p.file = file
 	p.scanner.Init(p.file, src)
 	p.listok = false
 	p.curScope = ast.NewScope(nil)
