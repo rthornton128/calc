@@ -30,7 +30,7 @@ all: $(LIB)
 
 .PHONY: install
 
-install:
+install: $(LIB)
 	go install ./calcc
 
 $(TEST): $(TEST_OBJ) $(LIB)
