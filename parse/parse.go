@@ -201,9 +201,6 @@ func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
 
 	typ := p.parseIdent()
 	bod := p.tryExprOrList()
-
-	p.closeScope()
-
 	end := p.expect(token.RPAREN)
 
 	decl := &ast.DeclExpr{
@@ -216,6 +213,7 @@ func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
 		Type:   typ,
 		Params: list,
 		Body:   bod,
+		Scope:  p.curScope,
 	}
 	ob := &ast.Object{
 		NamePos: nam.NamePos,
@@ -224,6 +222,8 @@ func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
 		Type:    typ,
 		Value:   decl,
 	}
+
+	p.closeScope()
 
 	if old := p.curScope.Insert(ob); old != nil {
 		p.addError("redeclaration of function not allowed, originally declared "+

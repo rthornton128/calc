@@ -55,6 +55,7 @@ type DeclExpr struct {
 	Type   *Ident
 	Params []*Ident
 	Body   Expr
+	Scope  *Scope
 }
 
 type Expression struct {

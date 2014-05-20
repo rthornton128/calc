@@ -157,6 +157,8 @@ func (c *compiler) compCallExpr(e *ast.CallExpr) int {
 
 func (c *compiler) compDeclExpr(d *ast.DeclExpr) int {
 	c.openScope()
+	c.compScopeDecls(d.Scope)
+
 	offset := 0
 	for _, p := range d.Params {
 		c.curScope.Symbols[p.Name] = offset
