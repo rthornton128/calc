@@ -345,14 +345,13 @@ func (p *parser) parseIfExpr(open token.Pos) *ast.IfExpr {
 	}
 
 	p.openScope()
+	scope := p.curScope
 	then := p.tryExprOrList()
-	p.closeScope()
 	var els ast.Expr
 	if p.tok != token.RPAREN {
-		p.openScope()
 		els = p.tryExprOrList()
-		p.closeScope()
 	}
+	p.closeScope()
 	end := p.expect(token.RPAREN)
 
 	if typ != nil {
@@ -375,11 +374,12 @@ func (p *parser) parseIfExpr(open token.Pos) *ast.IfExpr {
 			Opening: open,
 			Closing: end,
 		},
-		If:   pos,
-		Type: typ,
-		Cond: cond,
-		Then: then,
-		Else: els,
+		If:    pos,
+		Type:  typ,
+		Cond:  cond,
+		Then:  then,
+		Else:  els,
+		Scope: scope,
 	}
 }
 
@@ -398,6 +398,7 @@ func (p *parser) parseParamList() []*ast.Ident {
 					}
 				}
 				param.Object.Type = ident
+				p.curScope.Insert(param.Object)
 			}
 			start = count
 			continue

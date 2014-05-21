@@ -22,8 +22,8 @@ type compiler struct {
 	fp       *os.File
 	fset     *token.FileSet
 	errors   token.ErrorList
-	curScope *Scope
-	topScope *Scope
+	curScope *ast.Scope
+	topScope *ast.Scope
 }
 
 func CompileFile(fname, src string) {
@@ -41,8 +41,6 @@ func CompileFile(fname, src string) {
 		os.Exit(1)
 	}
 	c.fp = fp
-	c.topScope = NewScope(nil)
-	c.curScope = c.topScope
 	c.compFile(f)
 }
 
@@ -53,6 +51,16 @@ func roundUp16(n int) int {
 		return n + (16 - r)
 	}
 	return n
+}
+
+/* Scope */
+
+func (c *compiler) openScope(s *ast.Scope) {
+	c.curScope = s
+}
+
+func (c *compiler) closeScope() {
+	c.curScope = c.curScope.Parent
 }
 
 /* Main Compiler */
@@ -159,12 +167,13 @@ func (c *compiler) compCallExpr(e *ast.CallExpr) int {
 }
 
 func (c *compiler) compDeclExpr(d *ast.DeclExpr) int {
-	c.openScope()
-	c.compScopeDecls(d.Scope)
+	c.openScope(d.Scope)
+	c.compScopeDecls()
 
 	offset := 0
 	for _, p := range d.Params {
-		c.curScope.Symbols[p.Name] = offset
+		ob := c.curScope.Lookup(p.Name)
+		ob.Offset = offset
 		offset += 4
 	}
 	x := c.countVars(d)
@@ -186,7 +195,9 @@ func (c *compiler) compDeclExpr(d *ast.DeclExpr) int {
 func (c *compiler) compFile(f *ast.File) {
 	fmt.Fprintln(c.fp, "#include <stdio.h>")
 	fmt.Fprintln(c.fp, "#include <runtime.h>")
-	c.compScopeDecls(f.Scope)
+	c.topScope = f.Scope
+	c.curScope = c.topScope
+	c.compScopeDecls()
 	fmt.Fprintln(c.fp, "int main(void) {")
 	fmt.Fprintln(c.fp, "stack_init();")
 	fmt.Fprintln(c.fp, "_main();")
@@ -197,11 +208,11 @@ func (c *compiler) compFile(f *ast.File) {
 }
 
 func (c *compiler) compIdent(n *ast.Ident, format string) {
-	offset, ok := c.curScope.Lookup(n.Name)
-	if !ok {
+	ob := c.curScope.Lookup(n.Name)
+	if ob == nil {
 		panic("no offset for identifier")
 	}
-	fmt.Fprintf(c.fp, format, offset)
+	fmt.Fprintf(c.fp, format, ob.Offset)
 }
 
 func (c *compiler) compIfExpr(n *ast.IfExpr) {
@@ -212,23 +223,21 @@ func (c *compiler) compIfExpr(n *ast.IfExpr) {
 		c.compBinaryExpr(e)
 	}
 	fmt.Fprintln(c.fp, "if (*(int32_t *)ecx == 1) {")
-	c.openScope()
+	c.openScope(n.Scope)
 	c.compNode(n.Then)
 	if n.Type != nil {
 		fmt.Fprintln(c.fp, "leave();")
 		fmt.Fprintln(c.fp, "return;")
 	}
-	c.closeScope()
 	if n.Else != nil && !reflect.ValueOf(n.Else).IsNil() {
 		fmt.Fprintln(c.fp, "} else {")
-		c.openScope()
 		c.compNode(n.Else)
-		c.closeScope()
 		if n.Type != nil {
 			fmt.Fprintln(c.fp, "leave();")
 			fmt.Fprintln(c.fp, "return;")
 		}
 	}
+	c.closeScope()
 	fmt.Fprintln(c.fp, "}")
 }
 
@@ -241,8 +250,8 @@ func (c *compiler) compInt(n *ast.BasicLit, reg string) {
 	fmt.Fprintf(c.fp, "setl(%d, %s);\n", i, reg)
 }
 
-func (c *compiler) compScopeDecls(s *ast.Scope) {
-	for k, v := range s.Table {
+func (c *compiler) compScopeDecls() {
+	for k, v := range c.curScope.Table {
 		if v.Kind == ast.Decl {
 			fmt.Fprintf(c.fp, "void _%s(void);\n", k)
 			defer c.compNode(v.Value)

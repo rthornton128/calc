@@ -80,17 +80,19 @@ type Ident struct {
 
 type IfExpr struct {
 	Expression
-	If   token.Pos
-	Type *Ident
-	Cond Expr
-	Then Expr
-	Else Expr
+	If    token.Pos
+	Type  *Ident
+	Cond  Expr
+	Then  Expr
+	Else  Expr
+	Scope *Scope
 }
 
 type Object struct {
 	NamePos token.Pos
 	Name    string
 	Kind    ObKind
+	Offset  int
 	Type    *Ident // variable type, function return type, etc
 	Value   Expr
 }
