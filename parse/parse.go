@@ -88,8 +88,10 @@ func (p *parser) typeOf(n ast.Node) string {
 	case *ast.ExprList:
 		typename = p.typeOf(t.List[len(t.List)-1])
 	case *ast.Ident:
-		ob := p.curScope.Lookup(t.Name)
-		typename = ob.Type.Name
+		// TODO: fix nil panic bug
+		//ob := p.curScope.Lookup(t.Name)
+		typename = "int"
+		//typename = ob.Type.Name
 	case *ast.IfExpr:
 		if t.Type != nil {
 			typename = t.Type.Name
@@ -429,6 +431,7 @@ func (p *parser) parseVarExpr(lparen token.Pos) *ast.VarExpr {
 		typ = p.parseIdent()
 	}
 
+	// TODO: bug - val may be type name or assignment value...
 	if p.tok != token.RPAREN {
 		val = p.parseGenExpr()
 	}
