@@ -22,6 +22,7 @@ type compiler struct {
 	fp       *os.File
 	fset     *token.FileSet
 	errors   token.ErrorList
+	offset   int
 	curScope *ast.Scope
 	topScope *ast.Scope
 }
@@ -51,6 +52,12 @@ func roundUp16(n int) int {
 		return n + (16 - r)
 	}
 	return n
+}
+
+func (c *compiler) nextOffset() (offset int) {
+	offset = c.offset
+	c.offset += 4
+	return
 }
 
 /* Scope */
@@ -83,8 +90,29 @@ func (c *compiler) compNode(node ast.Node) int {
 		c.compIdent(n, "movl(ebp+%d, eax);\n")
 	case *ast.IfExpr:
 		c.compIfExpr(n)
+	case *ast.VarExpr:
+		c.compVarExpr(n)
 	}
 	return 0
+}
+
+func (c *compiler) compAssignExpr(a *ast.AssignExpr) {
+	ob := c.curScope.Lookup(a.Name.Name)
+	//fmt.Fprintf(c.fp, "setl(%d, ebp+%d);\n",
+	// TODO: yikes! no type checking?!
+	ob.Value = a.Value
+	switch n := ob.Value.(type) {
+	case *ast.BasicLit:
+		c.compInt(n, fmt.Sprintf("ebp+%d", ob.Offset))
+	case *ast.BinaryExpr:
+		c.compBinaryExpr(n)
+		fmt.Fprintf(c.fp, "movl(eax, ebp+%d);\n", ob.Offset)
+	case *ast.CallExpr:
+		c.compCallExpr(n)
+		fmt.Fprintf(c.fp, "movl(eax, ebp+%d);\n", ob.Offset)
+	case *ast.Ident:
+		c.compIdent(n, fmt.Sprintf("movl(ebp+%%d, ebp+%d);\n", ob.Offset))
+	}
 }
 
 func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) int {
@@ -170,11 +198,11 @@ func (c *compiler) compDeclExpr(d *ast.DeclExpr) int {
 	c.openScope(d.Scope)
 	c.compScopeDecls()
 
-	offset := 0
+	last := c.offset
+	c.offset = 0
 	for _, p := range d.Params {
 		ob := c.curScope.Lookup(p.Name)
-		ob.Offset = offset
-		offset += 4
+		ob.Offset = c.nextOffset()
 	}
 	x := c.countVars(d)
 	fmt.Fprintf(c.fp, "void _%s(void) {\n", d.Name.Name)
@@ -188,6 +216,7 @@ func (c *compiler) compDeclExpr(d *ast.DeclExpr) int {
 	}
 
 	fmt.Fprintln(c.fp, "}")
+	c.offset = last
 	c.closeScope()
 	return 0
 }
@@ -208,6 +237,7 @@ func (c *compiler) compFile(f *ast.File) {
 }
 
 func (c *compiler) compIdent(n *ast.Ident, format string) {
+	fmt.Println("looking up:", n.Name)
 	ob := c.curScope.Lookup(n.Name)
 	if ob == nil {
 		panic("no offset for identifier")
@@ -259,8 +289,27 @@ func (c *compiler) compScopeDecls() {
 	}
 }
 
-func (c *compiler) compVar(n *ast.VarExpr) {
-
+func (c *compiler) compVarExpr(v *ast.VarExpr) {
+	fmt.Println("varexpr: table:", c.curScope.Table)
+	ob := c.curScope.Lookup(v.Name.Name)
+	ob.Offset = c.nextOffset()
+	fmt.Println("setting offset for", ob.Name, "to", ob.Offset)
+	// TODO: value + infer type + check type
+	if ob.Value != nil {
+		switch n := ob.Value.(type) {
+		case *ast.BasicLit:
+			c.compInt(n, fmt.Sprintf("ebp+%d", ob.Offset))
+		case *ast.BinaryExpr:
+			c.compBinaryExpr(n)
+			fmt.Fprintf(c.fp, "movl(eax, ebp+%d);\n", ob.Offset)
+		case *ast.CallExpr:
+			c.compCallExpr(n)
+			fmt.Fprintf(c.fp, "movl(eax, ebp+%d);\n", ob.Offset)
+		case *ast.Ident:
+			fmt.Println("varexpr-ident:", n.Name)
+			//c.compIdent(n, fmt.Sprintf("movl(ebp+%%d, ebp+%d);\n", ob.Offset))
+		}
+	}
 }
 
 func (c *compiler) countVars(n ast.Node) (x int) {
