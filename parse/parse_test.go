@@ -12,6 +12,7 @@ import (
 
 	"github.com/rthornton128/calc/ast"
 	"github.com/rthornton128/calc/parse"
+	"github.com/rthornton128/calc/token"
 )
 
 type Type int
@@ -98,7 +99,9 @@ func nodeTest(types []Type, t *testing.T) func(node ast.Node) {
 
 func TestParseFileBasic(t *testing.T) {
 	types := []Type{FILE, DECL, IDENT, IDENT, BINARY, BASIC, BASIC}
-	f := parse.ParseFile("basicdec", "(decl main int (+ 1 2))")
+	src := "(decl main int (+ 1 2))"
+	file := token.NewFile("basicdec", 1, len(src))
+	f := parse.ParseFile(file, "basicdec", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
@@ -108,14 +111,18 @@ func TestParseFileBasic(t *testing.T) {
 func TestParseCall(t *testing.T) {
 	types := []Type{FILE, DECL, IDENT, IDENT, CALL, IDENT, BASIC, BASIC,
 		BASIC, BASIC}
-	f := parse.ParseFile("call1", "(decl main int (add 1 2 3 4))")
+	src := "(decl main int (add 1 2 3 4))"
+	file := token.NewFile("call1", 1, len(src))
+	f := parse.ParseFile(file, "call1", "(decl main int (add 1 2 3 4))")
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
 	ast.Walk(f, nodeTest(types, t))
 
 	types = []Type{FILE, DECL, IDENT, IDENT, CALL, IDENT}
-	f = parse.ParseFile("call1", "(decl main int (nothing))")
+	src = "(decl main int (nothing))"
+	file = token.NewFile("call1", 1, len(src))
+	f = parse.ParseFile(file, "call1", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
@@ -123,8 +130,19 @@ func TestParseCall(t *testing.T) {
 }
 
 func TestParseDecl(t *testing.T) {
-	types := []Type{FILE, DECL, IDENT, IDENT, BINARY, BASIC, BASIC}
-	f := parse.ParseFile("decl1.calc", "(decl five int (+ 2 3))")
+	types := []Type{FILE, DECL, IDENT, IDENT, IDENT}
+	src := "(decl func int a)"
+	file := token.NewFile("decl1.calc", 1, len(src))
+	f := parse.ParseFile(file, "decl1.calc", src)
+	if f == nil {
+		t.Fatal("Failed to parse")
+	}
+	ast.Walk(f, nodeTest(types, t))
+
+	types = []Type{FILE, DECL, IDENT, IDENT, BINARY, BASIC, BASIC}
+	src = "(decl five int (+ 2 3))"
+	file = token.NewFile("decl2.calc", 1, len(src))
+	f = parse.ParseFile(file, "decl1.calc", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
@@ -132,7 +150,9 @@ func TestParseDecl(t *testing.T) {
 
 	types = []Type{FILE, DECL, IDENT, IDENT, IDENT, IDENT, BINARY,
 		IDENT, IDENT}
-	f = parse.ParseFile("decl2.calc", "(decl add(a b int) int (+ a b))")
+	src = "(decl add(a b int) int (+ a b))"
+	file = token.NewFile("decl3.calc", 1, len(src))
+	f = parse.ParseFile(file, "decl2.calc", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
@@ -141,7 +161,9 @@ func TestParseDecl(t *testing.T) {
 
 func TestParseIf(t *testing.T) {
 	types := []Type{FILE, DECL, IDENT, IDENT, IF, IDENT, IDENT, BASIC}
-	f := parse.ParseFile("if.calc", "(decl main int (if true int 3))")
+	src := "(decl main int (if true int 3))"
+	file := token.NewFile("if.calc", 1, len(src))
+	f := parse.ParseFile(file, "if.calc", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
@@ -149,9 +171,9 @@ func TestParseIf(t *testing.T) {
 
 	types = []Type{FILE, DECL, IDENT, IDENT, IF, BINARY, IDENT, IDENT, IDENT,
 		IDENT, LIST, BINARY, IDENT, BASIC, IDENT}
-
-	f = parse.ParseFile("if2.calc",
-		"(decl main int (if (< a b) int a ((+ b 1) b)))")
+	src = "(decl main int (if (< a b) int a ((+ b 1) b)))"
+	file = token.NewFile("if2.calc", 1, len(src))
+	f = parse.ParseFile(file, "if2.calc", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
@@ -159,7 +181,9 @@ func TestParseIf(t *testing.T) {
 
 	types = []Type{FILE, DECL, IDENT, IDENT, IF, BINARY, IDENT, IDENT, LIST,
 		ASSIGN, IDENT, IDENT}
-	f = parse.ParseFile("if3.calc", "(decl main int (if (< a b) ((= a b))))")
+	src = "(decl main int (if (< a b) ((= a b))))"
+	file = token.NewFile("if3.calc", 1, len(src))
+	f = parse.ParseFile(file, "if3.calc", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
@@ -169,8 +193,9 @@ func TestParseIf(t *testing.T) {
 func TestParseNested(t *testing.T) {
 	var types = []Type{FILE, DECL, IDENT, IDENT, BINARY, BINARY, BASIC, BASIC,
 		BASIC, BINARY, BASIC, BASIC}
-	f := parse.ParseFile("nested.calc",
-		";comment\n(decl main int (+ (/ 9 3) 5 (- 3 1)))")
+	src := ";comment\n(decl main int (+ (/ 9 3) 5 (- 3 1)))"
+	file := token.NewFile("nested.calc", 1, len(src))
+	f := parse.ParseFile(file, "nested.calc", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
@@ -178,22 +203,29 @@ func TestParseNested(t *testing.T) {
 }
 
 func TestParseVar(t *testing.T) {
-	var types = []Type{FILE, DECL, IDENT, IDENT, VAR, IDENT, IDENT, BASIC}
-	f := parse.ParseFile("var.calc", "(decl main int (var a 5 int))")
+	types := []Type{FILE, DECL, IDENT, IDENT, VAR, IDENT, IDENT}
+	src := "(decl main int (var a int))"
+	file := token.NewFile("var.calc", 1, len(src))
+	f := parse.ParseFile(file, "var.calc", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
 	ast.Walk(f, nodeTest(types, t))
 
-	types = []Type{FILE, DECL, IDENT, IDENT, VAR, IDENT, IDENT}
-	f = parse.ParseFile("var2.calc", "(decl main int (var a int))")
+	types = []Type{FILE, DECL, IDENT, IDENT, VAR, IDENT, IDENT, ASSIGN,
+		IDENT, BASIC}
+	src = "(decl main int (var (= a 5) int))"
+	file = token.NewFile("var2.calc", 1, len(src))
+	f = parse.ParseFile(file, "var2.calc", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
 	ast.Walk(f, nodeTest(types, t))
 
-	types = []Type{FILE, DECL, IDENT, IDENT, VAR, IDENT, BASIC}
-	f = parse.ParseFile("var3.calc", "(decl main int (var a 5))")
+	types = []Type{FILE, DECL, IDENT, IDENT, VAR, IDENT, ASSIGN, IDENT, BASIC}
+	src = "(decl main int (var (= a 5)))"
+	file = token.NewFile("var3.calc", 1, len(src))
+	f = parse.ParseFile(file, "var3.calc", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
@@ -217,9 +249,15 @@ func TestExpectFail(t *testing.T) {
 		"(var a)",
 		"(decl main () int a)",
 		"(decl main int ())",
+		"(decl main int a)(decl main in b)",
+		"(var a)",
+		"(var (+ a b))",
+		"(var 23)",
+		"(var a int)(var a int)",
 	}
 	for _, src := range tests {
-		if f := parse.ParseFile("expectfail", src); f != nil {
+		file := token.NewFile("expectfail", 1, len(src))
+		if f := parse.ParseFile(file, "expectfail", src); f != nil {
 			t.Log(src, "- not nil")
 			t.Fail()
 		}

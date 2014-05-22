@@ -72,43 +72,6 @@ func (p *parser) next() {
 	p.lit, p.tok, p.pos = p.scanner.Scan()
 }
 
-func (p *parser) typeOf(n ast.Node) string {
-	var typename string
-	switch t := n.(type) {
-	case *ast.AssignExpr:
-		ob := p.curScope.Lookup(t.Name.Name)
-		typename = ob.Type.Name
-	case *ast.BasicLit, *ast.BinaryExpr:
-		typename = "int"
-	case *ast.CallExpr:
-		ob := p.curScope.Lookup(t.Name.Name)
-		typename = ob.Type.Name
-	case *ast.DeclExpr:
-		typename = t.Type.Name
-	case *ast.ExprList:
-		typename = p.typeOf(t.List[len(t.List)-1])
-	case *ast.Ident:
-		// TODO: fix nil panic bug
-		//ob := p.curScope.Lookup(t.Name)
-		typename = "int"
-		//typename = ob.Type.Name
-	case *ast.IfExpr:
-		if t.Type != nil {
-			typename = t.Type.Name
-		}
-		typename = p.typeOf(t.Then)
-	case *ast.VarExpr:
-		ob := p.curScope.Lookup(t.Name.Name)
-		typename = ob.Type.Name
-	default:
-		panic("unknown node, no return type")
-	}
-	if !token.ValidType(typename) {
-		p.addError("invalid type:", typename)
-	}
-	return typename
-}
-
 /* Scope */
 
 func (p *parser) openScope() {
@@ -126,15 +89,6 @@ func (p *parser) parseAssignExpr(open token.Pos) *ast.AssignExpr {
 	nam := p.parseIdent()
 	val := p.parseGenExpr()
 	end := p.expect(token.RPAREN)
-
-	ob := p.curScope.Lookup(nam.Name)
-	if ob == nil {
-		p.addError("assignment to undeclared variable")
-	}
-	if vtype := p.typeOf(val); ob.Type.Name != vtype {
-		p.addError("assignment to variable with incompatible type: ",
-			ob.Type.Name, "vs.", vtype)
-	}
 
 	return &ast.AssignExpr{
 		Expression: ast.Expression{Opening: open, Closing: end},
@@ -238,11 +192,6 @@ func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
 			"at: ", p.file.Position(old.NamePos))
 	}
 
-	if btype := p.typeOf(bod); typ.Name != btype {
-		p.addError("return value type does not match return type:",
-			typ.Name, " vs. ", btype)
-	}
-
 	return decl
 }
 
@@ -312,8 +261,7 @@ func (p *parser) parseGenExpr() ast.Expr {
 	case token.INTEGER:
 		expr = p.parseBasicLit()
 	default:
-		p.addError("Expected '" + token.LPAREN.String() + "' or '" +
-			token.INTEGER.String() + "' got '" + p.lit + "'")
+		p.addError("Expected expression, got '" + p.lit + "'")
 		p.next()
 	}
 	p.listok = false
@@ -355,21 +303,6 @@ func (p *parser) parseIfExpr(open token.Pos) *ast.IfExpr {
 	}
 	p.closeScope()
 	end := p.expect(token.RPAREN)
-
-	if typ != nil {
-		ttype := p.typeOf(then)
-		if ttype != typ.Name {
-			p.addError("return value of then clause does not match if type: ",
-				typ.Name, " vs. ", ttype)
-		}
-		if els != nil {
-			etype := p.typeOf(els)
-			if etype != typ.Name {
-				p.addError("return value of else clause does not match if type: ",
-					typ.Name, " vs. ", etype)
-			}
-		}
-	}
 
 	return &ast.IfExpr{
 		Expression: ast.Expression{
@@ -414,40 +347,35 @@ func (p *parser) parseParamList() []*ast.Ident {
 	return list
 }
 
-func (p *parser) parseVarExpr(lparen token.Pos) *ast.VarExpr {
+func (p *parser) parseVarExpr(open token.Pos) *ast.VarExpr {
 	var (
-		typ *ast.Ident
-		val ast.Expr
+		name  *ast.Ident
+		vtype *ast.Ident
+		value *ast.AssignExpr
 	)
 	varpos := p.expect(token.VAR)
-	nam := p.parseIdent()
 
-	// TODO: Needs improvement; maybe a p.tryTypeOrExpression?
-	if p.tok == token.RPAREN {
-		p.addError("Expected type, expression or literal, got: )")
+	switch p.tok {
+	case token.IDENT:
+		name = p.parseIdent()
+	case token.LPAREN:
+		value = p.parseAssignExpr(p.expect(token.LPAREN))
+		name = value.Name
+	default:
+		name = &ast.Ident{token.NoPos, "NoName", nil}
+		p.addError("expected identifier or assignment")
 	}
-
-	if p.tok == token.IDENT {
-		typ = p.parseIdent()
+	if value == nil || p.tok == token.IDENT {
+		vtype = p.parseIdent()
 	}
-
-	// TODO: bug - val may be type name or assignment value...
-	if p.tok != token.RPAREN {
-		val = p.parseGenExpr()
-	}
-
-	if p.tok != token.RPAREN {
-		typ = p.parseIdent()
-	}
-	// TODO: end
-	rparen := p.expect(token.RPAREN)
+	end := p.expect(token.RPAREN)
 
 	ob := &ast.Object{
-		NamePos: nam.NamePos,
-		Name:    nam.Name,
+		NamePos: name.NamePos,
+		Name:    name.Name,
 		Kind:    ast.Var,
-		Type:    typ,
-		Value:   val,
+		Type:    vtype,
+		Value:   value,
 	}
 
 	if old := p.curScope.Insert(ob); old != nil {
@@ -456,9 +384,9 @@ func (p *parser) parseVarExpr(lparen token.Pos) *ast.VarExpr {
 	}
 
 	return &ast.VarExpr{
-		Expression: ast.Expression{Opening: lparen, Closing: rparen},
+		Expression: ast.Expression{Opening: open, Closing: end},
 		Var:        varpos,
-		Name:       nam,
+		Name:       name,
 		Object:     ob,
 	}
 }
