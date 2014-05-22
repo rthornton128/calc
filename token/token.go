@@ -68,6 +68,7 @@ var tok_strings = map[Token]string{
 	MUL:     "*",
 	QUO:     "/",
 	REM:     "%",
+	ASSIGN:  "=",
 	AND:     "&&",
 	OR:      "||",
 	EQL:     "==",
