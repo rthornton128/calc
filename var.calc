@@ -3,7 +3,7 @@
 (decl main int (
 	(var a int)
 	(= a 5)
-	(var b 5 int)
-	(var c a int)
-	(var d (add b c) int)
+	(var (= b 5))
+	(var (= c a) int)
+	(var (= d (add b c)))
 	d))
