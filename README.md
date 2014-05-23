@@ -19,7 +19,11 @@ the corresponding version you want. In the example below, Calc 1 has been used:
 To install and use the compiler, change into the calc directory and run the
 following command:
 
-	go install ./calcc
+	make install
+
+This will call 'go build' to install calcc and attempt to build the C
+runtime. Edit the Makefile in the root directory if you need to change the
+C compiler or tune any C compiler/linker flags.
 
 # Usage:
 
