@@ -41,7 +41,6 @@ func findRuntime() string {
 		paths = strings.Split(os.Getenv("GOPATH"), ":")
 	}
 	for _, path := range paths {
-		//fmt.Println("searching:", path+rpath)
 		path = filepath.Join(path, rpath)
 		_, err := os.Stat(filepath.Join(path, "runtime.a"))
 		if err == nil || os.IsExist(err) {
@@ -80,6 +79,7 @@ func main() {
 		flag.PrintDefaults()
 	}
 	var (
+		asm  = flag.Bool("s", false, "generate C code but do not compile")
 		cc   = flag.String("cc", "gcc", "C compiler to use")
 		cfl  = flag.String("cflags", "-c -std=gnu99", "C compiler flags")
 		cout = flag.String("cout", "--output=", "C compiler output flag")
@@ -121,21 +121,23 @@ func main() {
 	filename = filename[:len(filename)-len(calcExt)]
 	comp.CompileFile(filename, string(src))
 
-	/* compile to object code */
-	var out []byte
-	args := make_args(*cfl, "-I "+rpath, *cout+filename+".o", filename+".c")
-	out, err = exec.Command(*cc+ext, strings.Split(args, " ")...).CombinedOutput()
-	if err != nil {
-		cleanup(filename)
-		fatal(string(out), err)
-	}
+	if !*asm {
+		/* compile to object code */
+		var out []byte
+		args := make_args(*cfl, "-I "+rpath, *cout+filename+".o", filename+".c")
+		out, err = exec.Command(*cc+ext, strings.Split(args, " ")...).CombinedOutput()
+		if err != nil {
+			cleanup(filename)
+			fatal(string(out), err)
+		}
 
-	/* link to executable */
-	args = make_args(*ldf, *cout+filename+ext, filename+".o", rpath+"/runtime.a")
-	out, err = exec.Command(*ld+ext, strings.Split(args, " ")...).CombinedOutput()
-	if err != nil {
+		/* link to executable */
+		args = make_args(*ldf, *cout+filename+ext, filename+".o", rpath+"/runtime.a")
+		out, err = exec.Command(*ld+ext, strings.Split(args, " ")...).CombinedOutput()
+		if err != nil {
+			cleanup(filename)
+			fatal(string(out), err)
+		}
 		cleanup(filename)
-		fatal(string(out), err)
 	}
-	cleanup(filename)
 }
