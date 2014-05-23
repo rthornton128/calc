@@ -43,9 +43,18 @@ func CompileFile(fname, src string) {
 	}
 	c.fp = fp
 	c.compFile(f)
+
+	if c.errors.Count() != 0 {
+		c.errors.Print()
+		os.Exit(1)
+	}
 }
 
 /* Utility */
+
+func (c *compiler) Error(pos token.Pos, args ...interface{}) {
+	c.errors.Add(c.fset.Position(pos), args...)
+}
 
 func roundUp16(n int) int {
 	if r := n % 16; r != 0 {
@@ -180,6 +189,14 @@ func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) int {
 func (c *compiler) compCallExpr(e *ast.CallExpr) int {
 	offset := 4
 
+	ob := c.curScope.Lookup(e.Name.Name)
+	switch {
+	case ob == nil:
+		c.Error(e.Name.NamePos, "call to undeclared function '", e.Name.Name, "'")
+	case ob.Kind != ast.Decl:
+		c.Error(e.Name.NamePos, "may not call object that is not a function")
+	}
+
 	for _, v := range e.Args {
 		switch n := v.(type) {
 		case *ast.BasicLit:
@@ -226,6 +243,19 @@ func (c *compiler) compFile(f *ast.File) {
 	fmt.Fprintln(c.fp, "#include <runtime.h>")
 	c.topScope = f.Scope
 	c.curScope = c.topScope
+	ob := c.curScope.Lookup("main")
+	switch {
+	case ob == nil:
+		c.Error(token.NoPos, "no entry point, function 'main' not found")
+	case ob.Kind != ast.Decl:
+		c.Error(ob.NamePos, "no entry point, 'main' is not a function")
+	case ob.Type == nil:
+		c.Error(ob.NamePos, "'main' must be of type int but was declared as "+
+			"void")
+	case ob.Type.Name != "int":
+		c.Error(ob.Type.NamePos, "'main' must be of type but declared as ",
+			ob.Type.Name)
+	}
 	c.compScopeDecls()
 	fmt.Fprintln(c.fp, "int main(void) {")
 	fmt.Fprintln(c.fp, "stack_init();")
@@ -237,7 +267,6 @@ func (c *compiler) compFile(f *ast.File) {
 }
 
 func (c *compiler) compIdent(n *ast.Ident, format string) {
-	fmt.Println("looking up:", n.Name)
 	ob := c.curScope.Lookup(n.Name)
 	if ob == nil {
 		panic("no offset for identifier")
@@ -290,10 +319,8 @@ func (c *compiler) compScopeDecls() {
 }
 
 func (c *compiler) compVarExpr(v *ast.VarExpr) {
-	fmt.Println("varexpr: table:", c.curScope.Table)
 	ob := c.curScope.Lookup(v.Name.Name)
 	ob.Offset = c.nextOffset()
-	fmt.Println("setting offset for", ob.Name, "to", ob.Offset)
 	// TODO: value + infer type + check type
 	if ob.Value != nil {
 		switch n := ob.Value.(type) {
@@ -306,8 +333,7 @@ func (c *compiler) compVarExpr(v *ast.VarExpr) {
 			c.compCallExpr(n)
 			fmt.Fprintf(c.fp, "movl(eax, ebp+%d);\n", ob.Offset)
 		case *ast.Ident:
-			fmt.Println("varexpr-ident:", n.Name)
-			//c.compIdent(n, fmt.Sprintf("movl(ebp+%%d, ebp+%d);\n", ob.Offset))
+			c.compIdent(n, fmt.Sprintf("movl(ebp+%%d, ebp+%d);\n", ob.Offset))
 		}
 	}
 }
