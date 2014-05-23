@@ -197,7 +197,7 @@ func (c *compiler) compCallExpr(e *ast.CallExpr) int {
 
 	ob := c.curScope.Lookup(e.Name.Name)
 	switch {
-	case e.Name == "main":
+	case e.Name.Name == "main":
 		c.Error(e.Name.NamePos, "illegal to call function 'main'")
 	case ob == nil:
 		c.Error(e.Name.NamePos, "call to undeclared function '", e.Name.Name, "'")
