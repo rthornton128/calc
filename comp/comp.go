@@ -114,7 +114,6 @@ func (c *compiler) compAssignExpr(a *ast.AssignExpr) {
 			a.Name.Name, "'")
 		return
 	}
-	//fmt.Fprintf(c.fp, "setl(%d, ebp+%d);\n",
 	// TODO: yikes! no type checking?!
 	ob.Value = a.Value
 	switch n := ob.Value.(type) {
@@ -329,19 +328,12 @@ func (c *compiler) compVarExpr(v *ast.VarExpr) {
 	ob := c.curScope.Lookup(v.Name.Name)
 	ob.Offset = c.nextOffset()
 	// TODO: value + infer type + check type
-	if ob.Value != nil {
-		switch n := ob.Value.(type) {
-		case *ast.BasicLit:
-			c.compInt(n, fmt.Sprintf("ebp+%d", ob.Offset))
-		case *ast.BinaryExpr:
-			c.compBinaryExpr(n)
-			fmt.Fprintf(c.fp, "movl(eax, ebp+%d);\n", ob.Offset)
-		case *ast.CallExpr:
-			c.compCallExpr(n)
-			fmt.Fprintf(c.fp, "movl(eax, ebp+%d);\n", ob.Offset)
-		case *ast.Ident:
-			c.compIdent(n, fmt.Sprintf("movl(ebp+%%d, ebp+%d);\n", ob.Offset))
+	if ob.Value != nil && !reflect.ValueOf(ob.Value).IsNil() {
+		if val, ok := ob.Value.(*ast.AssignExpr); ok {
+			c.compAssignExpr(val)
+			return
 		}
+		panic("parsing error occured, object's Value is not an assignment")
 	}
 }
 
