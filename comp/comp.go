@@ -201,6 +201,10 @@ func (c *compiler) compCallExpr(e *ast.CallExpr) int {
 		c.Error(e.Name.NamePos, "call to undeclared function '", e.Name.Name, "'")
 	case ob.Kind != ast.Decl:
 		c.Error(e.Name.NamePos, "may not call object that is not a function")
+	case len(ob.Value.(*ast.DeclExpr).Params) != len(e.Args):
+		c.Error(e.Name.NamePos, "number of arguments in function call do not "+
+			"match declaration, expected ", len(ob.Value.(*ast.DeclExpr).Params),
+			" got ", len(e.Args))
 	}
 
 	for _, v := range e.Args {
