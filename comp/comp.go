@@ -83,6 +83,8 @@ func (c *compiler) closeScope() {
 
 func (c *compiler) compNode(node ast.Node) int {
 	switch n := node.(type) {
+	case *ast.AssignExpr:
+		c.compAssignExpr(n)
 	case *ast.BasicLit:
 		c.compInt(n, "eax")
 	case *ast.BinaryExpr:
@@ -107,6 +109,11 @@ func (c *compiler) compNode(node ast.Node) int {
 
 func (c *compiler) compAssignExpr(a *ast.AssignExpr) {
 	ob := c.curScope.Lookup(a.Name.Name)
+	if ob == nil {
+		c.Error(a.Name.NamePos, "can't assign value to undeclared variable '",
+			a.Name.Name, "'")
+		return
+	}
 	//fmt.Fprintf(c.fp, "setl(%d, ebp+%d);\n",
 	// TODO: yikes! no type checking?!
 	ob.Value = a.Value
