@@ -85,7 +85,7 @@ func main() {
 		cout = flag.String("cout", "--output=", "C compiler output flag")
 		ld   = flag.String("ld", "gcc", "linker")
 		ldf  = flag.String("ldflags", "", "linker flags")
-		ver  = flag.Bool("version", false, "Print version number and exit")
+		ver  = flag.Bool("v", false, "Print version number and exit")
 	)
 	flag.Parse()
 
