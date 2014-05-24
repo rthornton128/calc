@@ -114,7 +114,15 @@ func (c *compiler) compAssignExpr(a *ast.AssignExpr) {
 			a.Name.Name, "'")
 		return
 	}
-	// TODO: yikes! no type checking?!
+	atype, otype := c.typeOf(a.Value), typeOfObject(ob)
+	if otype == "unknown" {
+		ob.Type = &ast.Ident{NamePos: token.NoPos, Name: atype}
+		otype = atype
+	}
+	if atype != otype {
+		c.Error(a.Name.NamePos, "type mismatch, can't assign a value of type ",
+			atype, " to a variable of type ", otype)
+	}
 	ob.Value = a.Value
 	switch n := ob.Value.(type) {
 	case *ast.BasicLit:
@@ -209,6 +217,17 @@ func (c *compiler) compCallExpr(e *ast.CallExpr) int {
 			" got ", len(e.Args))
 	}
 
+	decl := ob.Value.(*ast.DeclExpr)
+	scope := c.curScope
+	c.openScope(decl.Scope)
+	for i, v := range e.Args {
+		atype, dtype := c.typeOf(v), c.typeOf(decl.Params[i])
+		if atype != dtype {
+			c.Error(e.Name.NamePos, "type mismatch, argument ", i, " of ",
+				e.Name.Name, " is of type ", atype, " but expected ", dtype)
+		}
+	}
+	c.curScope = scope
 	for _, v := range e.Args {
 		switch n := v.(type) {
 		case *ast.BasicLit:
