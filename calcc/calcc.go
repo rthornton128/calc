@@ -10,7 +10,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -100,10 +99,6 @@ func main() {
 
 	filename := flag.Arg(0)
 
-	if filepath.Ext(filename) != calcExt {
-		fatal("Calc source files should have the '.calc' extension")
-	}
-
 	/* do a preemptive search to see if runtime can be found. Does not
 	 * guarantee it will be there at link time */
 	rpath := findRuntime()
@@ -112,27 +107,32 @@ func main() {
 			"run in source directory")
 	}
 
-	src, err := ioutil.ReadFile(filename)
-	if err != nil {
-		fatal(err)
-	}
 	fmt.Println("Compiling:", filename)
 
-	filename = filename[:len(filename)-len(calcExt)]
-	comp.CompileFile(filename, string(src))
-
+	fi, err := os.Stat(filename)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	if fi.IsDir() {
+		comp.CompileDir(filename)
+	} else {
+		comp.CompileFile(filename)
+	}
+	filename = filepath.Base(filename)
 	if !*asm {
 		/* compile to object code */
 		var out []byte
 		args := make_args(*cfl, "-I "+rpath, *cout+filename+".o", filename+".c")
-		out, err = exec.Command(*cc+ext, strings.Split(args, " ")...).CombinedOutput()
+		out, err := exec.Command(*cc+ext, strings.Split(args, " ")...).CombinedOutput()
 		if err != nil {
 			cleanup(filename)
 			fatal(string(out), err)
 		}
 
 		/* link to executable */
-		args = make_args(*ldf, *cout+filename+ext, filename+".o", rpath+"/runtime.a")
+		basename := filename[:len(filename)-len(filepath.Ext(filename))]
+		args = make_args(*ldf, *cout+basename+ext, filename+".o", rpath+"/runtime.a")
 		out, err = exec.Command(*ld+ext, strings.Split(args, " ")...).CombinedOutput()
 		if err != nil {
 			cleanup(filename)

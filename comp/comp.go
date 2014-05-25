@@ -28,7 +28,7 @@ type compiler struct {
 	topScope *ast.Scope
 }
 
-func CompileFile(fname, src string) {
+func CompileFile(fname string) {
 	var c compiler
 	fp, err := os.Create(fname + ".c")
 	if err != nil {
@@ -38,7 +38,7 @@ func CompileFile(fname, src string) {
 	defer fp.Close()
 
 	c.fset = token.NewFileSet()
-	f := parse.ParseFile(c.fset.Add(fname, src), fname, src)
+	f := parse.ParseFile(c.fset, fname)
 	if f == nil {
 		os.Exit(1)
 	}

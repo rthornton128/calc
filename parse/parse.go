@@ -18,14 +18,32 @@ import (
 	"github.com/rthornton128/calc/token"
 )
 
-func ParseFile(file *token.File, filename, src string) *ast.File {
+func ParseFile(fset *token.FileSet, filename string) *ast.File {
+	fi, err := os.Stat(filename)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	var p parser
-	p.init(file, filename, src)
-	f := p.parseFile()
+	var f *ast.File
+	if ext := filepath.Ext(fi.Name()); ext == ".calc" {
+		src, err := ioutil.ReadFile(filename)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		file := fset.Add(filepath.Base(filename), string(src))
+		p.init(file, filename, string(src))
+		f = p.parseFile()
+	}
+
 	if p.errors.Count() > 0 {
 		p.errors.Print()
 		return nil
 	}
+
 	return f
 }
 
@@ -44,22 +62,13 @@ func ParseDir(fset *token.FileSet, path string) *ast.Package {
 	}
 
 	var files []*ast.File
+	// TODO: use concurrency
 	for _, fi := range fis {
-		// Move to ParseFile?
-		if ext := filepath.Ext(fi.Name()); ext == ".calc" {
-			filename := fi.Name()[:len(fi.Name())-len(ext)]
-			src, err := ioutil.ReadFile(filepath.Join(path, fi.Name()))
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
-			file := fset.Add(filename, string(src))
-			f := ParseFile(file, filename, string(src))
-			if f == nil {
-				return nil
-			}
-			files = append(files, f)
+		f := ParseFile(fset, path+fi.Name())
+		if f != nil {
+			return nil
 		}
+		files = append(files, f)
 	}
 	scope := ast.MergeScopes(files)
 	return &ast.Package{Scope: scope, Files: files}
