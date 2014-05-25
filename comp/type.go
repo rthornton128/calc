@@ -9,7 +9,7 @@ func validType(t string) bool {
 	return t == "int"
 }
 
-func (c *compiler) typeOf(n ast.Node) string {
+func typeOf(n ast.Node, s *ast.Scope) string {
 	t := "unknown"
 	switch e := n.(type) {
 	case *ast.BasicLit:
@@ -17,13 +17,13 @@ func (c *compiler) typeOf(n ast.Node) string {
 	case *ast.BinaryExpr:
 		t = "int"
 	case *ast.CallExpr:
-		ob := c.curScope.Lookup(e.Name.Name)
+		ob := s.Lookup(e.Name.Name)
 		t = typeOfObject(ob)
 	case *ast.DeclExpr:
-		ob := c.curScope.Lookup(e.Name.Name)
+		ob := s.Lookup(e.Name.Name)
 		t = typeOfObject(ob)
 	case *ast.Ident:
-		ob := c.curScope.Lookup(e.Name)
+		ob := s.Lookup(e.Name)
 		t = typeOfObject(ob)
 	}
 	return t
