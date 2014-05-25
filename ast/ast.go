@@ -101,7 +101,7 @@ type ObKind int
 
 type Package struct {
 	Scope *Scope
-	//Files map[string]*File
+	Files []*File
 }
 
 type Scope struct {
@@ -139,6 +139,16 @@ const (
 
 func NewScope(parent *Scope) *Scope {
 	return &Scope{Parent: parent, Table: make(map[string]*Object)}
+}
+
+func MergeScopes(files []*File) *Scope {
+	table := make(map[string]*Object)
+	for _, f := range files {
+		for k, v := range f.Scope.Table {
+			table[k] = v
+		}
+	}
+	return &Scope{Parent: nil, Table: table}
 }
 
 func (s *Scope) Insert(ob *Object) *Object {
