@@ -10,6 +10,7 @@ package comp
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strconv"
 
@@ -43,6 +44,28 @@ func CompileFile(fname, src string) {
 	}
 	c.fp = fp
 	c.compFile(f)
+
+	if c.errors.Count() != 0 {
+		c.errors.Print()
+		os.Exit(1)
+	}
+}
+
+func CompileDir(path string) {
+	fp, err := os.Create(filepath.Base(path) + ".c")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer fp.Close()
+
+	fs := token.NewFileSet()
+	pkg := parse.ParseDir(fs, path)
+	if pkg == nil {
+		os.Exit(1)
+	}
+	c := &compiler{fp: fp, fset: fs}
+	c.compPackage(pkg)
 
 	if c.errors.Count() != 0 {
 		c.errors.Print()
@@ -114,7 +137,7 @@ func (c *compiler) compAssignExpr(a *ast.AssignExpr) {
 			a.Name.Name, "'")
 		return
 	}
-	atype, otype := c.typeOf(a.Value), typeOfObject(ob)
+	atype, otype := typeOf(a.Value, c.curScope), typeOfObject(ob)
 	if otype == "unknown" {
 		ob.Type = &ast.Ident{NamePos: token.NoPos, Name: atype}
 		otype = atype
@@ -218,16 +241,13 @@ func (c *compiler) compCallExpr(e *ast.CallExpr) int {
 	}
 
 	decl := ob.Value.(*ast.DeclExpr)
-	scope := c.curScope
-	c.openScope(decl.Scope)
 	for i, v := range e.Args {
-		atype, dtype := c.typeOf(v), c.typeOf(decl.Params[i])
+		atype, dtype := typeOf(v, c.curScope), typeOf(decl.Params[i], decl.Scope)
 		if atype != dtype {
 			c.Error(e.Name.NamePos, "type mismatch, argument ", i, " of ",
 				e.Name.Name, " is of type ", atype, " but expected ", dtype)
 		}
 	}
-	c.curScope = scope
 	for _, v := range e.Args {
 		switch n := v.(type) {
 		case *ast.BasicLit:
@@ -270,31 +290,9 @@ func (c *compiler) compDeclExpr(d *ast.DeclExpr) int {
 }
 
 func (c *compiler) compFile(f *ast.File) {
-	fmt.Fprintln(c.fp, "#include <stdio.h>")
-	fmt.Fprintln(c.fp, "#include <runtime.h>")
 	c.topScope = f.Scope
 	c.curScope = c.topScope
-	ob := c.curScope.Lookup("main")
-	switch {
-	case ob == nil:
-		c.Error(token.NoPos, "no entry point, function 'main' not found")
-	case ob.Kind != ast.Decl:
-		c.Error(ob.NamePos, "no entry point, 'main' is not a function")
-	case ob.Type == nil:
-		c.Error(ob.NamePos, "'main' must be of type int but was declared as "+
-			"void")
-	case ob.Type.Name != "int":
-		c.Error(ob.Type.NamePos, "'main' must be of type but declared as ",
-			ob.Type.Name)
-	}
-	c.compScopeDecls()
-	fmt.Fprintln(c.fp, "int main(void) {")
-	fmt.Fprintln(c.fp, "stack_init();")
-	fmt.Fprintln(c.fp, "_main();")
-	fmt.Fprintln(c.fp, "printf(\"%d\\n\", *(int32_t *)eax);")
-	fmt.Fprintln(c.fp, "stack_end();")
-	fmt.Fprintln(c.fp, "return *(int32_t*) eax;")
-	fmt.Fprintln(c.fp, "}")
+	c.compTopScope()
 }
 
 func (c *compiler) compIdent(n *ast.Ident, format string) {
@@ -340,6 +338,12 @@ func (c *compiler) compInt(n *ast.BasicLit, reg string) {
 	fmt.Fprintf(c.fp, "setl(%d, %s);\n", i, reg)
 }
 
+func (c *compiler) compPackage(p *ast.Package) {
+	c.topScope = p.Scope
+	c.curScope = c.topScope
+	c.compTopScope()
+}
+
 func (c *compiler) compScopeDecls() {
 	for k, v := range c.curScope.Table {
 		if v.Kind == ast.Decl {
@@ -347,6 +351,32 @@ func (c *compiler) compScopeDecls() {
 			defer c.compNode(v.Value)
 		}
 	}
+}
+
+func (c *compiler) compTopScope() {
+	ob := c.curScope.Lookup("main")
+	switch {
+	case ob == nil:
+		c.Error(token.NoPos, "no entry point, function 'main' not found")
+	case ob.Kind != ast.Decl:
+		c.Error(ob.NamePos, "no entry point, 'main' is not a function")
+	case ob.Type == nil:
+		c.Error(ob.NamePos, "'main' must be of type int but was declared as "+
+			"void")
+	case ob.Type.Name != "int":
+		c.Error(ob.Type.NamePos, "'main' must be of type but declared as ",
+			ob.Type.Name)
+	}
+	fmt.Fprintln(c.fp, "#include <stdio.h>")
+	fmt.Fprintln(c.fp, "#include <runtime.h>")
+	c.compScopeDecls()
+	fmt.Fprintln(c.fp, "int main(void) {")
+	fmt.Fprintln(c.fp, "stack_init();")
+	fmt.Fprintln(c.fp, "_main();")
+	fmt.Fprintln(c.fp, "printf(\"%d\\n\", *(int32_t *)eax);")
+	fmt.Fprintln(c.fp, "stack_end();")
+	fmt.Fprintln(c.fp, "return *(int32_t*) eax;")
+	fmt.Fprintln(c.fp, "}")
 }
 
 func (c *compiler) compVarExpr(v *ast.VarExpr) {

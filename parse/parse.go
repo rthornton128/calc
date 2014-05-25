@@ -8,7 +8,10 @@
 package parse
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/rthornton128/calc/ast"
 	"github.com/rthornton128/calc/scan"
@@ -24,6 +27,42 @@ func ParseFile(file *token.File, filename, src string) *ast.File {
 		return nil
 	}
 	return f
+}
+
+func ParseDir(fset *token.FileSet, path string) *ast.Package {
+	fd, err := os.Open(path)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	defer fd.Close()
+
+	fis, err := fd.Readdir(-1)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	var files []*ast.File
+	for _, fi := range fis {
+		// Move to ParseFile?
+		if ext := filepath.Ext(fi.Name()); ext == ".calc" {
+			filename := fi.Name()[:len(fi.Name())-len(ext)]
+			src, err := ioutil.ReadFile(filepath.Join(path, fi.Name()))
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+			file := fset.Add(filename, string(src))
+			f := ParseFile(file, filename, string(src))
+			if f == nil {
+				return nil
+			}
+			files = append(files, f)
+		}
+	}
+	scope := ast.MergeScopes(files)
+	return &ast.Package{Scope: scope, Files: files}
 }
 
 type parser struct {
