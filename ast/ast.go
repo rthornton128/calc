@@ -143,12 +143,14 @@ func NewScope(parent *Scope) *Scope {
 
 func MergeScopes(files []*File) *Scope {
 	table := make(map[string]*Object)
+	scope := &Scope{Parent: nil, Table: table}
 	for _, f := range files {
+		f.Scope.Parent = scope
 		for k, v := range f.Scope.Table {
 			table[k] = v
 		}
 	}
-	return &Scope{Parent: nil, Table: table}
+	return scope
 }
 
 func (s *Scope) Insert(ob *Object) *Object {
