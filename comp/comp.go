@@ -28,20 +28,23 @@ type compiler struct {
 	topScope *ast.Scope
 }
 
-func CompileFile(fname string) {
+func CompileFile(path string) {
 	var c compiler
-	fp, err := os.Create(fname + ".c")
+
+	c.fset = token.NewFileSet()
+	f := parse.ParseFile(c.fset, path)
+	if f == nil {
+		os.Exit(1)
+	}
+
+	path = path[:len(path)-len(filepath.Ext(path))]
+	fp, err := os.Create(path + ".c")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 	defer fp.Close()
 
-	c.fset = token.NewFileSet()
-	f := parse.ParseFile(c.fset, fname)
-	if f == nil {
-		os.Exit(1)
-	}
 	c.fp = fp
 	c.compFile(f)
 
@@ -52,18 +55,19 @@ func CompileFile(fname string) {
 }
 
 func CompileDir(path string) {
-	fp, err := os.Create(filepath.Base(path) + ".c")
+	fs := token.NewFileSet()
+	pkg := parse.ParseDir(fs, path)
+	if pkg == nil {
+		os.Exit(1)
+	}
+
+	fp, err := os.Create(path + ".c")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 	defer fp.Close()
 
-	fs := token.NewFileSet()
-	pkg := parse.ParseDir(fs, path)
-	if pkg == nil {
-		os.Exit(1)
-	}
 	c := &compiler{fp: fp, fset: fs}
 	c.compPackage(pkg)
 

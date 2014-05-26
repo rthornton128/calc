@@ -19,8 +19,6 @@ import (
 	"github.com/rthornton128/calc/comp"
 )
 
-var calcExt = ".calc"
-
 func cleanup(filename string) {
 	os.Remove(filename + ".c")
 	os.Remove(filename + ".o")
@@ -92,12 +90,17 @@ func main() {
 		printVersion()
 		os.Exit(1)
 	}
-	if flag.NArg() != 1 {
+	var filename, path string
+	switch flag.NArg() {
+	case 0:
+		path, _ = filepath.Abs(".")
+	case 1:
+		path, _ = filepath.Abs(flag.Arg(0))
+	default:
 		flag.Usage()
 		os.Exit(1)
 	}
-
-	filename := flag.Arg(0)
+	path, filename = filepath.Split(path)
 
 	/* do a preemptive search to see if runtime can be found. Does not
 	 * guarantee it will be there at link time */
@@ -109,35 +112,38 @@ func main() {
 
 	fmt.Println("Compiling:", filename)
 
-	fi, err := os.Stat(filename)
+	fi, err := os.Stat(filepath.Join(path, filename))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 	if fi.IsDir() {
-		comp.CompileDir(filename)
+		//fmt.Println("calling compile dir")
+		comp.CompileDir(filepath.Join(path, filename))
 	} else {
-		comp.CompileFile(filename)
+		//fmt.Println("calling compile file")
+		comp.CompileFile(filepath.Join(path, filename))
 	}
-	filename = filepath.Base(filename)
+	path = filepath.Join(path, filename)
+	path = path[:len(path)-len(filepath.Ext(path))]
+
 	if !*asm {
 		/* compile to object code */
 		var out []byte
-		args := make_args(*cfl, "-I "+rpath, *cout+filename+".o", filename+".c")
+		args := make_args(*cfl, "-I "+rpath, *cout+path+".o", path+".c")
 		out, err := exec.Command(*cc+ext, strings.Split(args, " ")...).CombinedOutput()
 		if err != nil {
-			cleanup(filename)
+			cleanup(path)
 			fatal(string(out), err)
 		}
 
 		/* link to executable */
-		basename := filename[:len(filename)-len(filepath.Ext(filename))]
-		args = make_args(*ldf, *cout+basename+ext, filename+".o", rpath+"/runtime.a")
+		args = make_args(*ldf, *cout+path+ext, path+".o", rpath+"/runtime.a")
 		out, err = exec.Command(*ld+ext, strings.Split(args, " ")...).CombinedOutput()
 		if err != nil {
-			cleanup(filename)
+			cleanup(path)
 			fatal(string(out), err)
 		}
-		cleanup(filename)
+		cleanup(path)
 	}
 }

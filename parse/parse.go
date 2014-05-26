@@ -33,7 +33,6 @@ func ParseFile(fset *token.FileSet, filename string) *ast.File {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-
 		file := fset.Add(filepath.Base(filename), string(src))
 		p.init(file, filename, string(src))
 		f = p.parseFile()
@@ -64,8 +63,8 @@ func ParseDir(fset *token.FileSet, path string) *ast.Package {
 	var files []*ast.File
 	// TODO: use concurrency
 	for _, fi := range fis {
-		f := ParseFile(fset, path+fi.Name())
-		if f != nil {
+		f := ParseFile(fset, filepath.Join(path, fi.Name()))
+		if f == nil {
 			return nil
 		}
 		files = append(files, f)
