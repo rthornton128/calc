@@ -61,7 +61,7 @@ func CompileDir(path string) {
 		os.Exit(1)
 	}
 
-	fp, err := os.Create(path + ".c")
+	fp, err := os.Create(filepath.Join(path, filepath.Base(path)) + ".c")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

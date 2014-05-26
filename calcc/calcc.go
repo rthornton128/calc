@@ -90,7 +90,7 @@ func main() {
 		printVersion()
 		os.Exit(1)
 	}
-	var filename, path string
+	var path string
 	switch flag.NArg() {
 	case 0:
 		path, _ = filepath.Abs(".")
@@ -100,7 +100,6 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
-	path, filename = filepath.Split(path)
 
 	/* do a preemptive search to see if runtime can be found. Does not
 	 * guarantee it will be there at link time */
@@ -110,28 +109,24 @@ func main() {
 			"run in source directory")
 	}
 
-	fmt.Println("Compiling:", filename)
-
-	fi, err := os.Stat(filepath.Join(path, filename))
+	fi, err := os.Stat(path)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 	if fi.IsDir() {
-		//fmt.Println("calling compile dir")
-		comp.CompileDir(filepath.Join(path, filename))
+		comp.CompileDir(path)
+		path = filepath.Join(path, filepath.Base(path))
 	} else {
-		//fmt.Println("calling compile file")
-		comp.CompileFile(filepath.Join(path, filename))
+		comp.CompileFile(path)
 	}
-	path = filepath.Join(path, filename)
 	path = path[:len(path)-len(filepath.Ext(path))]
-
 	if !*asm {
 		/* compile to object code */
 		var out []byte
 		args := make_args(*cfl, "-I "+rpath, *cout+path+".o", path+".c")
-		out, err := exec.Command(*cc+ext, strings.Split(args, " ")...).CombinedOutput()
+		out, err := exec.Command(*cc+ext,
+			strings.Split(args, " ")...).CombinedOutput()
 		if err != nil {
 			cleanup(path)
 			fatal(string(out), err)
@@ -139,7 +134,8 @@ func main() {
 
 		/* link to executable */
 		args = make_args(*ldf, *cout+path+ext, path+".o", rpath+"/runtime.a")
-		out, err = exec.Command(*ld+ext, strings.Split(args, " ")...).CombinedOutput()
+		out, err = exec.Command(*ld+ext,
+			strings.Split(args, " ")...).CombinedOutput()
 		if err != nil {
 			cleanup(path)
 			fatal(string(out), err)
