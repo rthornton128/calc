@@ -52,8 +52,8 @@ func TestFilePosition(t *testing.T) {
 
 func TestFileSetPosition(t *testing.T) {
 	fs := token.NewFileSet()
-	fs.AddFile("testA.calc", test_expr)
-	fs.AddFile("testB.calc", test_expr)
+	fs.Add("testA.calc", test_expr)
+	fs.Add("testB.calc", test_expr)
 }
 
 func TestLookup(t *testing.T) {
