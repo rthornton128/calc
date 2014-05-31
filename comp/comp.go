@@ -108,18 +108,18 @@ func (c *compiler) closeScope() {
 
 /* Main Compiler */
 
-func (c *compiler) compNode(node ast.Node) int {
+func (c *compiler) compNode(node ast.Node) {
 	switch n := node.(type) {
 	case *ast.AssignExpr:
 		c.compAssignExpr(n)
 	case *ast.BasicLit:
 		c.compInt(n, "eax")
 	case *ast.BinaryExpr:
-		return c.compBinaryExpr(n)
+		c.compBinaryExpr(n)
 	case *ast.CallExpr:
-		return c.compCallExpr(n)
+		c.compCallExpr(n)
 	case *ast.DeclExpr:
-		return c.compDeclExpr(n)
+		c.compDeclExpr(n)
 	case *ast.ExprList:
 		for i := range n.List {
 			c.compNode(n.List[i])
@@ -131,7 +131,7 @@ func (c *compiler) compNode(node ast.Node) int {
 	case *ast.VarExpr:
 		c.compVarExpr(n)
 	}
-	return 0
+	return
 }
 
 func (c *compiler) compAssignExpr(a *ast.AssignExpr) {
@@ -165,7 +165,7 @@ func (c *compiler) compAssignExpr(a *ast.AssignExpr) {
 	}
 }
 
-func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) int {
+func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) {
 	switch n := b.List[0].(type) {
 	case *ast.BasicLit:
 		c.compInt(n, "eax")
@@ -224,10 +224,10 @@ func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) int {
 		}
 	}
 
-	return 0
+	return
 }
 
-func (c *compiler) compCallExpr(e *ast.CallExpr) int {
+func (c *compiler) compCallExpr(e *ast.CallExpr) {
 	offset := 4
 
 	ob := c.curScope.Lookup(e.Name.Name)
@@ -263,10 +263,10 @@ func (c *compiler) compCallExpr(e *ast.CallExpr) int {
 		offset += 4
 	}
 	fmt.Fprintf(c.fp, "_%s();\n", e.Name.Name)
-	return 0
+	return
 }
 
-func (c *compiler) compDeclExpr(d *ast.DeclExpr) int {
+func (c *compiler) compDeclExpr(d *ast.DeclExpr) {
 	c.openScope(d.Scope)
 	c.compScopeDecls()
 
@@ -290,7 +290,7 @@ func (c *compiler) compDeclExpr(d *ast.DeclExpr) int {
 	fmt.Fprintln(c.fp, "}")
 	c.offset = last
 	c.closeScope()
-	return 0
+	return
 }
 
 func (c *compiler) compFile(f *ast.File) {
