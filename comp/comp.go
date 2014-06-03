@@ -166,6 +166,10 @@ func (c *compiler) compAssignExpr(a *ast.AssignExpr) {
 }
 
 func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) {
+	if x, ok := c.compTryOptimizeBinaryOrInt(b); ok {
+		fmt.Fprintf(c.fp, "setl(%d, eax);\n", x)
+		return
+	}
 	switch n := b.List[0].(type) {
 	case *ast.BasicLit:
 		c.compInt(n, "eax")
@@ -414,4 +418,47 @@ func (c *compiler) countVars(n ast.Node) (x int) {
 		}
 	}
 	return
+}
+
+func (c *compiler) compTryOptimizeBinaryOrInt(e ast.Expr) (int, bool) {
+	var ret int
+	var ok bool
+	switch t := e.(type) {
+	case *ast.BasicLit:
+		if t.Kind == token.INTEGER {
+			i, err := strconv.Atoi(t.Lit)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+			ret, ok = i, true
+		}
+	case *ast.BinaryExpr:
+		for i, v := range t.List {
+			var x int
+			x, ok = c.compTryOptimizeBinaryOrInt(v)
+			if !ok {
+				break
+			}
+			if i == 0 {
+				ret = x
+				continue
+			}
+			switch t.Op {
+			case token.ADD:
+				ret += x
+			case token.SUB:
+				ret -= x
+			case token.MUL:
+				ret *= x
+			case token.QUO:
+				ret /= x
+			case token.REM:
+				ret %= x
+			default:
+				return 0, false
+			}
+		}
+	}
+	return ret, ok
 }
