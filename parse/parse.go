@@ -176,7 +176,6 @@ func (p *parser) parseBinaryExpr(open token.Pos) *ast.BinaryExpr {
 }
 
 func (p *parser) parseCallExpr(open token.Pos) *ast.CallExpr {
-	pos := p.pos
 	nam := p.parseIdent()
 
 	var list []ast.Expr
@@ -190,7 +189,6 @@ func (p *parser) parseCallExpr(open token.Pos) *ast.CallExpr {
 			Opening: open,
 			Closing: end,
 		},
-		Call: pos,
 		Name: nam,
 		Args: list,
 	}
