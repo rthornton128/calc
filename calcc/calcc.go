@@ -78,7 +78,7 @@ func main() {
 	var (
 		asm  = flag.Bool("s", false, "generate C code but do not compile")
 		cc   = flag.String("cc", "gcc", "C compiler to use")
-		cfl  = flag.String("cflags", "-c -std=gnu99", "C compiler flags")
+		cfl  = flag.String("cflags", "-c -g -std=gnu99", "C compiler flags")
 		cout = flag.String("cout", "--output=", "C compiler output flag")
 		ld   = flag.String("ld", "gcc", "linker")
 		ldf  = flag.String("ldflags", "", "linker flags")

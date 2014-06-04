@@ -322,7 +322,7 @@ func (c *compiler) compIfExpr(n *ast.IfExpr) {
 	case *ast.IfExpr:
 		c.compIfExpr(e)
 	case *ast.Ident:
-		c.compIdent(e)
+		c.compIdent(e, "movl(ebp+%d, eax);\n")
 	default:
 		c.Error(n.Cond.Pos(), "Conditional expression must evaluate to an "+
 			"integer type")
