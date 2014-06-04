@@ -317,6 +317,18 @@ func (c *compiler) compIfExpr(n *ast.IfExpr) {
 		c.compInt(e, "eax")
 	case *ast.BinaryExpr:
 		c.compBinaryExpr(e)
+	case *ast.CallExpr:
+		c.compCallExpr(e)
+	case *ast.IfExpr:
+		c.compIfExpr(e)
+	case *ast.Ident:
+		c.compIdent(e)
+	default:
+		c.Error(n.Cond.Pos(), "Conditional expression must evaluate to an "+
+			"integer type")
+	}
+	if t := typeOf(n.Cond, c.curScope); t != "int" {
+		c.Error(n.Cond.Pos(), "Expression must be of type int, got ", t)
 	}
 	fmt.Fprintln(c.fp, "if (*(int32_t *)ecx == 1) {")
 	c.openScope(n.Scope)
