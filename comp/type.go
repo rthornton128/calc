@@ -25,6 +25,10 @@ func typeOf(n ast.Node, s *ast.Scope) string {
 	case *ast.Ident:
 		ob := s.Lookup(e.Name)
 		t = typeOfObject(ob)
+	case *ast.IfExpr:
+		if e.Type != nil {
+			t = e.Type.Name
+		}
 	}
 	return t
 }

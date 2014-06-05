@@ -142,27 +142,33 @@ func (c *compiler) compAssignExpr(a *ast.AssignExpr) {
 		return
 	}
 	atype, otype := typeOf(a.Value, c.curScope), typeOfObject(ob)
-	if otype == "unknown" {
+	switch {
+	case atype == "unknown":
+		c.Error(a.Value.Pos(), "can't assign expression with no side effects")
+	case otype == "unknown":
 		ob.Type = &ast.Ident{NamePos: token.NoPos, Name: atype}
 		otype = atype
-	}
-	if atype != otype {
-		c.Error(a.Name.NamePos, "type mismatch, can't assign a value of type ",
+	case atype != otype:
+		c.Error(a.Name.Pos(), "type mismatch, can't assign a value of type ",
 			atype, " to a variable of type ", otype)
 	}
+	/* TODO: opportunity to optimize, if a.Value could be resolved prior to
+	 * assignment then only the raw value need by assigned */
 	ob.Value = a.Value
 	switch n := ob.Value.(type) {
 	case *ast.BasicLit:
 		c.compInt(n, fmt.Sprintf("ebp+%d", ob.Offset))
+		return
 	case *ast.BinaryExpr:
 		c.compBinaryExpr(n)
-		fmt.Fprintf(c.fp, "movl(eax, ebp+%d);\n", ob.Offset)
 	case *ast.CallExpr:
 		c.compCallExpr(n)
-		fmt.Fprintf(c.fp, "movl(eax, ebp+%d);\n", ob.Offset)
+	case *ast.IfExpr:
+		c.compIfExpr(n)
 	case *ast.Ident:
 		c.compIdent(n, fmt.Sprintf("movl(ebp+%%d, ebp+%d);\n", ob.Offset))
 	}
+	fmt.Fprintf(c.fp, "movl(eax, ebp+%d);\n", ob.Offset)
 }
 
 func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) {
