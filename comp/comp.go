@@ -339,17 +339,9 @@ func (c *compiler) compIfExpr(n *ast.IfExpr) {
 	fmt.Fprintln(c.fp, "if (*(int32_t *)ecx == 1) {")
 	c.openScope(n.Scope)
 	c.compNode(n.Then)
-	if n.Type != nil {
-		fmt.Fprintln(c.fp, "leave();")
-		fmt.Fprintln(c.fp, "return;")
-	}
 	if n.Else != nil && !reflect.ValueOf(n.Else).IsNil() {
 		fmt.Fprintln(c.fp, "} else {")
 		c.compNode(n.Else)
-		if n.Type != nil {
-			fmt.Fprintln(c.fp, "leave();")
-			fmt.Fprintln(c.fp, "return;")
-		}
 	}
 	c.closeScope()
 	fmt.Fprintln(c.fp, "}")
