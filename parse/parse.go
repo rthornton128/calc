@@ -211,7 +211,11 @@ func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
 	}
 
 	typ := p.parseIdent()
-	bod := p.tryExprOrList()
+
+	var body ast.Expr
+	if p.tok == token.LPAREN {
+		body = p.tryExprOrList()
+	}
 	end := p.expect(token.RPAREN)
 
 	decl := &ast.DeclExpr{
@@ -223,7 +227,7 @@ func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
 		Name:   nam,
 		Type:   typ,
 		Params: list,
-		Body:   bod,
+		Body:   body,
 		Scope:  p.curScope,
 	}
 	ob := &ast.Object{
