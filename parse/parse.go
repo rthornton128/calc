@@ -195,6 +195,10 @@ func (p *parser) parseCallExpr(open token.Pos) *ast.CallExpr {
 }
 
 func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
+	if p.curScope != p.topScope {
+		p.addError("function declarations may only be used in top-level scope")
+		return nil
+	}
 	pos := p.expect(token.DECL)
 	nam := p.parseIdent()
 
