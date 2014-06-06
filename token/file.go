@@ -8,25 +8,24 @@
 package token
 
 type File struct {
-	base     int
-	name     string
-	src      string
-	newlines []Pos
+	base  int
+	name  string
+	src   string
+	lines []int
 }
 
 func NewFile(name, src string) *File {
 	return &File{
-		base:     1,
-		name:     name,
-		src:      src,
-		newlines: make([]Pos, 0, 16),
+		base:  1,
+		name:  name,
+		src:   src,
+		lines: make([]int, 0, 16),
 	}
 }
 
-func (f *File) AddLine(p Pos) {
-	base := Pos(1)
-	if p.Valid() && p >= base && p < base+Pos(f.Size()) {
-		f.newlines = append(f.newlines, p)
+func (f *File) AddLine(offset int) {
+	if offset >= f.base-1 && offset < f.base+f.size {
+		f.lines = append(f.lines, offset)
 	}
 }
 
@@ -42,15 +41,12 @@ func (f *File) Pos(offset int) Pos {
 }
 
 func (f *File) Position(p Pos) Position {
-	start := Pos(0)
 	col, row := int(p), 1
 
-	for i, nl := range f.newlines {
-		if p <= nl {
-			col, row = int(p-start), i+1
-			break
+	for i, nl := range f.lines {
+		if p > f.Pos(nl) {
+			col, row = int(p-f.Pos(nl)), i+1
 		}
-		start = nl
 	}
 
 	return Position{Filename: f.name, Col: col, Row: row}
