@@ -18,6 +18,21 @@ import (
 	"github.com/rthornton128/calc/token"
 )
 
+func ParseExpression(name, src string) (node ast.Node) {
+	var p parser
+
+	fset := token.NewFileSet()
+	file := fset.Add(name, src)
+	p.init(file, name, string(src))
+	node = p.parseGenExpr()
+
+	if p.errors.Count() > 0 {
+		p.errors.Print()
+		node = nil
+	}
+	return
+}
+
 func ParseFile(fset *token.FileSet, filename string) *ast.File {
 	fi, err := os.Stat(filename)
 	if err != nil {

@@ -8,11 +8,11 @@
 package parse_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/rthornton128/calc/ast"
 	"github.com/rthornton128/calc/parse"
-	"github.com/rthornton128/calc/token"
 )
 
 type Type int
@@ -98,10 +98,9 @@ func nodeTest(types []Type, t *testing.T) func(node ast.Node) {
 }
 
 func TestParseFileBasic(t *testing.T) {
-	types := []Type{FILE, DECL, IDENT, IDENT, BINARY, BASIC, BASIC}
+	types := []Type{DECL, IDENT, IDENT, BINARY, BASIC, BASIC}
 	src := "(decl main int (+ 1 2))"
-	file := token.NewFile("basicdec", 1, len(src))
-	f := parse.ParseFile(file, "basicdec", src)
+	f := parse.ParseExpression("basicdec", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
@@ -109,20 +108,18 @@ func TestParseFileBasic(t *testing.T) {
 }
 
 func TestParseCall(t *testing.T) {
-	types := []Type{FILE, DECL, IDENT, IDENT, CALL, IDENT, BASIC, BASIC,
+	types := []Type{DECL, IDENT, IDENT, CALL, IDENT, BASIC, BASIC,
 		BASIC, BASIC}
 	src := "(decl main int (add 1 2 3 4))"
-	file := token.NewFile("call1", 1, len(src))
-	f := parse.ParseFile(file, "call1", "(decl main int (add 1 2 3 4))")
+	f := parse.ParseExpression("call1", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
 	ast.Walk(f, nodeTest(types, t))
 
-	types = []Type{FILE, DECL, IDENT, IDENT, CALL, IDENT}
+	types = []Type{DECL, IDENT, IDENT, CALL, IDENT}
 	src = "(decl main int (nothing))"
-	file = token.NewFile("call1", 1, len(src))
-	f = parse.ParseFile(file, "call1", src)
+	f = parse.ParseExpression("call2", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
@@ -130,29 +127,26 @@ func TestParseCall(t *testing.T) {
 }
 
 func TestParseDecl(t *testing.T) {
-	types := []Type{FILE, DECL, IDENT, IDENT, IDENT}
-	src := "(decl func int a)"
-	file := token.NewFile("decl1.calc", 1, len(src))
-	f := parse.ParseFile(file, "decl1.calc", src)
+	types := []Type{DECL, IDENT, IDENT}
+	src := "(decl func int)"
+	f := parse.ParseExpression("decl1", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
 	ast.Walk(f, nodeTest(types, t))
 
-	types = []Type{FILE, DECL, IDENT, IDENT, BINARY, BASIC, BASIC}
+	types = []Type{DECL, IDENT, IDENT, BINARY, BASIC, BASIC}
 	src = "(decl five int (+ 2 3))"
-	file = token.NewFile("decl2.calc", 1, len(src))
-	f = parse.ParseFile(file, "decl1.calc", src)
+	f = parse.ParseExpression("decl2", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
 	ast.Walk(f, nodeTest(types, t))
 
-	types = []Type{FILE, DECL, IDENT, IDENT, IDENT, IDENT, BINARY,
+	types = []Type{DECL, IDENT, IDENT, IDENT, IDENT, BINARY,
 		IDENT, IDENT}
 	src = "(decl add(a b int) int (+ a b))"
-	file = token.NewFile("decl3.calc", 1, len(src))
-	f = parse.ParseFile(file, "decl2.calc", src)
+	f = parse.ParseExpression("decl3", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
@@ -160,30 +154,26 @@ func TestParseDecl(t *testing.T) {
 }
 
 func TestParseIf(t *testing.T) {
-	types := []Type{FILE, DECL, IDENT, IDENT, IF, IDENT, IDENT, BASIC}
-	src := "(decl main int (if true int 3))"
-	file := token.NewFile("if.calc", 1, len(src))
-	f := parse.ParseFile(file, "if.calc", src)
+	types := []Type{IF, BASIC, IDENT, BASIC}
+	src := "(if 1 int 3)"
+	f := parse.ParseExpression("if1", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
 	ast.Walk(f, nodeTest(types, t))
 
-	types = []Type{FILE, DECL, IDENT, IDENT, IF, BINARY, IDENT, IDENT, IDENT,
+	types = []Type{IF, BINARY, IDENT, IDENT, IDENT,
 		IDENT, LIST, BINARY, IDENT, BASIC, IDENT}
-	src = "(decl main int (if (< a b) int a ((+ b 1) b)))"
-	file = token.NewFile("if2.calc", 1, len(src))
-	f = parse.ParseFile(file, "if2.calc", src)
+	src = "(if (< a b) int a ((+ b 1) b))"
+	f = parse.ParseExpression("if2", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
 	ast.Walk(f, nodeTest(types, t))
 
-	types = []Type{FILE, DECL, IDENT, IDENT, IF, BINARY, IDENT, IDENT, LIST,
-		ASSIGN, IDENT, IDENT}
-	src = "(decl main int (if (< a b) ((= a b))))"
-	file = token.NewFile("if3.calc", 1, len(src))
-	f = parse.ParseFile(file, "if3.calc", src)
+	types = []Type{IF, BINARY, IDENT, IDENT, LIST, ASSIGN, IDENT, IDENT}
+	src = "(if (< a b) ((= a b)))"
+	f = parse.ParseExpression("if3", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
@@ -191,11 +181,10 @@ func TestParseIf(t *testing.T) {
 }
 
 func TestParseNested(t *testing.T) {
-	var types = []Type{FILE, DECL, IDENT, IDENT, BINARY, BINARY, BASIC, BASIC,
-		BASIC, BINARY, BASIC, BASIC}
-	src := ";comment\n(decl main int (+ (/ 9 3) 5 (- 3 1)))"
-	file := token.NewFile("nested.calc", 1, len(src))
-	f := parse.ParseFile(file, "nested.calc", src)
+	var types = []Type{BINARY, BINARY, BASIC, BASIC, BASIC, BINARY, BASIC,
+		BASIC}
+	src := ";comment\n(+ (/ 9 3) 5 (- 3 1))"
+	f := parse.ParseExpression("nested", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
@@ -203,29 +192,25 @@ func TestParseNested(t *testing.T) {
 }
 
 func TestParseVar(t *testing.T) {
-	types := []Type{FILE, DECL, IDENT, IDENT, VAR, IDENT, IDENT}
-	src := "(decl main int (var a int))"
-	file := token.NewFile("var.calc", 1, len(src))
-	f := parse.ParseFile(file, "var.calc", src)
+	types := []Type{VAR, IDENT, IDENT}
+	src := "(var a int)"
+	f := parse.ParseExpression("var", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
 	ast.Walk(f, nodeTest(types, t))
 
-	types = []Type{FILE, DECL, IDENT, IDENT, VAR, IDENT, IDENT, ASSIGN,
-		IDENT, BASIC}
-	src = "(decl main int (var (= a 5) int))"
-	file = token.NewFile("var2.calc", 1, len(src))
-	f = parse.ParseFile(file, "var2.calc", src)
+	types = []Type{VAR, IDENT, IDENT, ASSIGN, IDENT, BASIC}
+	src = "(var (= a 5) int)"
+	f = parse.ParseExpression("var2", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
 	ast.Walk(f, nodeTest(types, t))
 
-	types = []Type{FILE, DECL, IDENT, IDENT, VAR, IDENT, ASSIGN, IDENT, BASIC}
-	src = "(decl main int (var (= a 5)))"
-	file = token.NewFile("var3.calc", 1, len(src))
-	f = parse.ParseFile(file, "var3.calc", src)
+	types = []Type{VAR, IDENT, ASSIGN, IDENT, BASIC}
+	src = "(var (= a 5))"
+	f = parse.ParseExpression("var3", src)
 	if f == nil {
 		t.Fatal("Failed to parse")
 	}
@@ -239,7 +224,6 @@ func TestExpectFail(t *testing.T) {
 		"(3 5 +)",
 		"(3 + 4)",
 		"(+ 6 2",
-		"(- 4 5)2",
 		"(d",
 		"(% / d)",
 		"(& 3 5)",
@@ -253,12 +237,11 @@ func TestExpectFail(t *testing.T) {
 		"(var a)",
 		"(var (+ a b))",
 		"(var 23)",
-		"(var a int)(var a int)",
 	}
-	for _, src := range tests {
-		file := token.NewFile("expectfail", 1, len(src))
-		if f := parse.ParseFile(file, "expectfail", src); f != nil {
-			t.Log(src, "- not nil")
+	for i, src := range tests {
+		name := fmt.Sprint("expectfail", i)
+		if f := parse.ParseExpression(name, src); f != nil {
+			t.Log(name, ":", src, "- not nil")
 			t.Fail()
 		}
 	}
