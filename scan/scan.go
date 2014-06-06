@@ -25,6 +25,7 @@ func (s *Scanner) Init(file *token.File, src string) {
 	s.file = file
 	s.offset, s.roffset = 0, 0
 	s.src = src
+	s.file.AddLine(s.offset)
 
 	s.next()
 }
@@ -122,8 +123,8 @@ func (s *Scanner) next() {
 	if s.roffset < len(s.src) {
 		s.offset = s.roffset
 		s.ch = rune(s.src[s.offset])
-		if s.ch == '\n' || s.offset >= len(s.src)-1 {
-			s.file.AddLine(token.Pos(s.offset))
+		if s.ch == '\n' {
+			s.file.AddLine(s.offset)
 		}
 		s.roffset++
 	}
