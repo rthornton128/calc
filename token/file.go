@@ -24,7 +24,7 @@ func NewFile(name, src string) *File {
 }
 
 func (f *File) AddLine(offset int) {
-	if offset >= f.base-1 && offset < f.base+f.size {
+	if offset >= f.base-1 && offset < f.base+len(f.src) {
 		f.lines = append(f.lines, offset)
 	}
 }
