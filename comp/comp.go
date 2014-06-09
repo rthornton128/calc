@@ -393,7 +393,7 @@ func (c *compiler) compTopScope() {
 	fmt.Fprintln(c.fp, "_main();")
 	fmt.Fprintln(c.fp, "printf(\"%d\\n\", *(int32_t *)eax);")
 	fmt.Fprintln(c.fp, "stack_end();")
-	fmt.Fprintln(c.fp, "return *(int32_t*) eax;")
+	fmt.Fprintln(c.fp, "return 0;")
 	fmt.Fprintln(c.fp, "}")
 }
 
