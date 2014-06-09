@@ -152,8 +152,6 @@ func (c *compiler) compAssignExpr(a *ast.AssignExpr) {
 		c.Error(a.Name.Pos(), "type mismatch, can't assign a value of type ",
 			atype, " to a variable of type ", otype)
 	}
-	/* TODO: opportunity to optimize, if a.Value could be resolved prior to
-	 * assignment then only the raw value need by assigned */
 	ob.Value = a.Value
 	switch n := ob.Value.(type) {
 	case *ast.BasicLit:
@@ -400,7 +398,6 @@ func (c *compiler) compTopScope() {
 func (c *compiler) compVarExpr(v *ast.VarExpr) {
 	ob := c.curScope.Lookup(v.Name.Name)
 	ob.Offset = c.nextOffset()
-	// TODO: value + infer type + check type
 	if ob.Value != nil && !reflect.ValueOf(ob.Value).IsNil() {
 		if val, ok := ob.Value.(*ast.AssignExpr); ok {
 			c.compAssignExpr(val)
