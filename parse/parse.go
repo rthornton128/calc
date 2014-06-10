@@ -114,7 +114,7 @@ func (p *parser) addError(args ...interface{}) {
 
 func (p *parser) checkExpr(e ast.Expr) ast.Expr {
 	switch e.(type) {
-	case *ast.BasicLit, *ast.BinaryExpr, *ast.CallExpr, *ast.IfExpr:
+	case *ast.BasicLit, *ast.BinaryExpr, *ast.CallExpr, *ast.Ident, *ast.IfExpr:
 	default:
 		p.addError("expected simple expression") // TODO: improve message
 	}

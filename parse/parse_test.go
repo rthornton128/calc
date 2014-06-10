@@ -27,6 +27,7 @@ const (
 	IF
 	FILE
 	LIST
+	UNARY
 	VAR
 )
 
@@ -40,6 +41,7 @@ var typeStrings = []string{
 	IF:     "if",
 	FILE:   "file",
 	LIST:   "exprlist",
+	UNARY:  "unaryexpr",
 	VAR:    "var",
 }
 
@@ -85,6 +87,10 @@ func nodeTest(types []Type, t *testing.T) func(node ast.Node) {
 		case *ast.IfExpr:
 			if types[i] != IF {
 				t.Fatal("Walk index:", i, "Expected:", types[i], "Got:", IF)
+			}
+		case *ast.UnaryExpr:
+			if types[i] != UNARY {
+				t.Fatal("Walk index:", i, "Expected:", types[i], "Got:", UNARY)
 			}
 		case *ast.VarExpr:
 			if types[i] != VAR {
@@ -189,6 +195,30 @@ func TestParseNested(t *testing.T) {
 		t.Fatal("Failed to parse")
 	}
 	ast.Walk(f, nodeTest(types, t))
+}
+
+func TestParseUnary(t *testing.T) {
+	var tests = []struct {
+		name  string
+		src   string
+		types []Type
+		pass  bool
+	}{
+		{"unary1", "-24", []Type{UNARY, BASIC}, true},
+		{"unary2", "-a", []Type{UNARY, IDENT}, true},
+		{"unary3", "-(foo)", []Type{UNARY, CALL, IDENT}, true},
+		{"unary4", "-(+ 2 3)", []Type{UNARY, BINARY, BASIC, BASIC}, true},
+		{"unary5", "-(decl foo int)", []Type{UNARY, DECL, IDENT, IDENT}, false},
+	}
+	for _, test := range tests {
+		f := parse.ParseExpression(test.name, test.src)
+		if f == nil && test.pass {
+			t.Log(f == nil)
+			t.Log(!test.pass)
+			t.Fatal("Failed to parse")
+		}
+		ast.Walk(f, nodeTest(test.types, t))
+	}
 }
 
 func TestParseVar(t *testing.T) {
