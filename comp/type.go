@@ -14,7 +14,7 @@ func typeOf(n ast.Node, s *ast.Scope) string {
 	switch e := n.(type) {
 	case *ast.BasicLit:
 		t = typeOfBasic(e)
-	case *ast.BinaryExpr:
+	case *ast.BinaryExpr, *ast.UnaryExpr:
 		t = "int"
 	case *ast.CallExpr:
 		ob := s.Lookup(e.Name.Name)

@@ -128,6 +128,8 @@ func (c *compiler) compNode(node ast.Node) {
 		c.compIdent(n, "movl(ebp+%d, eax);\n")
 	case *ast.IfExpr:
 		c.compIfExpr(n)
+	case *ast.UnaryExpr:
+		c.compUnaryExpr(n)
 	case *ast.VarExpr:
 		c.compVarExpr(n)
 	}
@@ -174,16 +176,7 @@ func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) {
 		fmt.Fprintf(c.fp, "setl(%d, eax);\n", x)
 		return
 	}
-	switch n := b.List[0].(type) {
-	case *ast.BasicLit:
-		c.compInt(n, "eax")
-	case *ast.BinaryExpr:
-		c.compBinaryExpr(n)
-	case *ast.CallExpr:
-		c.compCallExpr(n)
-	case *ast.Ident:
-		c.compIdent(n, "movl(ebp+%d, eax);\n")
-	}
+	c.compNode(b.List[0])
 
 	for _, node := range b.List[1:] {
 		switch n := node.(type) {
@@ -201,6 +194,11 @@ func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) {
 			fmt.Fprintln(c.fp, "popl(eax);")
 		case *ast.Ident:
 			c.compIdent(n, "movl(ebp+%d, edx);\n")
+		case *ast.UnaryExpr:
+			fmt.Fprintln(c.fp, "pushl(eax);")
+			c.compUnaryExpr(n)
+			fmt.Fprintln(c.fp, "movl(eax, edx);")
+			fmt.Fprintln(c.fp, "popl(eax);")
 		}
 		switch b.Op {
 		case token.ADD:
@@ -231,8 +229,6 @@ func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) {
 			fmt.Fprintln(c.fp, "orl(eax, edx);")
 		}
 	}
-
-	return
 }
 
 func (c *compiler) compCallExpr(e *ast.CallExpr) {
@@ -393,6 +389,12 @@ func (c *compiler) compTopScope() {
 	fmt.Fprintln(c.fp, "stack_end();")
 	fmt.Fprintln(c.fp, "return 0;")
 	fmt.Fprintln(c.fp, "}")
+}
+
+func (c *compiler) compUnaryExpr(u *ast.UnaryExpr) {
+	c.compNode(u.Value)
+	fmt.Fprintln(c.fp, "setl(-1, edx);")
+	fmt.Fprintln(c.fp, "mull(edx, eax);")
 }
 
 func (c *compiler) compVarExpr(v *ast.VarExpr) {
