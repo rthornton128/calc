@@ -112,6 +112,15 @@ func (p *parser) addError(args ...interface{}) {
 	}
 }
 
+func (p *parser) checkExpr(e ast.Expr) ast.Expr {
+	switch e.(type) {
+	case *ast.BasicLit, *ast.BinaryExpr, *ast.CallExpr, *ast.IfExpr:
+	default:
+		p.addError("expected simple expression") // TODO: improve message
+	}
+	return e
+}
+
 func (p *parser) expect(tok token.Token) token.Pos {
 	pos := p.pos
 	if p.tok != tok {
@@ -328,6 +337,8 @@ func (p *parser) parseGenExpr() ast.Expr {
 		expr = p.parseIdent()
 	case token.INTEGER:
 		expr = p.parseBasicLit()
+	case token.SUB:
+		expr = p.parseUnaryExpr()
 	default:
 		p.addError("Expected expression, got '" + p.lit + "'")
 		p.next()
@@ -413,6 +424,13 @@ func (p *parser) parseParamList() []*ast.Ident {
 	}
 	p.expect(token.RPAREN)
 	return list
+}
+
+func (p *parser) parseUnaryExpr() *ast.UnaryExpr {
+	pos, op := p.pos, p.lit
+	p.next()
+	exp := p.parseGenExpr()
+	return &ast.UnaryExpr{OpPos: pos, Op: op, Value: p.checkExpr(exp)}
 }
 
 func (p *parser) parseVarExpr(open token.Pos) *ast.VarExpr {
