@@ -126,16 +126,19 @@ func (e *Expression) Pos() token.Pos { return e.Opening }
 func (f *File) Pos() token.Pos       { return token.NoPos }
 func (i *Ident) Pos() token.Pos      { return i.NamePos }
 func (p *Package) Pos() token.Pos    { return token.NoPos }
+func (u *UnaryExpr) Pos() token.Pos  { return u.OpPos }
 
 func (b *BasicLit) End() token.Pos   { return b.LitPos + token.Pos(len(b.Lit)) }
 func (e *Expression) End() token.Pos { return e.Closing }
 func (f *File) End() token.Pos       { return token.NoPos }
 func (i *Ident) End() token.Pos      { return i.NamePos + token.Pos(len(i.Name)) }
 func (p *Package) End() token.Pos    { return token.NoPos }
+func (u *UnaryExpr) End() token.Pos  { return u.Value.End() }
 
 func (b *BasicLit) exprNode()   {}
 func (e *Expression) exprNode() {}
 func (i *Ident) exprNode()      {}
+func (u *UnaryExpr) exprNode()  {}
 
 const (
 	Decl ObKind = iota
