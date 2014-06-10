@@ -108,6 +108,12 @@ type Scope struct {
 	Table  map[string]*Object
 }
 
+type UnaryExpr struct {
+	OpPos token.Pos
+	Op    string
+	Value Expr
+}
+
 type VarExpr struct {
 	Expression
 	Var    token.Pos

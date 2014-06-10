@@ -56,6 +56,8 @@ func Walk(node Node, f Func) {
 		for _, v := range n.Scope.Table {
 			Walk(v.Value, f)
 		}
+	case *UnaryExpr:
+		Walk(n.Value, f)
 	case *VarExpr:
 		Walk(n.Name, f)
 		Walk(n.Object.Type, f)
