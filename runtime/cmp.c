@@ -11,12 +11,15 @@
 
 #include <string.h>
 
-void gel(char *a, char *b) { setl(memcmp(a, b, 4) >= 0, ecx); }
-void gtl(char *a, char *b) { setl(memcmp(a, b, 4) >= 1, ecx); }
-void lel(char *a, char *b) { setl(memcmp(a, b, 4) <= 0, ecx); }
-void ltl(char *a, char *b) { setl(memcmp(a, b, 4) <= -1, ecx); }
-void eql(char *a, char *b) { setl(memcmp(a, b, 4) == 0, ecx); }
-void nel(char *a, char *b) { setl(memcmp(a, b, 4) != 0, ecx); }
+#include <stdio.h>
+
+
+void gel(char *a, char *b) { setl(*(int32_t *)a >= *(int32_t *)b, ecx); }
+void gtl(char *a, char *b) { setl(*(int32_t *)a >  *(int32_t *)b, ecx); }
+void lel(char *a, char *b) { setl(*(int32_t *)a <= *(int32_t *)b, ecx); }
+void ltl(char *a, char *b) { setl(*(int32_t *)a <  *(int32_t *)b, ecx); }
+void eql(char *a, char *b) { setl(*(int32_t *)a == *(int32_t *)b, ecx); }
+void nel(char *a, char *b) { setl(*(int32_t *)a != *(int32_t *)b, ecx); }
 
 void andl(char *a, char *b) {
        setl(*(int32_t *)a >= 1 && *(int32_t *)b >= 1, ecx);
