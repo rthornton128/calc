@@ -22,6 +22,8 @@ func typeOf(n ast.Node, s *ast.Scope) (t *ast.Ident) {
 	case *ast.DeclExpr:
 		t = typeOfObject(s.Lookup(e.Name.Name))
 	case *ast.ExprList:
+		// BUG: should follow chain of execution to make sure all return
+		// values match return type
 		t = typeOf(e.List[len(e.List)-1], s)
 	case *ast.Ident:
 		t = typeOfObject(s.Lookup(e.Name))

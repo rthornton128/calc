@@ -143,7 +143,7 @@ func (c *compiler) compAssignExpr(a *ast.AssignExpr) {
 		return
 	}
 
-	c.matchTypes(a.Value, a.Name)
+	//c.matchTypes(a.Name, a.Value)
 	ob.Value = a.Value
 
 	switch n := ob.Value.(type) {
@@ -243,7 +243,7 @@ func (c *compiler) compCallExpr(e *ast.CallExpr) {
 	for i, v := range e.Args {
 		atype, dtype := typeOf(v, c.curScope), typeOf(decl.Params[i], decl.Scope)
 		if atype.Name != dtype.Name {
-			c.Error(e.Name.NamePos, "type mismatch, argument ", i, " of ",
+			c.Error(e.Name.NamePos, "type mismatch, argument ", i+1, " of ",
 				e.Name.Name, " is of type ", atype.Name, " but expected ", dtype.Name)
 		}
 	}
@@ -263,7 +263,6 @@ func (c *compiler) compCallExpr(e *ast.CallExpr) {
 
 func (c *compiler) compDeclExpr(d *ast.DeclExpr) {
 	c.openScope(d.Scope)
-	c.matchTypes(d, d.Body)
 	c.compScopeDecls()
 
 	last := c.offset
@@ -285,6 +284,7 @@ func (c *compiler) compDeclExpr(d *ast.DeclExpr) {
 
 	fmt.Fprintln(c.fp, "}")
 	c.offset = last
+	//c.matchTypes(d, d.Body)
 	c.closeScope()
 	return
 }
