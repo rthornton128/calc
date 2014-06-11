@@ -139,22 +139,13 @@ func (c *compiler) compNode(node ast.Node) {
 func (c *compiler) compAssignExpr(a *ast.AssignExpr) {
 	ob := c.curScope.Lookup(a.Name.Name)
 	if ob == nil {
-		c.Error(a.Name.NamePos, "can't assign value to undeclared variable '",
-			a.Name.Name, "'")
+		c.Error(a.Name.NamePos, "undeclared variable '", a.Name.Name, "'")
 		return
 	}
-	atype, otype := typeOf(a.Value, c.curScope), typeOfObject(ob)
-	switch {
-	case atype == "unknown":
-		c.Error(a.Value.Pos(), "can't assign expression with no side effects")
-	case otype == "unknown":
-		ob.Type = &ast.Ident{NamePos: token.NoPos, Name: atype}
-		otype = atype
-	case atype != otype:
-		c.Error(a.Name.Pos(), "type mismatch, can't assign a value of type ",
-			atype, " to a variable of type ", otype)
-	}
+
+	c.matchTypes(a.Value, a.Name)
 	ob.Value = a.Value
+
 	switch n := ob.Value.(type) {
 	case *ast.BasicLit:
 		c.compInt(n, fmt.Sprintf("ebp+%d", ob.Offset))
@@ -251,9 +242,9 @@ func (c *compiler) compCallExpr(e *ast.CallExpr) {
 	decl := ob.Value.(*ast.DeclExpr)
 	for i, v := range e.Args {
 		atype, dtype := typeOf(v, c.curScope), typeOf(decl.Params[i], decl.Scope)
-		if atype != dtype {
+		if atype.Name != dtype.Name {
 			c.Error(e.Name.NamePos, "type mismatch, argument ", i, " of ",
-				e.Name.Name, " is of type ", atype, " but expected ", dtype)
+				e.Name.Name, " is of type ", atype.Name, " but expected ", dtype.Name)
 		}
 	}
 	for _, v := range e.Args {
@@ -272,6 +263,7 @@ func (c *compiler) compCallExpr(e *ast.CallExpr) {
 
 func (c *compiler) compDeclExpr(d *ast.DeclExpr) {
 	c.openScope(d.Scope)
+	c.matchTypes(d, d.Body)
 	c.compScopeDecls()
 
 	last := c.offset
@@ -312,14 +304,16 @@ func (c *compiler) compIdent(n *ast.Ident, format string) {
 }
 
 func (c *compiler) compIfExpr(n *ast.IfExpr) {
-	if t := typeOf(n.Cond, c.curScope); t != "int" {
-		c.Error(n.Cond.Pos(), "Expression must be of type int, got ", t)
+	if t := typeOf(n.Cond, c.curScope); t.Name != "int" {
+		c.Error(n.Cond.Pos(), "Expression must be of type int, got ", t.Name)
 	}
 	c.compNode(n.Cond)
 	fmt.Fprintln(c.fp, "if (*(int32_t *)ecx == 1) {")
 	c.openScope(n.Scope)
+	c.matchTypes(n, n.Then)
 	c.compNode(n.Then)
 	if n.Else != nil && !reflect.ValueOf(n.Else).IsNil() {
+		c.matchTypes(n, n.Then)
 		fmt.Fprintln(c.fp, "} else {")
 		c.compNode(n.Else)
 	}
@@ -355,6 +349,7 @@ func (c *compiler) compTopScope() {
 	ob := c.curScope.Lookup("main")
 	switch {
 	case ob == nil:
+		// BUG: token.NoPos will cause panic
 		c.Error(token.NoPos, "no entry point, function 'main' not found")
 	case ob.Kind != ast.Decl:
 		c.Error(ob.NamePos, "no entry point, 'main' is not a function")
@@ -456,4 +451,21 @@ func (c *compiler) compTryOptimizeBinaryOrInt(e ast.Expr) (int, bool) {
 		}
 	}
 	return ret, ok
+}
+
+func (c *compiler) matchTypes(a, b ast.Node) {
+	atype, btype := typeOf(a, c.curScope), typeOf(b, c.curScope)
+
+	switch {
+	//case atype == "unknown":
+	//c.Error(a.Pos(), "unknown type")
+	case btype.Name == "unknown":
+		c.Error(btype.Pos(), "unknown type")
+	//case !validType(atype):
+	//c.Error(a.Pos(), "invalid type: ", atype)
+	case !validType(btype):
+		c.Error(btype.Pos(), "invalid type: ", btype.Name)
+	case atype.Name != btype.Name:
+		c.Error(btype.Pos(), "type mismatch: ", btype.Name, " vs ", atype.Name)
+	}
 }

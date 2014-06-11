@@ -5,49 +5,54 @@ import (
 	"github.com/rthornton128/calc/token"
 )
 
-func validType(t string) bool {
-	return t == "int"
+func validType(t *ast.Ident) bool {
+	return t.Name == "int"
 }
 
-func typeOf(n ast.Node, s *ast.Scope) string {
-	t := "unknown"
+func typeOf(n ast.Node, s *ast.Scope) (t *ast.Ident) {
 	switch e := n.(type) {
+	case *ast.AssignExpr:
+		t = typeOfObject(s.Lookup(e.Name.Name))
 	case *ast.BasicLit:
 		t = typeOfBasic(e)
-	case *ast.BinaryExpr, *ast.UnaryExpr:
-		t = "int"
+	case *ast.BinaryExpr:
+		t = typeOf(e.List[0], s)
 	case *ast.CallExpr:
-		ob := s.Lookup(e.Name.Name)
-		t = typeOfObject(ob)
+		t = typeOfObject(s.Lookup(e.Name.Name))
 	case *ast.DeclExpr:
-		ob := s.Lookup(e.Name.Name)
-		t = typeOfObject(ob)
+		t = typeOfObject(s.Lookup(e.Name.Name))
+	case *ast.ExprList:
+		t = typeOf(e.List[len(e.List)-1], s)
 	case *ast.Ident:
-		ob := s.Lookup(e.Name)
-		t = typeOfObject(ob)
+		t = typeOfObject(s.Lookup(e.Name))
 	case *ast.IfExpr:
 		if e.Type != nil {
-			t = e.Type.Name
+			t = e.Type
 		}
+	case *ast.UnaryExpr:
+		t = typeOf(e.Value, s)
+	case *ast.VarExpr:
+		t = typeOf(e.Name, s)
+	}
+
+	if t == nil {
+		t = &ast.Ident{Name: "unknown", NamePos: n.Pos()}
 	}
 	return t
 }
 
-func typeOfBasic(b *ast.BasicLit) string {
+func typeOfBasic(b *ast.BasicLit) *ast.Ident {
 	switch b.Kind {
 	case token.INTEGER:
-		return "int"
+		return &ast.Ident{Name: "int", NamePos: b.Pos()}
 	default:
-		return "unknown"
+		return nil
 	}
 }
 
-func typeOfObject(o *ast.Object) string {
-	t := "unknown"
+func typeOfObject(o *ast.Object) *ast.Ident {
 	if o.Type != nil {
-		if validType(o.Type.Name) {
-			t = o.Type.Name
-		}
+		return o.Type
 	}
-	return t
+	return nil
 }
