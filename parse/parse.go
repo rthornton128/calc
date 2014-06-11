@@ -107,16 +107,21 @@ type parser struct {
 func (p *parser) addError(args ...interface{}) {
 	p.errors.Add(p.file.Position(p.pos), args...)
 	if p.errors.Count() >= 10 {
+		// TODO: printing should not be done here...
 		p.errors.Print()
 		os.Exit(1)
 	}
 }
 
 func (p *parser) checkExpr(e ast.Expr) ast.Expr {
-	switch e.(type) {
-	case *ast.BasicLit, *ast.BinaryExpr, *ast.CallExpr, *ast.Ident, *ast.IfExpr:
+	switch t := e.(type) {
+	case *ast.BasicLit, *ast.BinaryExpr, *ast.CallExpr, *ast.Ident, *ast.IfExpr,
+		*ast.UnaryExpr:
+	case *ast.ExprList:
+		p.checkExpr(t.List[len(t.List)-1])
 	default:
-		p.addError("expected simple expression") // TODO: improve message
+		// TODO: should be part of addError
+		p.errors.Add(p.file.Position(e.Pos()), "expression has no side-effects")
 	}
 	return e
 }
@@ -165,7 +170,7 @@ func (p *parser) parseAssignExpr(open token.Pos) *ast.AssignExpr {
 		Expression: ast.Expression{Opening: open, Closing: end},
 		Equal:      pos,
 		Name:       nam,
-		Value:      val,
+		Value:      p.checkExpr(val),
 	}
 }
 
@@ -236,10 +241,7 @@ func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
 
 	typ := p.parseIdent()
 
-	var body ast.Expr
-	if p.tok == token.LPAREN {
-		body = p.tryExprOrList()
-	}
+	body := p.tryExprOrList()
 	end := p.expect(token.RPAREN)
 
 	decl := &ast.DeclExpr{
@@ -251,7 +253,7 @@ func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
 		Name:   nam,
 		Type:   typ,
 		Params: list,
-		Body:   body,
+		Body:   p.checkExpr(body),
 		Scope:  p.curScope,
 	}
 	ob := &ast.Object{
