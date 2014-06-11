@@ -312,24 +312,10 @@ func (c *compiler) compIdent(n *ast.Ident, format string) {
 }
 
 func (c *compiler) compIfExpr(n *ast.IfExpr) {
-	switch e := n.Cond.(type) {
-	case *ast.BasicLit:
-		c.compInt(e, "eax")
-	case *ast.BinaryExpr:
-		c.compBinaryExpr(e)
-	case *ast.CallExpr:
-		c.compCallExpr(e)
-	case *ast.IfExpr:
-		c.compIfExpr(e)
-	case *ast.Ident:
-		c.compIdent(e, "movl(ebp+%d, eax);\n")
-	default:
-		c.Error(n.Cond.Pos(), "Conditional expression must evaluate to an "+
-			"integer type")
-	}
 	if t := typeOf(n.Cond, c.curScope); t != "int" {
 		c.Error(n.Cond.Pos(), "Expression must be of type int, got ", t)
 	}
+	c.compNode(n.Cond)
 	fmt.Fprintln(c.fp, "if (*(int32_t *)ecx == 1) {")
 	c.openScope(n.Scope)
 	c.compNode(n.Then)
