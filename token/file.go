@@ -7,6 +7,8 @@
 
 package token
 
+// File represents a single source file. It is used to track the number of
+// newlines in the file, it's size, name and position within a fileset.
 type File struct {
 	base  int
 	name  string
@@ -14,6 +16,7 @@ type File struct {
 	size  int
 }
 
+// NewFile returns a new file object
 func NewFile(name string, base, size int) *File {
 	return &File{
 		base:  base,
@@ -23,16 +26,22 @@ func NewFile(name string, base, size int) *File {
 	}
 }
 
+// AddLine adds the position of the start of a line in the source file at
+// the given offset. Every file consists of at least one line at offset
+// zero.
 func (f *File) AddLine(offset int) {
 	if offset >= f.base-1 && offset < f.base+f.size {
 		f.lines = append(f.lines, offset)
 	}
 }
 
+// Base returns the base offset of the file within a fileset
 func (f *File) Base() int {
 	return f.base
 }
 
+// Pos generates a Pos based on the offset. The position is the file's
+// base+offset
 func (f *File) Pos(offset int) Pos {
 	if offset < 0 || offset >= f.size {
 		panic("illegal file offset")
@@ -40,6 +49,7 @@ func (f *File) Pos(offset int) Pos {
 	return Pos(f.base + offset)
 }
 
+// Position returns the column and row position of a Pos within the file
 func (f *File) Position(p Pos) Position {
 	col, row := int(p), 1
 
@@ -52,6 +62,7 @@ func (f *File) Position(p Pos) Position {
 	return Position{Filename: f.name, Col: col, Row: row}
 }
 
+// Size returns the length of the source code of the file.
 func (f *File) Size() int {
 	return f.size
 }

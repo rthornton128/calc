@@ -5,6 +5,7 @@
 // or, if one is not included, you may also find a copy at
 // http://opensource.org/licenses/BSD-2-Clause
 
+// Package scan is the Calc source code scanner
 package scan
 
 import (
@@ -13,6 +14,7 @@ import (
 	"github.com/rthornton128/calc/token"
 )
 
+// Scanner...
 type Scanner struct {
 	ch      rune
 	offset  int
@@ -21,6 +23,7 @@ type Scanner struct {
 	file    *token.File
 }
 
+// Init initializes Scanner and makes the source code ready to Scan
 func (s *Scanner) Init(file *token.File, src string) {
 	s.file = file
 	s.offset, s.roffset = 0, 0

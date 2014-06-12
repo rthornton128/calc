@@ -13,6 +13,7 @@ type Pos uint
 
 var NoPos = Pos(0)
 
+// Valid returns true if p does not equal NoPos
 func (p Pos) Valid() bool {
 	return p != NoPos
 }
