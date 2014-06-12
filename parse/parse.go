@@ -42,16 +42,18 @@ func ParseFile(fset *token.FileSet, filename string) *ast.File {
 
 	var p parser
 	var f *ast.File
-	if ext := filepath.Ext(fi.Name()); ext == ".calc" {
-		src, err := ioutil.ReadFile(filename)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		file := fset.Add(filepath.Base(filename), string(src))
-		p.init(file, filename, string(src))
-		f = p.parseFile()
+	if ext := filepath.Ext(fi.Name()); ext != ".calc" {
+		fmt.Println("Unknown file extension, must be .calc")
+		return nil
 	}
+	src, err := ioutil.ReadFile(filename)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	file := fset.Add(filepath.Base(filename), string(src))
+	p.init(file, filename, string(src))
+	f = p.parseFile()
 
 	if p.errors.Count() > 0 {
 		p.errors.Print()
@@ -69,16 +71,21 @@ func ParseDir(fset *token.FileSet, path string) *ast.Package {
 	}
 	defer fd.Close()
 
-	fis, err := fd.Readdir(-1)
+	fnames, err := fd.Readdirnames(0)
 	if err != nil {
 		fmt.Println(err)
+		return nil
+	}
+	fnames = filterByExt(fnames)
+	if len(fnames) == 0 {
+		fmt.Println("No files to parse; stop.")
 		return nil
 	}
 
 	var files []*ast.File
 	// TODO: use concurrency
-	for _, fi := range fis {
-		f := ParseFile(fset, filepath.Join(path, fi.Name()))
+	for _, name := range fnames {
+		f := ParseFile(fset, filepath.Join(path, name))
 		if f == nil {
 			return nil
 		}
@@ -86,6 +93,16 @@ func ParseDir(fset *token.FileSet, path string) *ast.Package {
 	}
 	scope := ast.MergeScopes(files)
 	return &ast.Package{Scope: scope, Files: files}
+}
+
+func filterByExt(names []string) []string {
+	filtered := make([]string, 0, len(names))
+	for _, name := range names {
+		if filepath.Ext(name) == ".calc" {
+			filtered = append(filtered, name)
+		}
+	}
+	return filtered
 }
 
 type parser struct {
