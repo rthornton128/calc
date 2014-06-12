@@ -143,7 +143,12 @@ func (c *compiler) compAssignExpr(a *ast.AssignExpr) {
 		return
 	}
 
-	//c.matchTypes(a.Name, a.Value)
+	if ob.Type == nil {
+		ob.Type = typeOf(a.Value, c.curScope)
+	} else {
+		c.matchTypes(a.Name, a.Value)
+	}
+
 	ob.Value = a.Value
 
 	switch n := ob.Value.(type) {
@@ -284,7 +289,9 @@ func (c *compiler) compDeclExpr(d *ast.DeclExpr) {
 
 	fmt.Fprintln(c.fp, "}")
 	c.offset = last
-	//c.matchTypes(d, d.Body)
+	if d.Body != nil {
+		c.matchTypes(d, d.Body)
+	}
 	c.closeScope()
 	return
 }
