@@ -157,8 +157,9 @@ func TestParseDecl(t *testing.T) {
 			[]Type{DECL, IDENT, IDENT, BINARY, BASIC, BASIC}, true},
 		{"decl3", "(decl add(a b int) int (+ a b))",
 			[]Type{DECL, IDENT, IDENT, IDENT, IDENT, BINARY, IDENT, IDENT}, true},
-		{"decl3", "(decl main () int a)", []Type{}, false},
-		{"decl3", "(decl main int ())", []Type{}, false},
+		{"decl4", "(decl main () int a)", []Type{}, false},
+		{"decl5", "(decl main int ())", []Type{}, false},
+		{"decl6", "decl main int)", []Type{}, false},
 	}
 	handleTests(t, tests)
 }
