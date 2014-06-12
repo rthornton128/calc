@@ -18,81 +18,73 @@ import (
 	"github.com/rthornton128/calc/token"
 )
 
-func ParseExpression(name, src string) (node ast.Node) {
+func ParseExpression(name, src string) (ast.Node, error) {
 	var p parser
 
 	fset := token.NewFileSet()
 	file := fset.Add(name, src)
 	p.init(file, name, string(src))
-	node = p.parseGenExpr()
+	node := p.parseGenExpr()
 
 	if p.errors.Count() > 0 {
-		p.errors.Print()
-		node = nil
+		return nil, p.errors
 	}
-	return
+	return node, nil
 }
 
-func ParseFile(fset *token.FileSet, filename string) *ast.File {
+func ParseFile(fset *token.FileSet, filename string) (*ast.File, error) {
 	fi, err := os.Stat(filename)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return nil, err
 	}
 
 	var p parser
 	var f *ast.File
 	if ext := filepath.Ext(fi.Name()); ext != ".calc" {
-		fmt.Println("Unknown file extension, must be .calc")
-		return nil
+		return nil, fmt.Errorf("unknown file extension, must be .calc")
 	}
 	src, err := ioutil.ReadFile(filename)
 	if err != nil {
-		fmt.Println(err)
-		return nil
+		return nil, err
 	}
 	file := fset.Add(filepath.Base(filename), string(src))
 	p.init(file, filename, string(src))
 	f = p.parseFile()
 
 	if p.errors.Count() > 0 {
-		p.errors.Print()
-		return nil
+		return nil, p.errors
 	}
 
-	return f
+	return f, nil
 }
 
-func ParseDir(fset *token.FileSet, path string) *ast.Package {
+func ParseDir(fset *token.FileSet, path string) (*ast.Package, error) {
 	fd, err := os.Open(path)
 	if err != nil {
-		fmt.Println(err)
-		return nil
+		return nil, err
 	}
 	defer fd.Close()
 
 	fnames, err := fd.Readdirnames(0)
 	if err != nil {
-		fmt.Println(err)
-		return nil
+		return nil, err
 	}
 	fnames = filterByExt(fnames)
 	if len(fnames) == 0 {
-		fmt.Println("No files to parse; stop.")
-		return nil
+		return nil, fmt.Errorf("no files to parse; stop")
 	}
 
 	var files []*ast.File
 	// TODO: use concurrency
 	for _, name := range fnames {
-		f := ParseFile(fset, filepath.Join(path, name))
+		f, err := ParseFile(fset, filepath.Join(path, name))
 		if f == nil {
-			return nil
+			return nil, err
 		}
 		files = append(files, f)
 	}
 	scope := ast.MergeScopes(files)
-	return &ast.Package{Scope: scope, Files: files}
+	return &ast.Package{Scope: scope, Files: files}, nil
 }
 
 func filterByExt(names []string) []string {

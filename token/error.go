@@ -30,8 +30,16 @@ func (el *ErrorList) Add(p Position, args ...interface{}) {
 	*el = append(*el, &Error{pos: p, msg: fmt.Sprint(args...)})
 }
 
-func (el *ErrorList) Print() {
-	for _, err := range *el {
+func (el ErrorList) Error() string {
+	var msg string
+	for _, err := range el {
+		msg += fmt.Sprintln(err)
+	}
+	return msg
+}
+
+func (el ErrorList) Print() {
+	for _, err := range el {
 		fmt.Println(err)
 	}
 }

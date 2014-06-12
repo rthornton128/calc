@@ -32,8 +32,9 @@ func CompileFile(path string) {
 	var c compiler
 
 	c.fset = token.NewFileSet()
-	f := parse.ParseFile(c.fset, path)
-	if f == nil {
+	f, err := parse.ParseFile(c.fset, path)
+	if err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
 
@@ -56,8 +57,9 @@ func CompileFile(path string) {
 
 func CompileDir(path string) {
 	fs := token.NewFileSet()
-	pkg := parse.ParseDir(fs, path)
-	if pkg == nil {
+	pkg, err := parse.ParseDir(fs, path)
+	if err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
 
