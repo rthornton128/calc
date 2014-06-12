@@ -114,14 +114,16 @@ func (p *parser) addError(args ...interface{}) {
 }
 
 func (p *parser) checkExpr(e ast.Expr) ast.Expr {
-	switch t := e.(type) {
-	case *ast.BasicLit, *ast.BinaryExpr, *ast.CallExpr, *ast.Ident, *ast.IfExpr,
-		*ast.UnaryExpr:
-	case *ast.ExprList:
-		p.checkExpr(t.List[len(t.List)-1])
-	default:
-		// TODO: should be part of addError
-		p.errors.Add(p.file.Position(e.Pos()), "expression has no side-effects")
+	if e != nil {
+		switch t := e.(type) {
+		case *ast.BasicLit, *ast.BinaryExpr, *ast.CallExpr, *ast.Ident, *ast.IfExpr,
+			*ast.UnaryExpr:
+		case *ast.ExprList:
+			p.checkExpr(t.List[len(t.List)-1])
+		default:
+			// TODO: should be part of addError
+			p.errors.Add(p.file.Position(e.Pos()), "expression has no side-effects")
+		}
 	}
 	return e
 }
