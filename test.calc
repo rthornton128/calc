@@ -9,5 +9,5 @@
 ;(decl main int (- (add 10 8) (* 1 5) (/ 9 3 )))
 ;(decl main int (add 3 2))
 (decl main int (fib 5))
-;decl main int (var (= a 5) int)) ; no side effect error?
+;(decl main int (var (= a 5) int)) ; no side effect error?
 ;(decl main int ((var a int)(= a 4)))
