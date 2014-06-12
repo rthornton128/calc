@@ -5,6 +5,7 @@
 // or, if one is not included, you may also find a copy at
 // http://opensource.org/licenses/BSD-2-Clause
 
+// Package parse implements the parser for the Calc programming language
 package parse
 
 import (
@@ -18,6 +19,10 @@ import (
 	"github.com/rthornton128/calc/token"
 )
 
+// ParseExpression parses the given source string and returns an ast.Node
+// representing the root of the expression. This function is intended to
+// facilitate testing and is not use by the compiler itself. The name is
+// used in error reporting
 func ParseExpression(name, src string) (ast.Node, error) {
 	var p parser
 
@@ -32,6 +37,10 @@ func ParseExpression(name, src string) (ast.Node, error) {
 	return node, nil
 }
 
+// ParseFile parses the file identified by filename and returns a pointer
+// to an ast.File object. The file should contain Calc source code and
+// have the .calc file extension.
+// The returned AST object ast.File is nil if there is an error.
 func ParseFile(fset *token.FileSet, filename string) (*ast.File, error) {
 	fi, err := os.Stat(filename)
 	if err != nil {
@@ -58,6 +67,8 @@ func ParseFile(fset *token.FileSet, filename string) (*ast.File, error) {
 	return f, nil
 }
 
+// ParseDir parses a directory of Calc source files. It calls ParseFile
+// for each file ending in .calc found in the directory.
 func ParseDir(fset *token.FileSet, path string) (*ast.Package, error) {
 	fd, err := os.Open(path)
 	if err != nil {
