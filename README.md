@@ -1,7 +1,10 @@
 # Prerequisites
 
  * Make sure GOPATH/bin is in your PATH environmental variable
- * GCC is installed (see Usage: Alternate C Compilers, below)
+ * C compiler; GCC is recommended (see Usage: Alternate C Compilers, below
+   if you wish to use something other than GCC)
+ * *Windows Only* Mingw or some kind of make program compatible with GNU
+   Make. Msys is _not_ required.
 
 # Install
 
