@@ -3,8 +3,8 @@
  * Make sure GOPATH/bin is in your PATH environmental variable
  * C compiler; GCC is recommended (see Usage: Alternate C Compilers, below
    if you wish to use something other than GCC)
- * *Windows Only* Mingw or some kind of make program compatible with GNU
-   Make. Msys is _not_ required.
+ * *(Windows Only)* Mingw or some kind of make program compatible with GNU
+   Make. Msys is __not__ required.
 
 # Install
 
