@@ -319,8 +319,10 @@ func (c *compiler) compIfExpr(n *ast.IfExpr) {
 	if t := typeOf(n.Cond, c.curScope); t.Name != "int" {
 		c.Error(n.Cond.Pos(), "Expression must be of type int, got ", t.Name)
 	}
+
 	c.compNode(n.Cond)
-	fmt.Fprintln(c.fp, "if (*(int32_t *)ecx == 1) {")
+
+	fmt.Fprintln(c.fp, "if (*(int32_t *)eax == 1) {")
 	c.openScope(n.Scope)
 	c.matchTypes(n, n.Then)
 	c.compNode(n.Then)

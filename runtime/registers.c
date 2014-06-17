@@ -7,9 +7,8 @@
 
 #include <stddef.h>
 
-char regs[12];
+char regs[8];
 char *eax = &regs[0];
-char *ecx = &regs[4];
-char *edx = &regs[8];
+char *edx = &regs[4];
 char *ebp = NULL;
 char *esp = NULL;
