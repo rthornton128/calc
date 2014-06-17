@@ -280,27 +280,23 @@ func (c *compiler) compCallExpr(e *ast.CallExpr) {
 
 func (c *compiler) compDeclExpr(d *ast.DeclExpr) {
 	c.openScope(d.Scope)
-	c.compScopeDecls()
 
-	last := c.offset
 	c.offset = 0
 	for _, p := range d.Params {
 		ob := c.curScope.Lookup(p.Name)
 		ob.Offset = c.nextOffset()
 	}
-	x := c.countVars(d)
-	fmt.Fprintf(c.fp, "void _%s(void) {\n", d.Name.Name)
 
-	if x > 0 {
+	fmt.Fprintf(c.fp, "void _%s(void) {\n", d.Name.Name)
+	if x := c.countVars(d) * 4; x > 0 {
 		fmt.Fprintf(c.fp, "enter(%d);\n", roundUp16(x))
 		c.compNode(d.Body)
 		fmt.Fprintln(c.fp, "leave();")
 	} else {
 		c.compNode(d.Body)
 	}
-
 	fmt.Fprintln(c.fp, "}")
-	c.offset = last
+
 	if d.Body != nil {
 		c.matchTypes(d, d.Body)
 	}
