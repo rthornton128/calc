@@ -263,8 +263,7 @@ func (c *compiler) compCallExpr(e *ast.CallExpr) {
 			c.Error(e.Name.NamePos, "type mismatch, argument ", i+1, " of ",
 				e.Name.Name, " is of type ", atype.Name, " but expected ", dtype.Name)
 		}
-	}
-	for _, v := range e.Args {
+
 		switch n := v.(type) {
 		case *ast.BasicLit:
 			c.compInt(n, fmt.Sprintf("esp+%d", offset))
