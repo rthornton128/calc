@@ -27,7 +27,6 @@ type compiler struct {
 	errors   token.ErrorList
 	offset   int
 	curScope *ast.Scope
-	topScope *ast.Scope
 }
 
 // CompileFile generates a C source file for the corresponding file
@@ -304,8 +303,7 @@ func (c *compiler) compDeclExpr(d *ast.DeclExpr) {
 }
 
 func (c *compiler) compFile(f *ast.File) {
-	c.topScope = f.Scope
-	c.curScope = c.topScope
+	c.curScope = f.Scope
 	c.compTopScope()
 }
 
@@ -345,8 +343,7 @@ func (c *compiler) compInt(n *ast.BasicLit, reg string) {
 }
 
 func (c *compiler) compPackage(p *ast.Package) {
-	c.topScope = p.Scope
-	c.curScope = c.topScope
+	c.curScope = p.Scope
 	c.compTopScope()
 }
 
