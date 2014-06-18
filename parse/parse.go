@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 
 	"github.com/rthornton128/calc/ast"
 	"github.com/rthornton128/calc/scan"
@@ -134,7 +135,7 @@ func (p *parser) addError(args ...interface{}) {
 }
 
 func (p *parser) checkExpr(e ast.Expr) ast.Expr {
-	if e != nil {
+	if !reflect.ValueOf(e).IsNil() {
 		switch t := e.(type) {
 		case *ast.BasicLit, *ast.BinaryExpr, *ast.CallExpr, *ast.Ident, *ast.IfExpr,
 			*ast.UnaryExpr:
