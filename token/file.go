@@ -51,11 +51,11 @@ func (f *File) Pos(offset int) Pos {
 
 // Position returns the column and row position of a Pos within the file
 func (f *File) Position(p Pos) Position {
-	col, row := int(p), 1
+	col, row := int(p)-f.Base()+1, 1
 
 	for i, nl := range f.lines {
 		if p > f.Pos(nl) {
-			col, row = int(p-f.Pos(nl)), i+1
+			col, row = int(p-f.Pos(nl))-f.Base()+1, i+1
 		}
 	}
 
