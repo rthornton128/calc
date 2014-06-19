@@ -95,7 +95,19 @@ func ParseDir(fset *token.FileSet, path string) (*ast.Package, error) {
 		}
 		files = append(files, f)
 	}
-	scope := ast.MergeScopes(files)
+
+	scope := ast.NewScope(nil)
+	for _, f := range files {
+		for _, v := range f.Scope.Table {
+			if ob := scope.Insert(v); ob != nil {
+				fmt.Println(v.NamePos)
+				fmt.Println(ob.NamePos)
+				return nil, fmt.Errorf(
+					"%v - redeclaration of function '%s'\n\toriginally declared here: %v",
+					fset.Position(v.NamePos), v.Name, fset.Position(ob.NamePos))
+			}
+		}
+	}
 	return &ast.Package{Scope: scope, Files: files}, nil
 }
 
