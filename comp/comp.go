@@ -334,8 +334,7 @@ func (c *compiler) compIfExpr(n *ast.IfExpr) {
 func (c *compiler) compInt(n *ast.BasicLit, reg string) {
 	i, err := strconv.Atoi(n.Lit)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		c.Error(n.Pos(), "bad conversion:", err)
 	}
 	fmt.Fprintf(c.fp, "setl(%d, %s);\n", i, reg)
 }
