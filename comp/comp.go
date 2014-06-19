@@ -32,21 +32,19 @@ type compiler struct {
 // CompileFile generates a C source file for the corresponding file
 // specified by path. The .calc extension for the filename in path is
 // replaced with .c for the C source output.
-func CompileFile(path string) {
+func CompileFile(path string) error {
 	var c compiler
 
 	c.fset = token.NewFileSet()
 	f, err := parse.ParseFile(c.fset, path)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return err
 	}
 
 	path = path[:len(path)-len(filepath.Ext(path))]
 	fp, err := os.Create(path + ".c")
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return err
 	}
 	defer fp.Close()
 
@@ -54,26 +52,24 @@ func CompileFile(path string) {
 	c.compFile(f)
 
 	if c.errors.Count() != 0 {
-		c.errors.Print()
-		os.Exit(1)
+		return c.errors
 	}
+	return nil
 }
 
 // CompileDir generates C source code for the Calc sources found in the
 // directory specified by path. The C source file uses the same name as
 // directory rather than any individual file.
-func CompileDir(path string) {
+func CompileDir(path string) error {
 	fs := token.NewFileSet()
 	pkg, err := parse.ParseDir(fs, path)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return err
 	}
 
 	fp, err := os.Create(filepath.Join(path, filepath.Base(path)) + ".c")
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return err
 	}
 	defer fp.Close()
 
@@ -81,9 +77,9 @@ func CompileDir(path string) {
 	c.compPackage(pkg)
 
 	if c.errors.Count() != 0 {
-		c.errors.Print()
-		os.Exit(1)
+		return c.errors
 	}
+	return nil
 }
 
 /* Utility */

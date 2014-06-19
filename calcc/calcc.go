@@ -115,10 +115,15 @@ func main() {
 		os.Exit(1)
 	}
 	if fi.IsDir() {
-		comp.CompileDir(path)
+		err = comp.CompileDir(path)
 		path = filepath.Join(path, filepath.Base(path))
 	} else {
-		comp.CompileFile(path)
+		err = comp.CompileFile(path)
+	}
+	if err != nil {
+		fmt.Println(err)
+		cleanup(path)
+		os.Exit(1)
 	}
 	path = path[:len(path)-len(filepath.Ext(path))]
 	if !*asm {
