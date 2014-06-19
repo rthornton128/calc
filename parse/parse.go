@@ -130,7 +130,7 @@ func (p *parser) addError(args ...interface{}) {
 }
 
 func (p *parser) checkExpr(e ast.Expr) ast.Expr {
-	if !reflect.ValueOf(e).IsNil() {
+	if e != nil && !reflect.ValueOf(e).IsNil() {
 		switch t := e.(type) {
 		case *ast.BasicLit, *ast.BinaryExpr, *ast.CallExpr, *ast.Ident, *ast.IfExpr,
 			*ast.UnaryExpr:
