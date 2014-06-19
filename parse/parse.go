@@ -127,11 +127,6 @@ type parser struct {
 
 func (p *parser) addError(args ...interface{}) {
 	p.errors.Add(p.file.Position(p.pos), args...)
-	if p.errors.Count() >= 10 {
-		// TODO: printing should not be done here...
-		p.errors.Print()
-		os.Exit(1)
-	}
 }
 
 func (p *parser) checkExpr(e ast.Expr) ast.Expr {
