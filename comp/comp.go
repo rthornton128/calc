@@ -396,6 +396,8 @@ func (c *compiler) compVarExpr(v *ast.VarExpr) {
 		}
 		panic("parsing error occured, object's Value is not an assignment")
 	}
+	// TODO: implement proper zero value code for additional types
+	fmt.Fprintf(c.fp, "setl(0, ebp+%d);\n", ob.Offset)
 }
 
 func (c *compiler) countVars(n ast.Node) (x int) {
@@ -465,12 +467,8 @@ func (c *compiler) matchTypes(a, b ast.Node) {
 	atype, btype := typeOf(a, c.curScope), typeOf(b, c.curScope)
 
 	switch {
-	//case atype == "unknown":
-	//c.Error(a.Pos(), "unknown type")
 	case btype.Name == "unknown":
 		c.Error(btype.Pos(), "unknown type")
-	//case !validType(atype):
-	//c.Error(a.Pos(), "invalid type: ", atype)
 	case !validType(btype):
 		c.Error(btype.Pos(), "invalid type: ", btype.Name)
 	case atype.Name != btype.Name:
