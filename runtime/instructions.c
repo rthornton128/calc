@@ -32,6 +32,10 @@ void leave() {
 }
 
 void popl(char *dest) {
+	if ((esp - &ss[0]) - 4 < 0) {
+		fprintf(stderr, "Stack underflow!\n");
+		exit(EXIT_FAILURE);
+	}
 	esp -= 4;
 	movl(esp, dest);
 }
