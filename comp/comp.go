@@ -170,6 +170,7 @@ func (c *compiler) compAssignExpr(a *ast.AssignExpr) {
 		c.compIfExpr(n)
 	case *ast.Ident:
 		c.compIdent(n, fmt.Sprintf("movl(ebp+%%d, ebp+%d);\n", ob.Offset))
+		return
 	}
 	fmt.Fprintf(c.fp, "movl(eax, ebp+%d);\n", ob.Offset)
 }
