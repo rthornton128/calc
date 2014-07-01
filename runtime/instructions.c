@@ -19,7 +19,7 @@ void enter(const int32_t n) {
 		fprintf(stderr, "Stack overflow!\n");
 		exit(EXIT_FAILURE);
 	}
-	setl(ebp-&ss[0], esp);
+	*(int *)esp = ebp-&ss[0];
 	esp += 4;
 	ebp = esp;
 	esp += n;
@@ -28,7 +28,7 @@ void enter(const int32_t n) {
 void leave() {
 	esp = ebp;
 	esp -= 4;
-	ebp = &ss[0]+(int)*esp;
+	ebp = &ss[0]+*(int *)esp;
 }
 
 void popl(char *dest) {
