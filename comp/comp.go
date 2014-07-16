@@ -36,7 +36,7 @@ func CompileFile(path string) error {
 	var c compiler
 
 	c.fset = token.NewFileSet()
-	f, err := parse.ParseFile(c.fset, path)
+	f, err := parse.ParseFile(c.fset, path, nil)
 	if err != nil {
 		return err
 	}
@@ -242,14 +242,18 @@ func (c *compiler) compCallExpr(e *ast.CallExpr) {
 	switch {
 	case e.Name.Name == "main":
 		c.Error(e.Name.NamePos, "illegal to call function 'main'")
+		return
 	case ob == nil:
 		c.Error(e.Name.NamePos, "call to undeclared function '", e.Name.Name, "'")
+		return
 	case ob.Kind != ast.Decl:
 		c.Error(e.Name.NamePos, "may not call object that is not a function")
+		return
 	case len(ob.Value.(*ast.DeclExpr).Params) != len(e.Args):
 		c.Error(e.Name.NamePos, "number of arguments in function call do not "+
 			"match declaration, expected ", len(ob.Value.(*ast.DeclExpr).Params),
 			" got ", len(e.Args))
+		return
 	}
 
 	decl := ob.Value.(*ast.DeclExpr)

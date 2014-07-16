@@ -29,7 +29,7 @@ func ParseExpression(name, src string) (ast.Node, error) {
 
 	fset := token.NewFileSet()
 	file := fset.Add(name, src)
-	p.init(file, name, string(src))
+	p.init(file, name, string(src), nil)
 	node := p.parseGenExpr()
 
 	if p.errors.Count() > 0 {
@@ -42,7 +42,7 @@ func ParseExpression(name, src string) (ast.Node, error) {
 // to an ast.File object. The file should contain Calc source code and
 // have the .calc file extension.
 // The returned AST object ast.File is nil if there is an error.
-func ParseFile(fset *token.FileSet, filename string) (*ast.File, error) {
+func ParseFile(fset *token.FileSet, filename string, s *ast.Scope) (*ast.File, error) {
 	fi, err := os.Stat(filename)
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func ParseFile(fset *token.FileSet, filename string) (*ast.File, error) {
 		return nil, err
 	}
 	file := fset.Add(filepath.Base(filename), string(src))
-	p.init(file, filename, string(src))
+	p.init(file, filename, string(src), s)
 	f = p.parseFile()
 
 	if p.errors.Count() > 0 {
@@ -87,26 +87,15 @@ func ParseDir(fset *token.FileSet, path string) (*ast.Package, error) {
 	}
 
 	var files []*ast.File
+	scope := ast.NewScope(nil)
+
 	// TODO: use concurrency
 	for _, name := range fnames {
-		f, err := ParseFile(fset, filepath.Join(path, name))
+		f, err := ParseFile(fset, filepath.Join(path, name), scope)
 		if f == nil {
 			return nil, err
 		}
 		files = append(files, f)
-	}
-
-	scope := ast.NewScope(nil)
-	for _, f := range files {
-		for _, v := range f.Scope.Table {
-			if ob := scope.Insert(v); ob != nil {
-				fmt.Println(v.NamePos)
-				fmt.Println(ob.NamePos)
-				return nil, fmt.Errorf(
-					"%v - redeclaration of function '%s'\n\toriginally declared here: %v",
-					fset.Position(v.NamePos), v.Name, fset.Position(ob.NamePos))
-			}
-		}
 	}
 	return &ast.Package{Scope: scope, Files: files}, nil
 }
@@ -165,11 +154,14 @@ func (p *parser) expect(tok token.Token) token.Pos {
 	return pos
 }
 
-func (p *parser) init(file *token.File, fname, src string) {
+func (p *parser) init(file *token.File, fname, src string, s *ast.Scope) {
+	if s == nil {
+		s = ast.NewScope(nil)
+	}
 	p.file = file
 	p.scanner.Init(p.file, src)
 	p.listok = false
-	p.curScope = ast.NewScope(nil)
+	p.curScope = s //ast.NewScope(nil)
 	p.topScope = p.curScope
 	p.next()
 }
