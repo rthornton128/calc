@@ -1,0 +1,3 @@
+; Run calcc without args to compile the package
+
+(decl main int (add 2 3))

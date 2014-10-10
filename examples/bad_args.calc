@@ -1,0 +1,3 @@
+(decl sub (a b c int) int (- a b))
+
+(decl main int (sub 1 2 ))

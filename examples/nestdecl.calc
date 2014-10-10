@@ -1,0 +1,2 @@
+(decl main int (
+    (decl foo int 1)))

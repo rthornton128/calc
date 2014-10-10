@@ -1,0 +1,9 @@
+(decl add (a b int) int (+ a b))
+
+(decl main int (
+	(var a int)
+	(= a 3)
+	(var (= b 5))
+	(var (= c a) int)
+	(var (= d (add b c)))
+	d))
