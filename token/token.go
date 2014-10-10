@@ -14,7 +14,6 @@ const (
 
 	EOF
 	ILLEGAL
-	COMMENT
 
 	lit_start
 	IDENT
