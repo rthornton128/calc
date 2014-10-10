@@ -1,3 +1,5 @@
+; Bad number of arguments to parameters - also an intentional irroneous space
+; after the second argument to sub in the main function
 (decl sub (a b c int) int (- a b))
 
-(decl main int (sub 1 2 ))
+(decl main int (sub 1 2   )) ; note the space after the two

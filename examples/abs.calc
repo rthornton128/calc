@@ -1,0 +1,5 @@
+; Absolute value example
+
+(decl abs(n int) int (if (< n 0) int -n n))
+
+(decl main int (abs -24))

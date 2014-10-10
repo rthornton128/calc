@@ -1,3 +1,4 @@
+; assignment fun
 (decl add (a b int) int (+ a b))
 
 (decl main int (
