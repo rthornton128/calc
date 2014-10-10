@@ -362,8 +362,7 @@ func (c *compiler) compTopScope() {
 	ob := c.curScope.Lookup("main")
 	switch {
 	case ob == nil:
-		// BUG: token.NoPos will cause panic
-		c.Error(token.NoPos, "no entry point, function 'main' not found")
+		c.Error(token.Pos(1), "no entry point, function 'main' not found")
 	case ob.Kind != ast.Decl:
 		c.Error(ob.NamePos, "no entry point, 'main' is not a function")
 	case ob.Type == nil:
