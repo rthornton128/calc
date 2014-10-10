@@ -1,0 +1,5 @@
+; Example for a basic function call with two parameters
+
+(decl add (a b int) int (+ a b))
+
+(decl main int (add 3 2 4))

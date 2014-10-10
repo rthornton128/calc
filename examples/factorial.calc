@@ -1,0 +1,8 @@
+; Factorial example using recursion
+
+(decl fact (n int) int (
+	(if (<= n 0) int 0)
+	(if (== n 1) int 1
+		(* n (fact (- n 1))))))
+
+(decl main int (fact 10))
