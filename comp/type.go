@@ -22,7 +22,7 @@ func typeOf(n ast.Node, s *ast.Scope) (t *ast.Ident) {
 	case *ast.DeclExpr:
 		t = typeOfObject(s.Lookup(e.Name.Name))
 	case *ast.ExprList:
-		// BUG: should follow chain of execution to make sure all return
+		// BUG: should perform exit analysis to make sure all return
 		// values match return type
 		t = typeOf(e.List[len(e.List)-1], s)
 	case *ast.Ident:
@@ -40,6 +40,7 @@ func typeOf(n ast.Node, s *ast.Scope) (t *ast.Ident) {
 	if t == nil {
 		t = &ast.Ident{Name: "unknown", NamePos: n.Pos()}
 	}
+
 	return t
 }
 
@@ -53,8 +54,10 @@ func typeOfBasic(b *ast.BasicLit) *ast.Ident {
 }
 
 func typeOfObject(o *ast.Object) *ast.Ident {
-	if o.Type != nil {
-		return o.Type
+	if o != nil {
+		if o.Type != nil {
+			return o.Type
+		}
 	}
 	return nil
 }

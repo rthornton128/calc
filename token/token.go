@@ -56,7 +56,6 @@ const (
 var tok_strings = map[Token]string{
 	EOF:     "EOF",
 	ILLEGAL: "Illegal",
-	COMMENT: "Comment",
 	IDENT:   "Identifier",
 	INTEGER: "Integer",
 	LPAREN:  "(",

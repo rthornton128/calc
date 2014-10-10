@@ -473,7 +473,7 @@ func (c *compiler) matchTypes(a, b ast.Node) {
 
 	switch {
 	case btype.Name == "unknown":
-		c.Error(btype.Pos(), "unknown type")
+		c.Error(btype.Pos(), "object has unknown type")
 	case !validType(btype):
 		c.Error(btype.Pos(), "invalid type: ", btype.Name)
 	case atype.Name != btype.Name:
