@@ -105,7 +105,7 @@ func main() {
 	 * guarantee it will be there at link time */
 	rpath := findRuntime()
 	if rpath == "" {
-		fatal("Unable to find runtime in GOPATH. Make sure 'make' command was " +
+		fatal("Unable to find runtime in GOPATH. Be sure 'make' command was " +
 			"run in source directory")
 	}
 
@@ -120,12 +120,13 @@ func main() {
 	} else {
 		err = comp.CompileFile(path)
 	}
+
+	path = path[:len(path)-len(filepath.Ext(path))]
 	if err != nil {
 		fmt.Println(err)
 		cleanup(path)
 		os.Exit(1)
 	}
-	path = path[:len(path)-len(filepath.Ext(path))]
 	if !*asm {
 		/* compile to object code */
 		var out []byte
