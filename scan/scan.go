@@ -65,47 +65,17 @@ func (s *Scanner) Scan() (lit string, tok token.Token, pos token.Pos) {
 	case '%':
 		tok = token.REM
 	case '<':
-		if s.ch == '=' {
-			tok = token.LTE
-			s.next()
-		} else {
-			tok = token.LST
-		}
+		tok = s.selectToken('=', token.LTE, token.LST)
 	case '>':
-		if s.ch == '=' {
-			tok = token.GTE
-			s.next()
-		} else {
-			tok = token.GTT
-		}
+		tok = s.selectToken('=', token.GTE, token.GTT)
 	case '=':
-		if s.ch == '=' {
-			tok = token.EQL
-			s.next()
-		} else {
-			tok = token.ASSIGN
-		}
+		tok = s.selectToken('=', token.EQL, token.ASSIGN)
 	case '!':
-		if s.ch == '=' {
-			tok = token.NEQ
-			s.next()
-		} else {
-			tok = token.ILLEGAL
-		}
+		tok = s.selectToken('=', token.NEQ, token.ILLEGAL)
 	case '&':
-		if s.ch == '&' {
-			tok = token.AND
-			s.next()
-		} else {
-			tok = token.ILLEGAL
-		}
+		tok = s.selectToken('&', token.AND, token.ILLEGAL)
 	case '|':
-		if s.ch == '|' {
-			tok = token.OR
-			s.next()
-		} else {
-			tok = token.ILLEGAL
-		}
+		tok = s.selectToken('|', token.OR, token.ILLEGAL)
 	case ';':
 		s.skipComment()
 		s.next()
@@ -158,6 +128,14 @@ func (s *Scanner) scanNumber() (string, token.Token, token.Pos) {
 		offset++
 	}
 	return s.src[start:offset], token.INTEGER, s.file.Pos(start)
+}
+
+func (s *Scanner) selectToken(r rune, a, b token.Token) token.Token {
+	if s.ch == r {
+		s.next()
+		return a
+	}
+	return b
 }
 
 func (s *Scanner) skipComment() {
