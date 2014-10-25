@@ -21,19 +21,23 @@ RM=cmd /c del
 RMFLAGS=
 OBJ=$(subst /,\,$(SRC:.c=.o))
 TEST_OBJ=$(subst /,\,$(TEST_SRC:.c=.o))
-TEST=test.exe
+TEST_BIN=test.exe
 else
-TEST=test
+TEST_BIN=test
 endif
 
 all: $(LIB)
 
-.PHONY: install
+.PHONY: install test-all clean distclean
 
 install: $(LIB)
 	go install ./calcc
 
-$(TEST): $(TEST_OBJ) $(LIB)
+test-all: $(TEST)
+	exec ./$(TEST_BIN)
+	go test ./...
+
+$(TEST_BIN): $(TEST_OBJ) $(LIB)
 	$(CC) $(LDFLAGS) -o $@ $^
 
 $(LIB): $(OBJ)
@@ -43,7 +47,7 @@ $(LIB): $(OBJ)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	$(RM) $(RMFLAGS) $(OBJ) $(TEST_OBJ) $(TEST)
+	$(RM) $(RMFLAGS) $(OBJ) $(TEST_OBJ) $(TEST_BIN)
 
 distclean: clean
 	$(RM) $(RMFLAGS) $(LIB)
