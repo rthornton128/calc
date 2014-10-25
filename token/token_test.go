@@ -25,22 +25,22 @@ func TestFilePosition(t *testing.T) {
 		{7, 2, token.Pos(14)},
 	}
 	f := token.NewFile("", 1, 15)
-	f.AddLine(token.Pos(1))
+	f.AddLine(0)
 	p := f.Position(token.Pos(1))
 	if p.String() != "1:1" {
 		t.Fatal("Nameless file: Expected: 1:1, Got:", p.String())
 	}
 
 	f = token.NewFile("test.calc", 1, 15)
-	f.AddLine(token.Pos(1))
+	f.AddLine(0)
 	p = f.Position(token.Pos(1))
 	if p.String() != "test.calc:1:1" {
 		t.Fatal("Nameless file: Expected: test.calc:1:1, Got:", p.String())
 	}
 
 	f = token.NewFile("test", 1, len(test_expr))
-	f.AddLine(token.Pos(7))
-	f.AddLine(token.Pos(14))
+	f.AddLine(0)
+	f.AddLine(6)
 	for _, v := range tests {
 		p := f.Position(v.pos)
 		if p.Col != v.col || p.Row != v.row {
@@ -65,7 +65,6 @@ func TestLookup(t *testing.T) {
 		{"%", token.REM},
 		{"EOF", token.EOF},
 		{"Integer", token.INTEGER},
-		{"Comment", token.COMMENT},
 		{"", token.IDENT},
 	}
 
@@ -87,7 +86,6 @@ func TestIsLiteral(t *testing.T) {
 		{token.IDENT, true},
 		{token.INTEGER, true},
 		{token.IDENT, true},
-		{token.COMMENT, false},
 		{token.VAR, false},
 		{token.ASSIGN, false},
 	}
@@ -108,7 +106,6 @@ func TestIsOperator(t *testing.T) {
 		{token.REM, true},
 		{token.EOF, false},
 		{token.INTEGER, false},
-		{token.COMMENT, false},
 		{token.VAR, false},
 		{token.ASSIGN, true},
 	}
@@ -129,7 +126,6 @@ func TestIsKeyword(t *testing.T) {
 		{token.REM, false},
 		{token.EOF, false},
 		{token.INTEGER, false},
-		{token.COMMENT, false},
 		{token.VAR, true},
 		{token.ASSIGN, false},
 	}
@@ -150,7 +146,6 @@ func TestString(t *testing.T) {
 		{"%", token.REM},
 		{"EOF", token.EOF},
 		{"Integer", token.INTEGER},
-		{"Comment", token.COMMENT},
 	}
 
 	for i, v := range tests {
@@ -169,7 +164,6 @@ func TestValid(t *testing.T) {
 		{token.REM, true},
 		{token.EOF, true},
 		{token.INTEGER, true},
-		{token.COMMENT, true},
 		{token.Token(-1), false},
 		{token.Token(999999), false},
 	}
