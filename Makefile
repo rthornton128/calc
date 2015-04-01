@@ -8,8 +8,7 @@ RM=rm
 RMFLAGS=-vf
 
 LIB=runtime/runtime.a
-SRC=runtime/cmp.c\
-    runtime/instructions.c\
+SRC=runtime/instructions.c\
     runtime/registers.c\
     runtime/stack.c
 OBJ=$(SRC:.c=.o)

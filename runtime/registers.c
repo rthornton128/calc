@@ -5,10 +5,9 @@
  * or, if one is not included, you may also find a copy at
  * http://opensource.org/licenses/BSD-2-Clause */
 
-#include <stddef.h>
+#include <stdint.h>
 
-char regs[8];
-char *eax = &regs[0];
-char *edx = &regs[4];
-char *ebp = NULL;
-char *esp = NULL;
+uintptr_t ax = 0;
+uintptr_t dx = 0;
+uintptr_t *bp = NULL;
+uintptr_t *sp = NULL;

@@ -9,19 +9,45 @@
 #define RT_INSTRUCTIONS_H
 
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-void enter(const int32_t n);
-void leave(void);
-void popl(char *dest);
-void pushl(const char *src);
+#define check_overflow(n) {\
+	if (sp + n >= (uintptr_t *)&ss[scap-1]) {\
+		fprintf(stderr, "panic: stack underflow!\n");\
+		exit(EXIT_FAILURE);\
+	}\
+}
 
-void movl(const char *src, char *dest);
-void setl(const int32_t n, char *dest);
+#define check_underflow(n) {\
+	if (sp - n < (uintptr_t *) ss) {\
+		fprintf(stderr, "panic: stack underflow!\n");\
+		exit(EXIT_FAILURE);\
+	}\
+}
 
-void addl(const char *src, char *dest);
-void divl(const char *src, char *dest);
-void mull(const char *src, char *dest);
-void reml(const char *src, char *dest);
-void subl(const char *src, char *dest);
+#define enter(n) {\
+	check_overflow(n);\
+	*sp = (uintptr_t) bp;\
+	bp = ++sp;\
+	sp += n;\
+}
+
+#define leave() {\
+	check_underflow((sp - bp) / sizeof (uintptr_t));\
+	sp = bp;\
+	bp = (uintptr_t) *(--sp);\
+}
+
+#define pop(dest) {\
+	check_underflow(1);\
+	dest = (uintptr_t) *sp--;\
+}
+
+#define pushl(src) {\
+	check_overflow(1);\
+	*sp = (uintptr_t) src;\
+	sp++;\
+}
 
 #endif

@@ -10,26 +10,26 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
 
-#define MIN_STACK (size_t) 4096
+#define MIN_STACK (size_t) 1024
 
-char *ss = NULL;
-size_t scap = 0;
+uintptr_t *ss = NULL; /* stack segment */
+size_t scap = 0; /* stack capacity */
 
 void stack_init() {
-	ss = malloc(MIN_STACK);
+	ss = calloc(sizeof (intptr_t), MIN_STACK);
 	if (ss == NULL) {
-		fprintf(stderr, "Failed to init stack: out of memory\n");
+		fprintf(stderr, "panic: failed to init stack\n");
 		exit(EXIT_FAILURE);
 	}
-	memset(ss, 0, MIN_STACK);
 	scap = MIN_STACK;
-	ebp = &ss[0];
-	esp = &ss[0];
+	bp = ss;
+	sp = ss;
 }
 
 void stack_end() {
+	bp = NULL;
+	sp = NULL;
 	free(ss);
 	ss = NULL;
 }

@@ -8,10 +8,12 @@
 #ifndef RT_REGISTERS_H
 #define RT_REGISTERS_H
 
-extern char *eax; /* accumulator register */
-extern char *edx; /* data register */
-extern char *ebp; /* base pointer */
-extern char *esp; /* stack pointer */
+#include <stdint.h>
+
+extern uintptr_t ax; /* accumulator register */
+extern uintptr_t dx; /* data register */
+extern uintptr_t *bp; /* base pointer */
+extern uintptr_t *sp; /* stack pointer */
 
 void reg_init();
 
