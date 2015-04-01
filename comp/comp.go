@@ -90,16 +90,9 @@ func (c *compiler) Error(pos token.Pos, args ...interface{}) {
 	c.errors.Add(c.fset.Position(pos), args...)
 }
 
-func roundUp16(n int) int {
-	if r := n % 16; r != 0 {
-		return n + (16 - r)
-	}
-	return n
-}
-
 func (c *compiler) nextOffset() (offset int) {
 	offset = c.offset
-	c.offset += 4
+	c.offset += 1
 	return
 }
 
@@ -120,7 +113,7 @@ func (c *compiler) compNode(node ast.Node) {
 	case *ast.AssignExpr:
 		c.compAssignExpr(n)
 	case *ast.BasicLit:
-		c.compInt(n, "eax")
+		c.compInt(n, "ax")
 	case *ast.BinaryExpr:
 		c.compBinaryExpr(n)
 	case *ast.CallExpr:
@@ -132,7 +125,7 @@ func (c *compiler) compNode(node ast.Node) {
 			c.compNode(n.List[i])
 		}
 	case *ast.Ident:
-		c.compIdent(n, "movl(ebp+%d, eax);\n")
+		c.compIdent(n, "ax = *(bp+%d);\n")
 	case *ast.IfExpr:
 		c.compIfExpr(n)
 	case *ast.UnaryExpr:
@@ -160,7 +153,7 @@ func (c *compiler) compAssignExpr(a *ast.AssignExpr) {
 
 	switch n := ob.Value.(type) {
 	case *ast.BasicLit:
-		c.compInt(n, fmt.Sprintf("ebp+%d", ob.Offset))
+		c.compInt(n, fmt.Sprintf("*(bp+%d)", ob.Offset))
 		return
 	case *ast.BinaryExpr:
 		c.compBinaryExpr(n)
@@ -169,15 +162,15 @@ func (c *compiler) compAssignExpr(a *ast.AssignExpr) {
 	case *ast.IfExpr:
 		c.compIfExpr(n)
 	case *ast.Ident:
-		c.compIdent(n, fmt.Sprintf("movl(ebp+%%d, ebp+%d);\n", ob.Offset))
+		c.compIdent(n, fmt.Sprintf("*(bp+%d) = *(bp+%%d);\n", ob.Offset))
 		return
 	}
-	fmt.Fprintf(c.fp, "movl(eax, ebp+%d);\n", ob.Offset)
+	fmt.Fprintf(c.fp, "*(bp+%d) = ax;\n", ob.Offset)
 }
 
 func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) {
 	if x, ok := c.compTryOptimizeBinaryOrInt(b); ok {
-		fmt.Fprintf(c.fp, "setl(%d, eax);\n", x)
+		fmt.Fprintf(c.fp, "ax = %d;\n", x)
 		return
 	}
 	c.compNode(b.List[0])
@@ -185,58 +178,58 @@ func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) {
 	for _, node := range b.List[1:] {
 		switch n := node.(type) {
 		case *ast.BasicLit:
-			c.compInt(n, "edx")
+			c.compInt(n, "dx")
 		case *ast.BinaryExpr:
-			fmt.Fprintln(c.fp, "pushl(eax);")
+			fmt.Fprintln(c.fp, "push(ax);")
 			c.compBinaryExpr(n)
-			fmt.Fprintln(c.fp, "movl(eax, edx);")
-			fmt.Fprintln(c.fp, "popl(eax);")
+			fmt.Fprintln(c.fp, "dx = ax;")
+			fmt.Fprintln(c.fp, "pop(ax);")
 		case *ast.CallExpr:
-			fmt.Fprintln(c.fp, "pushl(eax);")
+			fmt.Fprintln(c.fp, "push(ax);")
 			c.compCallExpr(n)
-			fmt.Fprintln(c.fp, "movl(eax, edx);")
-			fmt.Fprintln(c.fp, "popl(eax);")
+			fmt.Fprintln(c.fp, "dx = ax;")
+			fmt.Fprintln(c.fp, "pop(ax);")
 		case *ast.Ident:
-			c.compIdent(n, "movl(ebp+%d, edx);\n")
+			c.compIdent(n, "dx = *(bp+%d);\n")
 		case *ast.UnaryExpr:
-			fmt.Fprintln(c.fp, "pushl(eax);")
+			fmt.Fprintln(c.fp, "push(ax);")
 			c.compUnaryExpr(n)
-			fmt.Fprintln(c.fp, "movl(eax, edx);")
-			fmt.Fprintln(c.fp, "popl(eax);")
+			fmt.Fprintln(c.fp, "dx = ax;")
+			fmt.Fprintln(c.fp, "pop(ax);")
 		}
 		switch b.Op {
 		case token.ADD:
-			fmt.Fprintln(c.fp, "addl(edx, eax);")
+			fmt.Fprintln(c.fp, "ax += dx;")
 		case token.SUB:
-			fmt.Fprintln(c.fp, "subl(edx, eax);")
+			fmt.Fprintln(c.fp, "ax -= dx;")
 		case token.MUL:
-			fmt.Fprintln(c.fp, "mull(edx, eax);")
+			fmt.Fprintln(c.fp, "ax *= dx;")
 		case token.QUO:
-			fmt.Fprintln(c.fp, "divl(edx, eax);")
+			fmt.Fprintln(c.fp, "ax /= dx;")
 		case token.REM:
-			fmt.Fprintln(c.fp, "reml(edx, eax);")
+			fmt.Fprintln(c.fp, "ax %= dx;")
 		case token.AND:
-			fmt.Fprintln(c.fp, "andl(eax, edx);")
-		case token.EQL:
-			fmt.Fprintln(c.fp, "eql(eax, edx);")
-		case token.GTE:
-			fmt.Fprintln(c.fp, "gel(eax, edx);")
-		case token.GTT:
-			fmt.Fprintln(c.fp, "gtl(eax, edx);")
-		case token.LST:
-			fmt.Fprintln(c.fp, "ltl(eax, edx);")
-		case token.LTE:
-			fmt.Fprintln(c.fp, "lel(eax, edx);")
-		case token.NEQ:
-			fmt.Fprintln(c.fp, "nel(eax, edx);")
+			fmt.Fprintln(c.fp, "ax &= dx;")
 		case token.OR:
-			fmt.Fprintln(c.fp, "orl(eax, edx);")
+			fmt.Fprintln(c.fp, "ax |= dx;")
+		case token.EQL:
+			fmt.Fprintln(c.fp, "ax = (ax == dx);")
+		case token.GTE:
+			fmt.Fprintln(c.fp, "ax = (ax >= dx);")
+		case token.GTT:
+			fmt.Fprintln(c.fp, "ax = (ax > dx);")
+		case token.LST:
+			fmt.Fprintln(c.fp, "ax = (ax < dx);")
+		case token.LTE:
+			fmt.Fprintln(c.fp, "ax = (ax <= dx);")
+		case token.NEQ:
+			fmt.Fprintln(c.fp, "ax = (ax != dx);")
 		}
 	}
 }
 
 func (c *compiler) compCallExpr(e *ast.CallExpr) {
-	offset := 4
+	offset := 1
 
 	ob := c.curScope.Lookup(e.Name.Name)
 	switch {
@@ -266,13 +259,14 @@ func (c *compiler) compCallExpr(e *ast.CallExpr) {
 
 		switch n := v.(type) {
 		case *ast.BasicLit:
-			c.compInt(n, fmt.Sprintf("esp+%d", offset))
+			c.compInt(n, fmt.Sprintf("*(sp+%d)", offset))
 		default:
 			c.compNode(n)
-			fmt.Fprintf(c.fp, "movl(eax, esp+%d);\n", offset)
+			fmt.Fprintf(c.fp, "*(sp+%d) = ax;\n", offset)
 		}
-		offset += 4
+		offset += 1
 	}
+	fmt.Fprintf(c.fp, "printf(\"calling: %s\\n\");\n", e.Name.Name)
 	fmt.Fprintf(c.fp, "_%s();\n", e.Name.Name)
 	return
 }
@@ -287,8 +281,9 @@ func (c *compiler) compDeclExpr(d *ast.DeclExpr) {
 	}
 
 	fmt.Fprintf(c.fp, "void _%s(void) {\n", d.Name.Name)
-	if x := c.countVars(d) * 4; x > 0 {
-		fmt.Fprintf(c.fp, "enter(%d);\n", roundUp16(x))
+	if x := c.countVars(d); x > 0 {
+		fmt.Fprintf(c.fp, "enter(%d);\n", x)
+		fmt.Fprintf(c.fp, "printf(\"bp+0=%%d\\n\", (int) *(bp+0));\n")
 		c.compNode(d.Body)
 		fmt.Fprintln(c.fp, "leave();")
 	} else {
@@ -323,7 +318,7 @@ func (c *compiler) compIfExpr(n *ast.IfExpr) {
 
 	c.compNode(n.Cond)
 
-	fmt.Fprintln(c.fp, "if (*(int32_t *)eax == 1) {")
+	fmt.Fprintln(c.fp, "if ((int32_t)ax == 1) {")
 	c.openScope(n.Scope)
 	c.matchTypes(n, n.Then)
 	c.compNode(n.Then)
@@ -341,7 +336,7 @@ func (c *compiler) compInt(n *ast.BasicLit, reg string) {
 	if err != nil {
 		c.Error(n.Pos(), "bad conversion:", err)
 	}
-	fmt.Fprintf(c.fp, "setl(%d, %s);\n", i, reg)
+	fmt.Fprintf(c.fp, "%s = %d;\n", reg, i)
 }
 
 func (c *compiler) compPackage(p *ast.Package) {
@@ -378,7 +373,7 @@ func (c *compiler) compTopScope() {
 	fmt.Fprintln(c.fp, "int main(void) {")
 	fmt.Fprintln(c.fp, "stack_init();")
 	fmt.Fprintln(c.fp, "_main();")
-	fmt.Fprintln(c.fp, "printf(\"%d\\n\", *(int32_t *)eax);")
+	fmt.Fprintln(c.fp, "printf(\"%d\\n\", (int32_t) ax);")
 	fmt.Fprintln(c.fp, "stack_end();")
 	fmt.Fprintln(c.fp, "return 0;")
 	fmt.Fprintln(c.fp, "}")
@@ -386,8 +381,7 @@ func (c *compiler) compTopScope() {
 
 func (c *compiler) compUnaryExpr(u *ast.UnaryExpr) {
 	c.compNode(u.Value)
-	fmt.Fprintln(c.fp, "setl(-1, edx);")
-	fmt.Fprintln(c.fp, "mull(edx, eax);")
+	fmt.Fprintln(c.fp, "ax *= -1;")
 }
 
 func (c *compiler) compVarExpr(v *ast.VarExpr) {
@@ -401,7 +395,7 @@ func (c *compiler) compVarExpr(v *ast.VarExpr) {
 		panic("parsing error occured, object's Value is not an assignment")
 	}
 	// TODO: implement proper zero value code for additional types
-	fmt.Fprintf(c.fp, "setl(0, ebp+%d);\n", ob.Offset)
+	fmt.Fprintf(c.fp, "*(bp+%d) = 0;\n", ob.Offset)
 }
 
 func (c *compiler) countVars(n ast.Node) (x int) {

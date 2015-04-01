@@ -5,4 +5,4 @@
 	(if (== n 1) int 1
 		(+ n (fib (- n 1))))))
 
-(decl main int (fib 170))
+(decl main int (fib 10))

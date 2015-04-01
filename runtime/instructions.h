@@ -44,7 +44,7 @@
 	dest = (uintptr_t) *sp--;\
 }
 
-#define pushl(src) {\
+#define push(src) {\
 	check_overflow(1);\
 	*sp = (uintptr_t) src;\
 	sp++;\
