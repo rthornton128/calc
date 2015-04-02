@@ -266,7 +266,6 @@ func (c *compiler) compCallExpr(e *ast.CallExpr) {
 		}
 		offset += 1
 	}
-	fmt.Fprintf(c.fp, "printf(\"calling: %s\\n\");\n", e.Name.Name)
 	fmt.Fprintf(c.fp, "_%s();\n", e.Name.Name)
 	return
 }
@@ -283,7 +282,6 @@ func (c *compiler) compDeclExpr(d *ast.DeclExpr) {
 	fmt.Fprintf(c.fp, "void _%s(void) {\n", d.Name.Name)
 	if x := c.countVars(d); x > 0 {
 		fmt.Fprintf(c.fp, "enter(%d);\n", x)
-		fmt.Fprintf(c.fp, "printf(\"bp+0=%%d\\n\", (int) *(bp+0));\n")
 		c.compNode(d.Body)
 		fmt.Fprintln(c.fp, "leave();")
 	} else {

@@ -6,6 +6,7 @@
  * http://opensource.org/licenses/BSD-2-Clause */
 
 #include <stdint.h>
+#include <stdlib.h>
 
 uintptr_t ax = 0;
 uintptr_t dx = 0;

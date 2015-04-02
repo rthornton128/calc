@@ -36,18 +36,17 @@
 #define leave() {\
 	check_underflow((sp - bp) / sizeof (uintptr_t));\
 	sp = bp;\
-	bp = (uintptr_t) *(--sp);\
+	bp = (uintptr_t *) *--sp;\
 }
 
 #define pop(dest) {\
 	check_underflow(1);\
-	dest = (uintptr_t) *sp--;\
+	dest = (uintptr_t) *--sp;\
 }
 
 #define push(src) {\
 	check_overflow(1);\
-	*sp = (uintptr_t) src;\
-	sp++;\
+	*sp++ = (uintptr_t) src;\
 }
 
 #endif

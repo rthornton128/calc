@@ -30,6 +30,12 @@ stack_tests()
 	assert((int32_t)ax == 8);
 	/* end inner function */
 
+	/* push and pop value to stack for sanity check */
+	push(ax);
+	ax = 0;
+	pop(ax);
+	assert((int32_t)ax == 8);
+
 	ax = *(bp+1);
 	ax += *(bp+0);
 	leave();
