@@ -13,29 +13,31 @@ SRC=runtime/registers.c\
 OBJ=$(SRC:.c=.o)
 TEST_SRC=runtime/test.c
 TEST_OBJ=runtime/test.o
+TEST_BIN=runtime/test
 
 ifeq ($(OS),Windows_NT)
 RM=cmd /c del
-RMFLAGS=
-OBJ=$(subst /,\,$(SRC:.c=.o))
-TEST_OBJ=$(subst /,\,$(TEST_SRC:.c=.o))
-TEST_BIN=test.exe
+RMFLAGS=/q
+FixPath=$(subst /,\,$1)
+X=.exe
 else
-TEST_BIN=test
+FixPath=$1
 endif
 
 all: $(LIB)
 
-.PHONY: install test-all clean distclean
+.PHONY: install test test-all clean distclean
 
 install: $(LIB)
 	go install ./calcc
 
 test-all: $(TEST)
-	exec ./$(TEST_BIN)
 	go test ./...
 
-$(TEST_BIN): $(TEST_OBJ) $(LIB)
+test: $(TEST_BIN)$(X)
+	exec ./$(TEST_BIN)
+
+$(TEST_BIN)$(X): $(TEST_OBJ) $(LIB)
 	$(CC) $(LDFLAGS) -o $@ $^
 
 $(LIB): $(OBJ)
@@ -45,7 +47,7 @@ $(LIB): $(OBJ)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	$(RM) $(RMFLAGS) $(OBJ) $(TEST_OBJ) $(TEST_BIN)
+	$(RM) $(RMFLAGS) $(call FixPath,$(OBJ)) $(call FixPath,$(TEST_OBJ)) $(call FixPath,$(TEST_BIN)$(X))
 
 distclean: clean
-	$(RM) $(RMFLAGS) $(LIB)
+	$(RM) $(RMFLAGS) $(call FixPath,$(LIB))
