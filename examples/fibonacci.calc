@@ -1,8 +1,9 @@
 ; Fibonacci number example using recursion
+; Expected Output: 55
 
 (decl fib (n int) int (
-	(if (<= n 0) int 0)
-	(if (== n 1) int 1
-		(+ n (fib (- n 1))))))
+	(if (<= n 0) int 0
+		(if (== n 1) int 1
+			(+ n (fib (- n 1)))))))
 
 (decl main int (fib 10))

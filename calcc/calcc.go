@@ -61,7 +61,7 @@ func make_args(options ...string) string {
 }
 
 func printVersion() {
-	fmt.Fprintln(os.Stderr, "Calc Compiler Tool Version 2.0")
+	fmt.Fprintln(os.Stderr, "Calc Compiler Tool Version 2.1")
 }
 
 func main() {
