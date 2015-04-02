@@ -16,7 +16,9 @@
 uintptr_t *ss = NULL; /* stack segment */
 size_t scap = 0; /* stack capacity */
 
-void stack_init() {
+void
+stack_init(void)
+{
 	ss = calloc(sizeof (intptr_t), MIN_STACK);
 	if (ss == NULL) {
 		fprintf(stderr, "panic: failed to init stack\n");
@@ -27,10 +29,29 @@ void stack_init() {
 	sp = ss;
 }
 
-void stack_end() {
+void
+stack_end(void)
+{
 	bp = NULL;
 	sp = NULL;
 	free(ss);
 	ss = NULL;
 }
 
+void
+stack_check_overflow(register const int n)
+{
+	if (sp + n >= (uintptr_t *)&ss[scap-1]) {
+		fprintf(stderr, "panic: stack overflow!\n");
+		exit(EXIT_FAILURE);
+	}
+}
+
+void
+stack_check_underflow(register const int n)
+{
+	if (sp - n < (uintptr_t *) ss) {
+		fprintf(stderr, "panic: stack underflow!\n");
+		exit(EXIT_FAILURE);
+	}
+}

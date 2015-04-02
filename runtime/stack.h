@@ -8,12 +8,9 @@
 #ifndef RT_STACK_H
 #define RT_STACK_H
 
-#include <stddef.h>
-
-extern char *ss;
-extern size_t scap;
-
-void stack_init();
-void stack_end();
+void stack_init(void);
+void stack_end(void);
+void stack_check_overflow(register const int n);
+void stack_check_underflow(register const int n);
 
 #endif
