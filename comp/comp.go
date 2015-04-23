@@ -49,7 +49,19 @@ func CompileFile(path string) error {
 	defer fp.Close()
 
 	c.fp = fp
+
+	fmt.Fprintln(c.fp, "#include <stdio.h>")
+	fmt.Fprintln(c.fp, "#include <runtime.h>")
+
 	c.compFile(f)
+
+	fmt.Fprintln(c.fp, "int main(void) {")
+	fmt.Fprintln(c.fp, "stack_init();")
+	fmt.Fprintln(c.fp, "_main();")
+	fmt.Fprintln(c.fp, "printf(\"%d\\n\", (int32_t) ax);")
+	fmt.Fprintln(c.fp, "stack_end();")
+	fmt.Fprintln(c.fp, "return 0;")
+	fmt.Fprintln(c.fp, "}")
 
 	if c.errors.Count() != 0 {
 		return c.errors
@@ -74,7 +86,19 @@ func CompileDir(path string) error {
 	defer fp.Close()
 
 	c := &compiler{fp: fp, fset: fs}
+
+	fmt.Fprintln(c.fp, "#include <stdio.h>")
+	fmt.Fprintln(c.fp, "#include <runtime.h>")
+
 	c.compPackage(pkg)
+
+	fmt.Fprintln(c.fp, "int main(void) {")
+	fmt.Fprintln(c.fp, "stack_init();")
+	fmt.Fprintln(c.fp, "_main();")
+	fmt.Fprintln(c.fp, "printf(\"%d\\n\", (int32_t) ax);")
+	fmt.Fprintln(c.fp, "stack_end();")
+	fmt.Fprintln(c.fp, "return 0;")
+	fmt.Fprintln(c.fp, "}")
 
 	if c.errors.Count() != 0 {
 		return c.errors
@@ -298,7 +322,7 @@ func (c *compiler) compDeclExpr(d *ast.DeclExpr) {
 
 func (c *compiler) compFile(f *ast.File) {
 	c.curScope = f.Scope
-	c.compTopScope()
+	c.compDeclProto(f)
 }
 
 func (c *compiler) compIdent(n *ast.Ident, format string) {
@@ -339,42 +363,17 @@ func (c *compiler) compInt(n *ast.BasicLit, reg string) {
 
 func (c *compiler) compPackage(p *ast.Package) {
 	c.curScope = p.Scope
-	c.compTopScope()
-}
 
-func (c *compiler) compScopeDecls() {
-	for k, v := range c.curScope.Table {
-		if v.Kind == ast.Decl {
-			fmt.Fprintf(c.fp, "void _%s(void);\n", k)
-			defer c.compNode(v.Value)
-		}
+	for _, f := range p.Files {
+		c.compFile(f)
 	}
 }
 
-func (c *compiler) compTopScope() {
-	ob := c.curScope.Lookup("main")
-	switch {
-	case ob == nil:
-		c.Error(token.Pos(1), "no entry point, function 'main' not found")
-	case ob.Kind != ast.Decl:
-		c.Error(ob.NamePos, "no entry point, 'main' is not a function")
-	case ob.Type == nil:
-		c.Error(ob.NamePos, "'main' must be of type int but was declared as "+
-			"void")
-	case ob.Type.Name != "int":
-		c.Error(ob.Type.NamePos, "'main' must be of type but declared as ",
-			ob.Type.Name)
+func (c *compiler) compDeclProto(f *ast.File) {
+	for _, decl := range f.Decls {
+		fmt.Fprintf(c.fp, "void _%s(void);\n", decl.Name.Name)
+		defer c.compNode(decl)
 	}
-	fmt.Fprintln(c.fp, "#include <stdio.h>")
-	fmt.Fprintln(c.fp, "#include <runtime.h>")
-	c.compScopeDecls()
-	fmt.Fprintln(c.fp, "int main(void) {")
-	fmt.Fprintln(c.fp, "stack_init();")
-	fmt.Fprintln(c.fp, "_main();")
-	fmt.Fprintln(c.fp, "printf(\"%d\\n\", (int32_t) ax);")
-	fmt.Fprintln(c.fp, "stack_end();")
-	fmt.Fprintln(c.fp, "return 0;")
-	fmt.Fprintln(c.fp, "}")
 }
 
 func (c *compiler) compUnaryExpr(u *ast.UnaryExpr) {

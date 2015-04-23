@@ -373,13 +373,17 @@ func (p *parser) parseGenExpr() ast.Expr {
 }
 
 func (p *parser) parseFile() *ast.File {
+	decls := make([]*ast.DeclExpr, 0, 16)
 	for p.tok != token.EOF {
-		p.parseGenExpr()
+		e := p.parseGenExpr()
+		if decl, ok := e.(*ast.DeclExpr); ok {
+			decls = append(decls, decl)
+		}
 	}
-	if p.topScope.Size() < 1 {
+	if len(decls) < 1 {
 		p.addError("reached end of file without any declarations")
 	}
-	return &ast.File{Scope: p.topScope}
+	return &ast.File{Decls: decls, Scope: p.topScope}
 }
 
 func (p *parser) parseIdent() *ast.Ident {

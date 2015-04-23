@@ -68,6 +68,7 @@ type ExprList struct {
 }
 
 type File struct {
+	Decls []*DeclExpr
 	Scope *Scope
 }
 
@@ -163,8 +164,4 @@ func (s *Scope) Lookup(ident string) *Object {
 		return ob
 	}
 	return s.Parent.Lookup(ident)
-}
-
-func (s *Scope) Size() int {
-	return len(s.Table)
 }
