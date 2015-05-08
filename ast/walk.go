@@ -7,60 +7,55 @@
 
 package ast
 
-import "reflect"
+type Visitor interface {
+	Visit(node Node) bool
+}
 
-type Func func(Node)
-
-func Walk(node Node, f Func) {
-	if node == nil || reflect.ValueOf(node).IsNil() {
+func Walk(node Node, v Visitor) {
+	if !v.Visit(node) {
 		return
 	}
 
-	if f != nil {
-		f(node)
-	}
 	switch n := node.(type) {
 	case *AssignExpr:
-		Walk(n.Name, f)
-		Walk(n.Value, f)
+		Walk(n.Name, v)
+		Walk(n.Value, v)
 	case *BinaryExpr:
-		for _, v := range n.List {
-			Walk(v, f)
+		for _, x := range n.List {
+			Walk(x, v)
 		}
 	case *CallExpr:
-		Walk(n.Name, f)
-		for _, v := range n.Args {
-			Walk(v, f)
+		Walk(n.Name, v)
+		for _, x := range n.Args {
+			Walk(x, v)
 		}
 	case *DeclExpr:
-		Walk(n.Name, f)
-		for _, v := range n.Params {
-			Walk(v, f)
+		Walk(n.Name, v)
+		for _, x := range n.Params {
+			Walk(x, v)
 		}
-		Walk(n.Type, f)
-		Walk(n.Body, f)
+		Walk(n.Type, v)
+		Walk(n.Body, v)
 	case *ExprList:
-		for _, v := range n.List {
-			Walk(v, f)
+		for _, x := range n.List {
+			Walk(x, v)
 		}
 	case *File:
-		for _, v := range n.Scope.Table {
-			Walk(v.Value, f)
+		for _, x := range n.Scope.Table {
+			Walk(x.Value, v)
 		}
 	case *IfExpr:
-		Walk(n.Cond, f)
-		Walk(n.Type, f)
-		Walk(n.Then, f)
-		Walk(n.Else, f)
+		Walk(n.Cond, v)
+		Walk(n.Type, v)
+		Walk(n.Then, v)
+		Walk(n.Else, v)
 	case *Package:
-		for _, v := range n.Scope.Table {
-			Walk(v.Value, f)
+		for _, x := range n.Scope.Table {
+			Walk(x.Value, v)
 		}
 	case *UnaryExpr:
-		Walk(n.Value, f)
+		Walk(n.Value, v)
 	case *VarExpr:
-		Walk(n.Name, f)
-		Walk(n.Object.Type, f)
-		Walk(n.Object.Value, f)
+		Walk(n.Name, v)
 	}
 }

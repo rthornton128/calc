@@ -47,6 +47,16 @@ type CallExpr struct {
 	Args []Expr
 }
 
+// Constant represents a basic literal's actual value. It is not a
+// syntactical construct and will not be found in the original source.
+// As such, it's position will always be NoPos as it should not be used
+// in error reporting. It will be created only by the optimizer for
+// constant folding.
+type Constant struct {
+	Kind  token.Token // TODO types.Kind?
+	Value interface{} // TODO placeholder, needs proper interface/type
+}
+
 type DeclExpr struct {
 	Expression
 	Decl   token.Pos
@@ -89,12 +99,13 @@ type IfExpr struct {
 }
 
 type Object struct {
-	NamePos token.Pos
-	Name    string
-	Kind    ObKind
-	Offset  int
-	Type    *Ident // variable type, function return type, etc
-	Value   Expr
+	NamePos  token.Pos
+	Name     string
+	Kind     ObKind
+	Offset   int
+	RealType Type
+	Type     *Ident
+	Value    Expr
 }
 
 type ObKind int
@@ -123,6 +134,7 @@ type VarExpr struct {
 }
 
 func (b *BasicLit) Pos() token.Pos   { return b.LitPos }
+func (c *Constant) Pos() token.Pos   { return token.NoPos }
 func (e *Expression) Pos() token.Pos { return e.Opening }
 func (f *File) Pos() token.Pos       { return token.NoPos }
 func (i *Ident) Pos() token.Pos      { return i.NamePos }
@@ -130,6 +142,7 @@ func (p *Package) Pos() token.Pos    { return token.NoPos }
 func (u *UnaryExpr) Pos() token.Pos  { return u.OpPos }
 
 func (b *BasicLit) End() token.Pos   { return b.LitPos + token.Pos(len(b.Lit)) }
+func (c *Constant) End() token.Pos   { return token.NoPos }
 func (e *Expression) End() token.Pos { return e.Closing }
 func (f *File) End() token.Pos       { return token.NoPos }
 func (i *Ident) End() token.Pos      { return i.NamePos + token.Pos(len(i.Name)) }
@@ -137,6 +150,7 @@ func (p *Package) End() token.Pos    { return token.NoPos }
 func (u *UnaryExpr) End() token.Pos  { return u.Value.End() }
 
 func (b *BasicLit) exprNode()   {}
+func (b *Constant) exprNode()   {} // not an expression
 func (e *Expression) exprNode() {}
 func (i *Ident) exprNode()      {}
 func (u *UnaryExpr) exprNode()  {}

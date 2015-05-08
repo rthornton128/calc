@@ -41,6 +41,12 @@ func CompileFile(path string) error {
 		return err
 	}
 
+	// type checking pass
+	var t ast.TypeChecker
+	ast.Walk(f, &t)
+
+	// TODO optimization pass(es)
+
 	path = path[:len(path)-len(filepath.Ext(path))]
 	fp, err := os.Create(path + ".c")
 	if err != nil {
@@ -415,6 +421,7 @@ func (c *compiler) countVars(n ast.Node) (x int) {
 	return
 }
 
+// TODO remove entirely and place into optimization pass
 func (c *compiler) compTryOptimizeBinaryOrInt(e ast.Expr) (int, bool) {
 	var ret int
 	var ok bool
@@ -458,6 +465,7 @@ func (c *compiler) compTryOptimizeBinaryOrInt(e ast.Expr) (int, bool) {
 	return ret, ok
 }
 
+// TODO delete entire function and all references
 func (c *compiler) matchTypes(a, b ast.Node) {
 	atype, btype := typeOf(a, c.curScope), typeOf(b, c.curScope)
 
