@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-uintptr_t ax = 0;
-uintptr_t dx = 0;
+intptr_t ax = 0;
+intptr_t dx = 0;
 uintptr_t *bp = NULL;
 uintptr_t *sp = NULL;

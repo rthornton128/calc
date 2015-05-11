@@ -10,8 +10,8 @@
 
 #include <stdint.h>
 
-extern uintptr_t ax; /* accumulator register */
-extern uintptr_t dx; /* data register */
+extern intptr_t ax; /* accumulator register */
+extern intptr_t dx; /* data register */
 extern uintptr_t *bp; /* base pointer */
 extern uintptr_t *sp; /* stack pointer */
 

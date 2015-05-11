@@ -237,17 +237,17 @@ func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) {
 		case token.OR:
 			fmt.Fprintln(c.fp, "ax |= dx;")
 		case token.EQL:
-			fmt.Fprintln(c.fp, "ax = (ax == dx);")
+			fmt.Fprintln(c.fp, "ax = ax == dx;")
 		case token.GTE:
-			fmt.Fprintln(c.fp, "ax = (ax >= dx);")
+			fmt.Fprintln(c.fp, "ax = ax >= dx;")
 		case token.GTT:
-			fmt.Fprintln(c.fp, "ax = (ax > dx);")
+			fmt.Fprintln(c.fp, "ax = ax > dx;")
 		case token.LST:
-			fmt.Fprintln(c.fp, "ax = (ax < dx);")
+			fmt.Fprintln(c.fp, "ax = ax < dx;")
 		case token.LTE:
-			fmt.Fprintln(c.fp, "ax = (ax <= dx);")
+			fmt.Fprintln(c.fp, "ax = ax <= dx;")
 		case token.NEQ:
-			fmt.Fprintln(c.fp, "ax = (ax != dx);")
+			fmt.Fprintln(c.fp, "ax = ax != dx;")
 		}
 	}
 }
