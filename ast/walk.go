@@ -18,23 +18,12 @@ func Walk(node Node, v Visitor) {
 
 	switch n := node.(type) {
 	case *AssignExpr:
-		Walk(n.Name, v)
 		Walk(n.Value, v)
 	case *BinaryExpr:
 		for _, x := range n.List {
 			Walk(x, v)
 		}
-	case *CallExpr:
-		Walk(n.Name, v)
-		for _, x := range n.Args {
-			Walk(x, v)
-		}
 	case *DeclExpr:
-		Walk(n.Name, v)
-		for _, x := range n.Params {
-			Walk(x, v)
-		}
-		Walk(n.Type, v)
 		Walk(n.Body, v)
 	case *ExprList:
 		for _, x := range n.List {
@@ -46,7 +35,6 @@ func Walk(node Node, v Visitor) {
 		}
 	case *IfExpr:
 		Walk(n.Cond, v)
-		Walk(n.Type, v)
 		Walk(n.Then, v)
 		Walk(n.Else, v)
 	case *Package:
@@ -55,7 +43,6 @@ func Walk(node Node, v Visitor) {
 		}
 	case *UnaryExpr:
 		Walk(n.Value, v)
-	case *VarExpr:
-		Walk(n.Name, v)
+	case *CallExpr, *VarExpr:
 	}
 }

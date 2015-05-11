@@ -173,12 +173,6 @@ func (c *compiler) compAssignExpr(a *ast.AssignExpr) {
 		return
 	}
 
-	if ob.Type == nil {
-		ob.Type = typeOf(a.Value, c.curScope)
-	} else {
-		c.matchTypes(a.Name, a.Value)
-	}
-
 	ob.Value = a.Value
 
 	switch n := ob.Value.(type) {
@@ -279,14 +273,7 @@ func (c *compiler) compCallExpr(e *ast.CallExpr) {
 		return
 	}
 
-	decl := ob.Value.(*ast.DeclExpr)
-	for i, v := range e.Args {
-		atype, dtype := typeOf(v, c.curScope), typeOf(decl.Params[i], decl.Scope)
-		if atype.Name != dtype.Name {
-			c.Error(e.Name.NamePos, "type mismatch, argument ", i+1, " of ",
-				e.Name.Name, " is of type ", atype.Name, " but expected ", dtype.Name)
-		}
-
+	for _, v := range e.Args {
 		switch n := v.(type) {
 		case *ast.BasicLit:
 			c.compInt(n, fmt.Sprintf("*(sp+%d)", offset))
@@ -319,9 +306,6 @@ func (c *compiler) compDeclExpr(d *ast.DeclExpr) {
 	}
 	fmt.Fprintln(c.fp, "}")
 
-	if d.Body != nil {
-		c.matchTypes(d, d.Body)
-	}
 	c.closeScope()
 	return
 }
@@ -340,18 +324,12 @@ func (c *compiler) compIdent(n *ast.Ident, format string) {
 }
 
 func (c *compiler) compIfExpr(n *ast.IfExpr) {
-	if t := typeOf(n.Cond, c.curScope); t.Name != "int" {
-		c.Error(n.Cond.Pos(), "Expression must be of type int, got ", t.Name)
-	}
-
 	c.compNode(n.Cond)
 
 	fmt.Fprintln(c.fp, "if ((int32_t)ax == 1) {")
 	c.openScope(n.Scope)
-	c.matchTypes(n, n.Then)
 	c.compNode(n.Then)
 	if n.Else != nil && !reflect.ValueOf(n.Else).IsNil() {
-		c.matchTypes(n, n.Then)
 		fmt.Fprintln(c.fp, "} else {")
 		c.compNode(n.Else)
 	}
@@ -463,18 +441,4 @@ func (c *compiler) compTryOptimizeBinaryOrInt(e ast.Expr) (int, bool) {
 		}
 	}
 	return ret, ok
-}
-
-// TODO delete entire function and all references
-func (c *compiler) matchTypes(a, b ast.Node) {
-	atype, btype := typeOf(a, c.curScope), typeOf(b, c.curScope)
-
-	switch {
-	case btype.Name == "unknown":
-		c.Error(btype.Pos(), "object has unknown type")
-	case !validType(btype):
-		c.Error(btype.Pos(), "invalid type: ", btype.Name)
-	case atype.Name != btype.Name:
-		c.Error(btype.Pos(), "type mismatch: ", btype.Name, " vs ", atype.Name)
-	}
 }

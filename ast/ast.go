@@ -68,8 +68,9 @@ type DeclExpr struct {
 }
 
 type Expression struct {
-	Opening token.Pos
-	Closing token.Pos
+	Opening  token.Pos
+	Closing  token.Pos
+	RealType Type
 }
 
 type ExprList struct {

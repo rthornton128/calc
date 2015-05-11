@@ -278,6 +278,8 @@ func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
 		Body:   p.checkExpr(body),
 		Scope:  p.curScope,
 	}
+
+	// create an object for the function and associate it with its name
 	ob := &ast.Object{
 		NamePos: nam.NamePos,
 		Name:    nam.Name,
@@ -285,6 +287,7 @@ func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
 		Type:    typ,
 		Value:   decl,
 	}
+	typ.Object = ob
 
 	p.closeScope()
 
