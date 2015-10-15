@@ -42,7 +42,7 @@ func TestComplexExpression(t *testing.T) {
 }
 
 func TestVarExpression(t *testing.T) {
-	test_handler(t, "(decl main int ((var (= a 5)) a))", "5")
+	test_handler(t, "(decl main int ((var (= a 5) int) a))", "5")
 }
 
 func test_handler(t *testing.T, src, expected string) {

@@ -111,6 +111,7 @@ func (t *TypeChecker) Visit(n Node) bool {
 			fmt.Println("unary expression expects integer value")
 		}
 	case *VarExpr:
+		// TODO bug: does not infer type when type is not explicitly set
 		x.Object.RealType = typeLookup(x.Object.Type)
 	}
 
