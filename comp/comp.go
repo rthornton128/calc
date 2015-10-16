@@ -32,7 +32,7 @@ type compiler struct {
 // CompileFile generates a C source file for the corresponding file
 // specified by path. The .calc extension for the filename in path is
 // replaced with .c for the C source output.
-func CompileFile(path string) error {
+func CompileFile(path string, opt bool) error {
 	var c compiler
 
 	c.fset = token.NewFileSet()
@@ -42,10 +42,12 @@ func CompileFile(path string) error {
 	}
 
 	// type checking pass
-	var t ast.TypeChecker
-	ast.Walk(f, &t)
+	ast.Walk(f, &ast.TypeChecker{})
 
-	// TODO optimization pass(es)
+	// optimization pass(es)
+	if opt {
+		ast.Walk(f, &OptConstantFolder{})
+	}
 
 	path = path[:len(path)-len(filepath.Ext(path))]
 	fp, err := os.Create(path + ".c")
@@ -69,11 +71,19 @@ func CompileFile(path string) error {
 // CompileDir generates C source code for the Calc sources found in the
 // directory specified by path. The C source file uses the same name as
 // directory rather than any individual file.
-func CompileDir(path string) error {
+func CompileDir(path string, opt bool) error {
 	fs := token.NewFileSet()
 	pkg, err := parse.ParseDir(fs, path)
 	if err != nil {
 		return err
+	}
+
+	// type checking pass
+	ast.Walk(pkg, &ast.TypeChecker{})
+
+	// optimization pass(es)
+	if opt {
+		ast.Walk(pkg, &OptConstantFolder{})
 	}
 
 	fp, err := os.Create(filepath.Join(path, filepath.Base(path)) + ".c")
@@ -165,6 +175,8 @@ func (c *compiler) compNode(node ast.Node) {
 		c.compIfExpr(n)
 	case *ast.UnaryExpr:
 		c.compUnaryExpr(n)
+	case *ast.Value:
+		c.emit("ax = %d;\n", n.Value)
 	case *ast.VarExpr:
 		c.compVarExpr(n)
 	}
@@ -192,16 +204,14 @@ func (c *compiler) compAssignExpr(a *ast.AssignExpr) {
 		c.compIfExpr(n)
 	case *ast.Ident:
 		c.compIdent(n, fmt.Sprintf("*(bp+%d) = *(bp+%%d);\n", ob.Offset))
+	case *ast.Value:
+		c.emit("*(bp+%d) = %d;\n", ob.Offset, n.Value)
 		return
 	}
 	c.emit("*(bp+%d) = ax;\n", ob.Offset)
 }
 
 func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) {
-	if x, ok := c.compTryOptimizeBinaryOrInt(b); ok {
-		c.emit("ax = %d;\n", x)
-		return
-	}
 	c.compNode(b.List[0])
 
 	for _, node := range b.List[1:] {
@@ -225,6 +235,8 @@ func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) {
 			c.compUnaryExpr(n)
 			c.emitln("dx = ax;")
 			c.emitln("pop(ax);")
+		case *ast.Value:
+			c.emit("dx = %d;\n", n.Value)
 		}
 		switch b.Op {
 		case token.ADD:
@@ -402,48 +414,4 @@ func (c *compiler) countVars(n ast.Node) (x int) {
 		}
 	}
 	return
-}
-
-// TODO remove entirely and place into optimization pass
-func (c *compiler) compTryOptimizeBinaryOrInt(e ast.Expr) (int, bool) {
-	var ret int
-	var ok bool
-	switch t := e.(type) {
-	case *ast.BasicLit:
-		if t.Kind == token.INTEGER {
-			i, err := strconv.Atoi(t.Lit)
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
-			ret, ok = i, true
-		}
-	case *ast.BinaryExpr:
-		for i, v := range t.List {
-			var x int
-			x, ok = c.compTryOptimizeBinaryOrInt(v)
-			if !ok {
-				break
-			}
-			if i == 0 {
-				ret = x
-				continue
-			}
-			switch t.Op {
-			case token.ADD:
-				ret += x
-			case token.SUB:
-				ret -= x
-			case token.MUL:
-				ret *= x
-			case token.QUO:
-				ret /= x
-			case token.REM:
-				ret %= x
-			default:
-				return 0, false
-			}
-		}
-	}
-	return ret, ok
 }

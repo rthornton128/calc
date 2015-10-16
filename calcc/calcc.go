@@ -82,6 +82,7 @@ func main() {
 		cout = flag.String("cout", "--output=", "C compiler output flag")
 		ld   = flag.String("ld", "gcc", "linker")
 		ldf  = flag.String("ldflags", "", "linker flags")
+		opt  = flag.Bool("o", true, "run optimization pass")
 		ver  = flag.Bool("v", false, "Print version number and exit")
 	)
 	flag.Parse()
@@ -115,10 +116,10 @@ func main() {
 		os.Exit(1)
 	}
 	if fi.IsDir() {
-		err = comp.CompileDir(path)
+		err = comp.CompileDir(path, *opt)
 		path = filepath.Join(path, filepath.Base(path))
 	} else {
-		err = comp.CompileFile(path)
+		err = comp.CompileFile(path, *opt)
 	}
 
 	path = path[:len(path)-len(filepath.Ext(path))]

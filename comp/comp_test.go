@@ -52,7 +52,7 @@ func test_handler(t *testing.T, src, expected string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	comp.CompileFile("test.calc")
+	comp.CompileFile("test.calc", false)
 	os.Remove("test.calc")
 
 	runpath, _ := filepath.Abs("../runtime")

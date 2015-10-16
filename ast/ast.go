@@ -127,6 +127,11 @@ type UnaryExpr struct {
 	Value Expr
 }
 
+type Value struct {
+	Value interface{}
+	Type  token.Token // s/b token.Kind?
+}
+
 type VarExpr struct {
 	Expression
 	Var    token.Pos
@@ -141,6 +146,7 @@ func (f *File) Pos() token.Pos       { return token.NoPos }
 func (i *Ident) Pos() token.Pos      { return i.NamePos }
 func (p *Package) Pos() token.Pos    { return token.NoPos }
 func (u *UnaryExpr) Pos() token.Pos  { return u.OpPos }
+func (v *Value) Pos() token.Pos      { return token.NoPos }
 
 func (b *BasicLit) End() token.Pos   { return b.LitPos + token.Pos(len(b.Lit)) }
 func (c *Constant) End() token.Pos   { return token.NoPos }
@@ -149,12 +155,14 @@ func (f *File) End() token.Pos       { return token.NoPos }
 func (i *Ident) End() token.Pos      { return i.NamePos + token.Pos(len(i.Name)) }
 func (p *Package) End() token.Pos    { return token.NoPos }
 func (u *UnaryExpr) End() token.Pos  { return u.Value.End() }
+func (v *Value) End() token.Pos      { return token.NoPos }
 
 func (b *BasicLit) exprNode()   {}
 func (b *Constant) exprNode()   {} // not an expression
 func (e *Expression) exprNode() {}
 func (i *Ident) exprNode()      {}
 func (u *UnaryExpr) exprNode()  {}
+func (v *Value) exprNode()      {}
 
 const (
 	Decl ObKind = iota
