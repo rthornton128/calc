@@ -23,6 +23,9 @@ func (e Error) Error() string {
 	return fmt.Sprint(e.pos, " ", e.msg)
 }
 
+// ErrorHandler
+type ErrorHandler func(Pos, ...interface{})
+
 // ErrorList is a slice of Error pointers
 type ErrorList []*Error
 

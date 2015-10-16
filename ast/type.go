@@ -1,10 +1,6 @@
 package ast
 
-import (
-	"fmt"
-
-	"github.com/rthornton128/calc/token"
-)
+import "github.com/rthornton128/calc/token"
 
 type Type int
 
@@ -32,8 +28,9 @@ func typeLookup(i *Ident) Type {
 }
 
 type TypeChecker struct {
-	i     Type
-	scope *Scope
+	ErrorHandler token.ErrorHandler
+	i            Type
+	scope        *Scope
 }
 
 func (t *TypeChecker) Visit(n Node) bool {
@@ -61,8 +58,8 @@ func (t *TypeChecker) Visit(n Node) bool {
 		for _, e := range x.List {
 			Walk(e, t)
 			if t.i != Int {
-				// TODO should emit proper warning via ast/errors
-				fmt.Println("Binary expr expects operands of type Int, Got:", t.i)
+				t.ErrorHandler(x.Pos(),
+					"Binary expr expects operands of type Int, Got:", t.i)
 			}
 		}
 		x.RealType = Int
@@ -76,20 +73,22 @@ func (t *TypeChecker) Visit(n Node) bool {
 
 		o := t.scope.Lookup(x.Name.Name)
 		if o.Kind != Decl {
-			fmt.Println("calling non-function")
+			t.ErrorHandler(x.Name.Pos(), "call of non-function", x.Name.Name)
 		}
 		d := o.Value.(*DeclExpr)
 		for i, a := range x.Args {
 			Walk(a, t)
 			if t.i != d.Params[i].Object.RealType {
-				// TODO should emit proper warning via ast/errors
-				fmt.Println("argument", i, "of", x.Name.Name, "of wrong type")
+				t.ErrorHandler(a.Pos(),
+					"argument ", i, " of ", x.Name.Name, " wrong type; expected ",
+					t.i, " got ", d.Params[i].Object.RealType)
 			}
 		}
 		x.RealType = d.RealType
 		t.i = x.RealType
 	case *DeclExpr:
 		t.scope = x.Scope
+		x.RealType = typeLookup(x.Type)
 		for _, p := range x.Params {
 			p.Object.RealType = typeLookup(p.Object.Type)
 		}
@@ -107,8 +106,7 @@ func (t *TypeChecker) Visit(n Node) bool {
 	case *UnaryExpr:
 		Walk(x.Value, t)
 		if t.i != Int {
-			// TODO should emit proper warning via ast/errors
-			fmt.Println("unary expression expects integer value")
+			t.ErrorHandler(x.Pos(), " unary expression expects integer value")
 		}
 	case *VarExpr:
 		// TODO bug: does not infer type when type is not explicitly set

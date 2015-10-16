@@ -42,7 +42,7 @@ func CompileFile(path string, opt bool) error {
 	}
 
 	// type checking pass
-	ast.Walk(f, &ast.TypeChecker{})
+	ast.Walk(f, &ast.TypeChecker{ErrorHandler: c.Error})
 
 	// optimization pass(es)
 	if opt {
