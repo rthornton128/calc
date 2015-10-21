@@ -479,7 +479,7 @@ func (p *parser) parseVarExpr(open token.Pos) *ast.VarExpr {
 		value = p.parseAssignExpr(p.expect(token.LPAREN))
 		name = value.Name
 	default:
-		name = &ast.Ident{token.NoPos, "NoName", nil}
+		name = &ast.Ident{NamePos: token.NoPos, Name: "NoName"}
 		p.addError("expected identifier or assignment")
 	}
 	if value == nil || p.tok == token.IDENT {

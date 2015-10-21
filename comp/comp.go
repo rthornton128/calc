@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/rthornton128/calc/ast"
 	"github.com/rthornton128/calc/parse"
@@ -25,7 +26,7 @@ type compiler struct {
 	fp       *os.File
 	fset     *token.FileSet
 	errors   token.ErrorList
-	offset   int
+	nextID   int
 	curScope *ast.Scope
 }
 
@@ -57,6 +58,7 @@ func CompileFile(path string, opt bool) error {
 	defer fp.Close()
 
 	c.fp = fp
+	c.nextID = 1
 
 	c.emitHeaders()
 	c.compFile(f)
@@ -92,7 +94,7 @@ func CompileDir(path string, opt bool) error {
 	}
 	defer fp.Close()
 
-	c := &compiler{fp: fp, fset: fs}
+	c := &compiler{fp: fp, fset: fs, nextID: 1}
 
 	c.emitHeaders()
 	c.compPackage(pkg)
@@ -112,12 +114,6 @@ func (c *compiler) Error(pos token.Pos, args ...interface{}) {
 	c.errors.Add(c.fset.Position(pos), args...)
 }
 
-func (c *compiler) nextOffset() (offset int) {
-	offset = c.offset
-	c.offset += 1
-	return
-}
-
 func (c *compiler) emit(s string, args ...interface{}) {
 	fmt.Fprintf(c.fp, s, args...)
 }
@@ -128,17 +124,22 @@ func (c *compiler) emitln(args ...interface{}) {
 
 func (c *compiler) emitHeaders() {
 	c.emitln("#include <stdio.h>")
-	c.emitln("#include <runtime.h>")
+	c.emitln("#include <stdint.h>")
 }
 
 func (c *compiler) emitMain() {
 	c.emitln("int main(void) {")
-	c.emitln("stack_init();")
-	c.emitln("_main();")
-	c.emitln("printf(\"%d\\n\", (int32_t) ax);")
-	c.emitln("stack_end();")
+	c.emitln("printf(\"%d\\n\", _main());")
 	c.emitln("return 0;")
 	c.emitln("}")
+}
+
+func (c *compiler) getID(id int) int {
+	if id == 0 {
+		id = c.nextID
+		c.nextID++
+	}
+	return id
 }
 
 /* Scope */
@@ -153,178 +154,95 @@ func (c *compiler) closeScope() {
 
 /* Main Compiler */
 
-func (c *compiler) compNode(node ast.Node) {
+type temp struct {
+	ID int
+}
+
+func (t *temp) Pos() token.Pos { return token.NoPos }
+func (t *temp) End() token.Pos { return token.NoPos }
+
+func (c *compiler) compNode(node ast.Node) string {
+	var str string
 	switch n := node.(type) {
 	case *ast.AssignExpr:
 		c.compAssignExpr(n)
 	case *ast.BasicLit:
-		c.compInt(n, "ax")
+		str = c.compBasicLit(n)
 	case *ast.BinaryExpr:
-		c.compBinaryExpr(n)
+		str = c.compBinaryExpr(n)
 	case *ast.CallExpr:
-		c.compCallExpr(n)
+		str = c.compCallExpr(n)
 	case *ast.DeclExpr:
 		c.compDeclExpr(n)
 	case *ast.ExprList:
-		for i := range n.List {
-			c.compNode(n.List[i])
+		for _, e := range n.List {
+			str = c.compNode(e)
 		}
 	case *ast.Ident:
-		c.compIdent(n, "ax = *(bp+%d);\n")
+		str = c.compIdent(n)
 	case *ast.IfExpr:
-		c.compIfExpr(n)
+		str = c.compIfExpr(n)
 	case *ast.UnaryExpr:
 		c.compUnaryExpr(n)
 	case *ast.Value:
-		c.emit("ax = %d;\n", n.Value)
+		str = fmt.Sprintf("%d", n.Value)
 	case *ast.VarExpr:
 		c.compVarExpr(n)
 	}
-	return
+	return str
 }
 
 func (c *compiler) compAssignExpr(a *ast.AssignExpr) {
-	ob := c.curScope.Lookup(a.Name.Name)
-	if ob == nil {
-		c.Error(a.Name.NamePos, "undeclared variable '", a.Name.Name, "'")
-		return
-	}
-
-	ob.Value = a.Value
-
-	switch n := ob.Value.(type) {
-	case *ast.BasicLit:
-		c.compInt(n, fmt.Sprintf("*(bp+%d)", ob.Offset))
-		return
-	case *ast.BinaryExpr:
-		c.compBinaryExpr(n)
-	case *ast.CallExpr:
-		c.compCallExpr(n)
-	case *ast.IfExpr:
-		c.compIfExpr(n)
-	case *ast.Ident:
-		c.compIdent(n, fmt.Sprintf("*(bp+%d) = *(bp+%%d);\n", ob.Offset))
-	case *ast.Value:
-		c.emit("*(bp+%d) = %d;\n", ob.Offset, n.Value)
-		return
-	}
-	c.emit("*(bp+%d) = ax;\n", ob.Offset)
+	c.emit("%s = %s;\n", c.compNode(a.Name), c.compNode(a.Value))
 }
 
-func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) {
-	c.compNode(b.List[0])
-
-	for _, node := range b.List[1:] {
-		switch n := node.(type) {
-		case *ast.BasicLit:
-			c.compInt(n, "dx")
-		case *ast.BinaryExpr:
-			c.emitln("push(ax);")
-			c.compBinaryExpr(n)
-			c.emitln("dx = ax;")
-			c.emitln("pop(ax);")
-		case *ast.CallExpr:
-			c.emitln("push(ax);")
-			c.compCallExpr(n)
-			c.emitln("dx = ax;")
-			c.emitln("pop(ax);")
-		case *ast.Ident:
-			c.compIdent(n, "dx = *(bp+%d);\n")
-		case *ast.UnaryExpr:
-			c.emitln("push(ax);")
-			c.compUnaryExpr(n)
-			c.emitln("dx = ax;")
-			c.emitln("pop(ax);")
-		case *ast.Value:
-			c.emit("dx = %d;\n", n.Value)
-		}
-		switch b.Op {
-		case token.ADD:
-			c.emitln("ax += dx;")
-		case token.SUB:
-			c.emitln("ax -= dx;")
-		case token.MUL:
-			c.emitln("ax *= dx;")
-		case token.QUO:
-			c.emitln("ax /= dx;")
-		case token.REM:
-			c.emitln("ax %= dx;")
-		case token.AND:
-			c.emitln("ax &= dx;")
-		case token.OR:
-			c.emitln("ax |= dx;")
-		case token.EQL:
-			c.emitln("ax = ax == dx;")
-		case token.GTE:
-			c.emitln("ax = ax >= dx;")
-		case token.GTT:
-			c.emitln("ax = ax > dx;")
-		case token.LST:
-			c.emitln("ax = ax < dx;")
-		case token.LTE:
-			c.emitln("ax = ax <= dx;")
-		case token.NEQ:
-			c.emitln("ax = ax != dx;")
-		}
+func (c *compiler) compBasicLit(b *ast.BasicLit) string {
+	// use switch b.Kind {} when future types are added
+	i, err := strconv.Atoi(b.Lit)
+	if err != nil {
+		c.Error(b.Pos(), "bad conversion:", err)
 	}
+	return fmt.Sprintf("%d", i)
 }
 
-func (c *compiler) compCallExpr(e *ast.CallExpr) {
-	offset := 1
+func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) string {
+	lhs := ast.Node(b.List[0])
 
-	ob := c.curScope.Lookup(e.Name.Name)
-	switch {
-	case e.Name.Name == "main":
-		c.Error(e.Name.NamePos, "illegal to call function 'main'")
-		return
-	case ob == nil:
-		c.Error(e.Name.NamePos, "call to undeclared function '", e.Name.Name, "'")
-		return
-	case ob.Kind != ast.Decl:
-		c.Error(e.Name.NamePos, "may not call object that is not a function")
-		return
-	case len(ob.Value.(*ast.DeclExpr).Params) != len(e.Args):
-		c.Error(e.Name.NamePos, "number of arguments in function call do not "+
-			"match declaration, expected ", len(ob.Value.(*ast.DeclExpr).Params),
-			" got ", len(e.Args))
-		return
+	for _, rhs := range b.List[1:] {
+		// TODO use qualified C type name from b.RealType
+		c.emit("int _v%d = %s %s %s;\n",
+			c.nextID,
+			c.compNode(lhs),
+			b.Op,
+			c.compNode(rhs))
+		lhs = &temp{ID: c.getID(b.ID)}
 	}
+	b.ID = c.getID(lhs.(*temp).ID)
+	return fmt.Sprintf("_v%d", b.ID)
+}
 
-	for _, v := range e.Args {
-		switch n := v.(type) {
-		case *ast.BasicLit:
-			c.compInt(n, fmt.Sprintf("*(sp+%d)", offset))
-		default:
-			c.compNode(n)
-			c.emit("*(sp+%d) = ax;\n", offset)
-		}
-		offset += 1
+func (c *compiler) compCallExpr(e *ast.CallExpr) string {
+	args := make([]string, len(e.Args))
+	for i, a := range e.Args {
+		args[i] = c.compNode(a)
 	}
-	c.emit("_%s();\n", e.Name.Name)
-	return
+	return fmt.Sprintf("_%s(%s)", e.Name.Name, strings.Join(args, ","))
 }
 
 func (c *compiler) compDeclExpr(d *ast.DeclExpr) {
 	c.openScope(d.Scope)
+	defer c.closeScope()
 
-	c.offset = 0
-	for _, p := range d.Params {
-		ob := c.curScope.Lookup(p.Name)
-		ob.Offset = c.nextOffset()
+	params := make([]string, len(d.Params))
+	for i, p := range d.Params {
+		//fmt.Println("decl:", p.Object == nil)
+		params[i] = p.Object.Type.Name + " " + c.compNode(p)
 	}
-
-	c.emit("void _%s(void) {\n", d.Name.Name)
-	if x := c.countVars(d); x > 0 {
-		c.emit("enter(%d);\n", x)
-		c.compNode(d.Body)
-		c.emitln("leave();")
-	} else {
-		c.compNode(d.Body)
-	}
-	c.emitln("}")
-
-	c.closeScope()
-	return
+	c.emit("%s _%s(%s) {\n",
+		d.Type.Name, // TODO should be proper qualified C type name
+		d.Name.Name,
+		strings.Join(params, ","))
+	c.emit("return %s;\n}\n", c.compNode(d.Body))
 }
 
 func (c *compiler) compFile(f *ast.File) {
@@ -332,34 +250,25 @@ func (c *compiler) compFile(f *ast.File) {
 	c.compDeclProto(f)
 }
 
-func (c *compiler) compIdent(n *ast.Ident, format string) {
-	ob := c.curScope.Lookup(n.Name)
-	if ob == nil {
-		panic("no offset for identifier")
-	}
-	fmt.Fprintf(c.fp, format, ob.Offset)
+func (c *compiler) compIdent(i *ast.Ident) string {
+	i.Object.ID = c.getID(i.Object.ID)
+	return fmt.Sprintf("_v%d", i.Object.ID)
 }
 
-func (c *compiler) compIfExpr(n *ast.IfExpr) {
-	c.compNode(n.Cond)
-
-	c.emitln("if ((int32_t)ax == 1) {")
+func (c *compiler) compIfExpr(n *ast.IfExpr) string {
 	c.openScope(n.Scope)
-	c.compNode(n.Then)
+	defer c.closeScope()
+
+	t := &temp{ID: c.getID(0)}
+	c.emit("int _v%d = 0;\n", t.ID)
+	c.emit("if (%s == 1) {\n", c.compNode(n.Cond))
+	c.emit("_v%d = %s;\n", t.ID, c.compNode(n.Then))
 	if n.Else != nil && !reflect.ValueOf(n.Else).IsNil() {
 		c.emitln("} else {")
-		c.compNode(n.Else)
+		c.emit("_v%d = %s;\n", t.ID, c.compNode(n.Else))
 	}
-	c.closeScope()
 	c.emitln("}")
-}
-
-func (c *compiler) compInt(n *ast.BasicLit, reg string) {
-	i, err := strconv.Atoi(n.Lit)
-	if err != nil {
-		c.Error(n.Pos(), "bad conversion:", err)
-	}
-	c.emit("%s = %d;\n", reg, i)
+	return fmt.Sprintf("_v%d", t.ID)
 }
 
 func (c *compiler) compPackage(p *ast.Package) {
@@ -372,46 +281,30 @@ func (c *compiler) compPackage(p *ast.Package) {
 
 func (c *compiler) compDeclProto(f *ast.File) {
 	for _, decl := range f.Decls {
-		c.emit("void _%s(void);\n", decl.Name.Name)
+		params := make([]string, len(decl.Params))
+		for i, p := range decl.Params {
+			//fmt.Println("proto:", p.Object == nil)
+			params[i] = p.Object.Type.Name + " " + c.compNode(p)
+		}
+		c.emit("%s _%s(%s);\n",
+			decl.Type.Name, // TODO should be proper qualified C type name
+			decl.Name.Name,
+			strings.Join(params, ","))
 		defer c.compNode(decl)
 	}
 }
 
-func (c *compiler) compUnaryExpr(u *ast.UnaryExpr) {
-	c.compNode(u.Value)
-	c.emitln("ax *= -1;")
+func (c *compiler) compUnaryExpr(u *ast.UnaryExpr) string {
+	return fmt.Sprintf("-(%s)", c.compNode(u.Value))
 }
 
 func (c *compiler) compVarExpr(v *ast.VarExpr) {
-	ob := c.curScope.Lookup(v.Name.Name)
-	ob.Offset = c.nextOffset()
-	if ob.Value != nil && !reflect.ValueOf(ob.Value).IsNil() {
-		if val, ok := ob.Value.(*ast.AssignExpr); ok {
+	c.emit("%s %s;", v.Object.Type.Name, v.Name.Name)
+	if v.Object.Value != nil && !reflect.ValueOf(v.Object.Value).IsNil() {
+		if val, ok := v.Object.Value.(*ast.AssignExpr); ok {
 			c.compAssignExpr(val)
 			return
 		}
 		panic("parsing error occured, object's Value is not an assignment")
 	}
-	// TODO: implement proper zero value code for additional types
-	c.emit("*(bp+%d) = 0;\n", ob.Offset)
-}
-
-func (c *compiler) countVars(n ast.Node) (x int) {
-	if n != nil && !reflect.ValueOf(n).IsNil() {
-		switch e := n.(type) {
-		case *ast.DeclExpr:
-			x = len(e.Params)
-			x += c.countVars(e.Body)
-		case *ast.IfExpr:
-			x = c.countVars(e.Then)
-			x = c.countVars(e.Else)
-		case *ast.ExprList:
-			for _, v := range e.List {
-				x += c.countVars(v)
-			}
-		case *ast.VarExpr:
-			x = 1
-		}
-	}
-	return
 }
