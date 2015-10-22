@@ -151,16 +151,6 @@ func (c *compiler) getID(id int) int {
 	return id
 }
 
-/* Scope */
-
-func (c *compiler) openScope(s *ast.Scope) {
-	c.curScope = s
-}
-
-func (c *compiler) closeScope() {
-	c.curScope = c.curScope.Parent
-}
-
 /* Main Compiler */
 
 type temp struct {
@@ -282,7 +272,6 @@ func (c *compiler) compDeclProto(f *ast.File) {
 	for _, decl := range f.Decls {
 		params := make([]string, len(decl.Params))
 		for i, p := range decl.Params {
-			//fmt.Println("proto:", p.Object == nil)
 			params[i] = cType(p.Object.RealType) + " " + c.compNode(p)
 		}
 		c.emit("%s _%s(%s);\n",
