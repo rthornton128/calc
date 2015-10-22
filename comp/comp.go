@@ -182,7 +182,7 @@ func (c *compiler) compNode(node ast.Node) string {
 	case *ast.IfExpr:
 		str = c.compIfExpr(n)
 	case *ast.UnaryExpr:
-		c.compUnaryExpr(n)
+		str = c.compUnaryExpr(n)
 	case *ast.Value:
 		str = fmt.Sprintf("%d", n.Value)
 	case *ast.VarExpr:
@@ -283,11 +283,12 @@ func (c *compiler) compDeclProto(f *ast.File) {
 }
 
 func (c *compiler) compUnaryExpr(u *ast.UnaryExpr) string {
-	return fmt.Sprintf("-(%s)", c.compNode(u.Value))
+	//fmt.Println(u.Value, c.compNode(u.Value))
+	return fmt.Sprintf("-%s", c.compNode(u.Value))
 }
 
 func (c *compiler) compVarExpr(v *ast.VarExpr) {
-	c.emit("%s %s;\n", cType(v.RealType), c.compNode(v.Name))
+	c.emit("%s %s = 0;\n", cType(v.RealType), c.compNode(v.Name))
 	if v.Object.Value != nil && !reflect.ValueOf(v.Object.Value).IsNil() {
 		if val, ok := v.Object.Value.(*ast.AssignExpr); ok {
 			c.compAssignExpr(val)

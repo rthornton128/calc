@@ -21,27 +21,44 @@ import (
 var ext string
 
 func init() {
-	ext = ""
 	if runtime.GOOS == "windows" {
 		ext = ".exe"
 	}
 }
 
 func TestSimpleExpression(t *testing.T) {
+	test_handler(t, "(decl main int 42)", "42")
+}
+
+func TestBinary(t *testing.T) {
 	test_handler(t, "(decl main int (+ 5 3))", "8")
-}
-
-func TestSimpleExpressionWithComments(t *testing.T) {
 	test_handler(t, ";comment 1\n(decl main int (* 5 3)); comment 2", "15")
-}
-
-func TestComplexExpression(t *testing.T) {
 	test_handler(t, "(decl main int (- (* 9 (+ 2 3)) (+ (/ 20 (% 15 10)) 1)))",
 		"40")
 }
 
-func TestVarExpression(t *testing.T) {
+func TestFunc(t *testing.T) {
+	test_handler(t, "(decl fn(a b int) int (+ a b))\n"+
+		"(decl main int (fn 1 2))", "3")
+}
+
+func TestIfThenElse(t *testing.T) {
+	test_handler(t, "(decl main int (if 1 int 99))", "99")
+	test_handler(t, "(decl main int (if 0 int 2 3))", "3")
+	test_handler(t, "(decl main int (if (< 2 3) int 7 3))", "7")
+	test_handler(t, "(decl main int ((var a int) (if (< a 3) int 1 3)))", "1")
+}
+
+func TestVarAndAssign(t *testing.T) {
 	test_handler(t, "(decl main int ((var (= a 5)) a))", "5")
+	test_handler(t, "(decl main int ((var a int) (= a 42) a))", "42")
+}
+
+func TestUnary(t *testing.T) {
+	test_handler(t, "(decl main int -24)", "-24")
+	test_handler(t, "(decl main int ((var (= z 12)) -z))", "-12")
+	test_handler(t, "(decl fn(num int) int -num)\n"+
+		"(decl main int (fn -42))", "42")
 }
 
 func test_handler(t *testing.T, src, expected string) {
@@ -51,7 +68,11 @@ func test_handler(t *testing.T, src, expected string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	comp.CompileFile("test.calc", false)
+	err = comp.CompileFile("test.calc", false)
+	if err != nil {
+		t.Log(src)
+		t.Fatal(err)
+	}
 	os.Remove("test.calc")
 
 	out, err := exec.Command("gcc"+ext, "-Wall", "-Wextra", "-std=c99",
@@ -69,10 +90,10 @@ func test_handler(t *testing.T, src, expected string) {
 		output, err = exec.Command("./test").Output()
 	}
 	output = []byte(strings.TrimSpace(string(output)))
-	t.Log("len output:", len(output))
-	t.Log("len expected:", len(expected))
 
 	if string(output) != expected {
+		//t.Log("len output:", len(output))
+		//t.Log("len expected:", len(expected))
 		t.Fatal("For " + src + " expected " + expected + " got " + string(output))
 	}
 }

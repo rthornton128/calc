@@ -400,10 +400,10 @@ func (p *parser) parseIfExpr(open token.Pos) *ast.IfExpr {
 	pos := p.expect(token.IF)
 	cond := p.parseGenExpr()
 
-	var typ *ast.Ident
-	if p.tok == token.IDENT {
-		typ = p.parseIdent()
-	}
+	//var typ *ast.Ident
+	//if p.tok == token.IDENT {
+	typ := p.parseIdent()
+	//}
 
 	p.openScope()
 	scope := p.curScope
@@ -501,7 +501,7 @@ func (p *parser) parseVarExpr(open token.Pos) *ast.VarExpr {
 			"declaration at: ", p.file.Position(old.NamePos))
 	}
 
-	value.Name.Object = ob
+	name.Object = ob
 
 	return &ast.VarExpr{
 		Expression: ast.Expression{Opening: open, Closing: end},
