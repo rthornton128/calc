@@ -108,6 +108,15 @@ func CompileDir(path string, opt bool) error {
 
 /* Utility */
 
+func cType(t ast.Type) string {
+	switch t {
+	case ast.Int:
+		return "int32_t"
+	default:
+		return "int"
+	}
+}
+
 // Error adds an error to the compiler at the given position. The remaining
 // arguments are used to generate the error message.
 func (c *compiler) Error(pos token.Pos, args ...interface{}) {
@@ -209,8 +218,8 @@ func (c *compiler) compBinaryExpr(b *ast.BinaryExpr) string {
 	lhs := ast.Node(b.List[0])
 
 	for _, rhs := range b.List[1:] {
-		// TODO use qualified C type name from b.RealType
-		c.emit("int _v%d = %s %s %s;\n",
+		c.emit("%s _v%d = %s %s %s;\n",
+			cType(b.RealType),
 			c.nextID,
 			c.compNode(lhs),
 			b.Op,
@@ -230,23 +239,18 @@ func (c *compiler) compCallExpr(e *ast.CallExpr) string {
 }
 
 func (c *compiler) compDeclExpr(d *ast.DeclExpr) {
-	c.openScope(d.Scope)
-	defer c.closeScope()
-
 	params := make([]string, len(d.Params))
 	for i, p := range d.Params {
-		//fmt.Println("decl:", p.Object == nil)
-		params[i] = p.Object.Type.Name + " " + c.compNode(p)
+		params[i] = cType(p.Object.RealType) + " " + c.compNode(p)
 	}
 	c.emit("%s _%s(%s) {\n",
-		d.Type.Name, // TODO should be proper qualified C type name
+		cType(d.RealType),
 		d.Name.Name,
 		strings.Join(params, ","))
 	c.emit("return %s;\n}\n", c.compNode(d.Body))
 }
 
 func (c *compiler) compFile(f *ast.File) {
-	c.curScope = f.Scope
 	c.compDeclProto(f)
 }
 
@@ -256,11 +260,8 @@ func (c *compiler) compIdent(i *ast.Ident) string {
 }
 
 func (c *compiler) compIfExpr(n *ast.IfExpr) string {
-	c.openScope(n.Scope)
-	defer c.closeScope()
-
 	t := &temp{ID: c.getID(0)}
-	c.emit("int _v%d = 0;\n", t.ID)
+	c.emit("%s _v%d = 0;\n", cType(n.RealType), t.ID)
 	c.emit("if (%s == 1) {\n", c.compNode(n.Cond))
 	c.emit("_v%d = %s;\n", t.ID, c.compNode(n.Then))
 	if n.Else != nil && !reflect.ValueOf(n.Else).IsNil() {
@@ -272,8 +273,6 @@ func (c *compiler) compIfExpr(n *ast.IfExpr) string {
 }
 
 func (c *compiler) compPackage(p *ast.Package) {
-	c.curScope = p.Scope
-
 	for _, f := range p.Files {
 		c.compFile(f)
 	}
@@ -284,10 +283,10 @@ func (c *compiler) compDeclProto(f *ast.File) {
 		params := make([]string, len(decl.Params))
 		for i, p := range decl.Params {
 			//fmt.Println("proto:", p.Object == nil)
-			params[i] = p.Object.Type.Name + " " + c.compNode(p)
+			params[i] = cType(p.Object.RealType) + " " + c.compNode(p)
 		}
 		c.emit("%s _%s(%s);\n",
-			decl.Type.Name, // TODO should be proper qualified C type name
+			cType(decl.RealType),
 			decl.Name.Name,
 			strings.Join(params, ","))
 		defer c.compNode(decl)
@@ -299,7 +298,7 @@ func (c *compiler) compUnaryExpr(u *ast.UnaryExpr) string {
 }
 
 func (c *compiler) compVarExpr(v *ast.VarExpr) {
-	c.emit("%s %s;", v.Object.Type.Name, v.Name.Name)
+	c.emit("%s %s;\n", cType(v.RealType), c.compNode(v.Name))
 	if v.Object.Value != nil && !reflect.ValueOf(v.Object.Value).IsNil() {
 		if val, ok := v.Object.Value.(*ast.AssignExpr); ok {
 			c.compAssignExpr(val)

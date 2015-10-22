@@ -392,7 +392,8 @@ func (p *parser) parseFile() *ast.File {
 func (p *parser) parseIdent() *ast.Ident {
 	name := p.lit
 	pos := p.expect(token.IDENT)
-	return &ast.Ident{NamePos: pos, Name: name}
+	ob := p.curScope.Lookup(name)
+	return &ast.Ident{NamePos: pos, Name: name, Object: ob}
 }
 
 func (p *parser) parseIfExpr(open token.Pos) *ast.IfExpr {
@@ -499,6 +500,8 @@ func (p *parser) parseVarExpr(open token.Pos) *ast.VarExpr {
 		p.addError("redeclaration of variable not allowed; original "+
 			"declaration at: ", p.file.Position(old.NamePos))
 	}
+
+	value.Name.Object = ob
 
 	return &ast.VarExpr{
 		Expression: ast.Expression{Opening: open, Closing: end},

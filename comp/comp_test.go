@@ -11,7 +11,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
@@ -55,11 +54,8 @@ func test_handler(t *testing.T, src, expected string) {
 	comp.CompileFile("test.calc", false)
 	os.Remove("test.calc")
 
-	runpath, _ := filepath.Abs("../runtime")
-	runlib := filepath.Join(runpath, "runtime.a")
 	out, err := exec.Command("gcc"+ext, "-Wall", "-Wextra", "-std=c99",
-		"-I", runpath, "--output=test"+ext,
-		"test.c", runlib).CombinedOutput()
+		"--output=test"+ext, "test.c").CombinedOutput()
 	if err != nil {
 		t.Log(string(out))
 		t.Fatal(err)
