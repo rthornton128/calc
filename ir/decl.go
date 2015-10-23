@@ -37,13 +37,15 @@ func (d *Declaration) String() string {
 
 type Param struct {
 	object
-	ID int
+	id int
 }
 
 func MakeParam(p *ast.Ident, parent *Scope) *Param {
 	return &Param{object: newObject(p.Name, p.Object.Type.Name, parent)}
 }
 
+func (p *Param) ID() int      { return p.id }
+func (p *Param) SetID(id int) { p.id = id }
 func (p *Param) String() string {
 	return fmt.Sprintf("{%s %s}", p.name, p.typ)
 }

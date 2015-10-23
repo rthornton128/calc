@@ -7,6 +7,11 @@ type Object interface {
 	String() string
 }
 
+type IDer interface {
+	ID() int
+	SetID(int)
+}
+
 type object struct {
 	name  string
 	typ   Type

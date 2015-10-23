@@ -41,6 +41,8 @@ func binaryType(t token.Token) Type {
 	}
 }
 
+func (b *Binary) ID() int      { return b.id }
+func (b *Binary) SetID(id int) { b.id = id }
 func (b *Binary) String() string {
 	return fmt.Sprintf("(%s %s %s)", b.lhs.String(), b.op, b.rhs.String())
 }
