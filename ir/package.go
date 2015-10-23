@@ -1,17 +1,29 @@
 package ir
 
-import "github.com/rthornton128/calc/ast"
+import (
+	"fmt"
+
+	"github.com/rthornton128/calc/ast"
+)
 
 type Package struct {
+	object
+	name  string
 	scope *Scope
 }
 
-func MakePackage(pkg *ast.Package) *Package {
-	p := &Package{scope: newScope(nil)}
+func MakePackage(pkg *ast.Package, name string) *Package {
+	p := &Package{name: name, scope: newScope(nil)}
 	for _, f := range pkg.Files {
 		MakeFile(f, p.scope)
 	}
 	return p
+}
+
+func (p *Package) Name() string  { return p.name }
+func (p *Package) Scope() *Scope { return p.scope }
+func (p *Package) String() string {
+	return fmt.Sprintf("package: %s { %s }\n", p.name, p.scope)
 }
 
 func MakeFile(f *ast.File, parent *Scope) {

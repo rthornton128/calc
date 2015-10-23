@@ -1,27 +1,38 @@
 package ir
 
-import "github.com/rthornton128/calc/ast"
+import (
+	"fmt"
+
+	"github.com/rthornton128/calc/ast"
+)
 
 type Declaration struct {
 	object
-	Params []*Param
+	body   Object
+	params []string
 }
 
 func MakeDeclaration(d *ast.DeclExpr, parent *Scope) *Declaration {
-	decl := &Declaration{
-		object: object{
-			name:   d.Name.Name,
-			t:      TypeFromString(d.Type.Name),
-			parent: newScope(parent),
-		},
-		Params: make([]*Param, len(d.Params)),
-	}
-
+	scope := newScope(parent)
+	params := make([]string, len(d.Params))
 	for i, p := range d.Params {
-		decl.Params[i] = MakeParam(p, parent)
+		params[i] = p.Name
+		scope.Insert(MakeParam(p, scope))
 	}
 
-	return decl
+	return &Declaration{
+		object: newObject(d.Name.Name, d.Type.Name, scope),
+		params: params,
+		body:   makeExpr(d.Body, scope),
+	}
+}
+
+func (d *Declaration) String() string {
+	var out string
+	for _, s := range d.params {
+		out += d.scope.Lookup(s).String()
+	}
+	return fmt.Sprintf("decl {%s %s (%s) %s}", d.name, d.typ, out, d.body)
 }
 
 type Param struct {
@@ -30,11 +41,9 @@ type Param struct {
 }
 
 func MakeParam(p *ast.Ident, parent *Scope) *Param {
-	return &Param{
-		object: object{
-			name:   p.Name,
-			t:      TypeFromString(p.Object.Type.Name), // TODO shudder
-			parent: parent,
-		},
-	}
+	return &Param{object: newObject(p.Name, p.Object.Type.Name, parent)}
+}
+
+func (p *Param) String() string {
+	return fmt.Sprintf("{%s %s}", p.name, p.typ)
 }

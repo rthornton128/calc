@@ -8,13 +8,21 @@ const (
 	Int
 )
 
-func TypeFromString(name string) Type {
-	switch name {
-	case "int":
-		return Int
-	case "bool":
-		return Bool
-	default:
-		return Unknown
+var typeStrings = []string{
+	Unknown: "unknown type",
+	Bool:    "bool",
+	Int:     "int",
+}
+
+func typeFromString(name string) Type {
+	for i, s := range typeStrings {
+		if name == s {
+			return Type(i)
+		}
 	}
+	return Unknown
+}
+
+func (t Type) String() string {
+	return typeStrings[t]
 }

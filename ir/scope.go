@@ -13,7 +13,7 @@ func newScope(p *Scope) *Scope {
 }
 
 func (s *Scope) Insert(o Object) Object {
-	if prev, ok := s.m[o.Name()]; !ok {
+	if prev, ok := s.m[o.Name()]; ok {
 		return prev
 	}
 	s.m[o.Name()] = o
@@ -26,4 +26,12 @@ func (s *Scope) Lookup(name string) Object {
 		return o
 	}
 	return s.parent.Lookup(name)
+}
+
+func (s *Scope) String() string {
+	var out string
+	for _, v := range s.m {
+		out += v.String()
+	}
+	return out
 }
