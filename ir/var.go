@@ -19,6 +19,7 @@ func (i *Var) String() string {
 
 type Variable struct {
 	object
+	id     int
 	Assign Object
 }
 
@@ -50,3 +51,6 @@ func (v *Variable) String() string {
 	}
 	return fmt.Sprintf("var %s", v.Name())
 }
+
+func (v *Variable) ID() int      { return v.id }
+func (v *Variable) SetID(id int) { v.id = id }

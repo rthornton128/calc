@@ -1,10 +1,6 @@
 package ir
 
-import (
-	"fmt"
-
-	"github.com/rthornton128/calc/token"
-)
+import "github.com/rthornton128/calc/token"
 
 func FoldConstants(pkg *Package) *Package {
 	for k, v := range pkg.scope.m {
@@ -29,7 +25,6 @@ func fold(o Object) Object {
 	case *Declaration:
 		t.body = fold(t.body)
 	case *If:
-		fmt.Println("if cond")
 		t.Cond = fold(t.Cond)
 		t.Then = fold(t.Then)
 		if t.Else != nil {
@@ -48,9 +43,7 @@ func foldBinary(b *Binary) Object {
 	lhs, lhsOk := b.lhs.(*Constant)
 	rhs, rhsOk := b.rhs.(*Constant)
 
-	fmt.Println("binary:", lhs, b.op, rhs)
 	if lhsOk && rhsOk {
-		fmt.Println("binary:", lhs.Type(), rhs.Type(), b.Type())
 		switch b.Type() {
 		case Int:
 			l, r := int64(lhs.value.(intValue)), int64(rhs.value.(intValue))
