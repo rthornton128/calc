@@ -27,9 +27,9 @@ func makeConstant(b *ast.BasicLit, parent *Scope) *Constant {
 	var v Value
 	switch b.Kind {
 	case token.INTEGER:
-		v, _ = makeInt(b) // TODO handle error
+		v, _ = makeInt(b.Lit) // TODO handle error
 		//case token.BOOL:
-		//v, _ := makeBool(b) // TODO handle error
+		//v, _ := makeBool(b.Name) // TODO handle error
 	}
 	return &Constant{
 		object: newObject(v.String(), v.Type().String(), parent),
@@ -41,16 +41,16 @@ func (c *Constant) String() string {
 	return c.value.String()
 }
 
-func makeBool(i *ast.Ident) (Value, error) {
-	b, err := strconv.ParseBool(i.Name)
+func makeBool(lit string) (Value, error) {
+	b, err := strconv.ParseBool(lit)
 	return boolValue(b), err
 }
 
 func (v boolValue) String() string { return fmt.Sprintf("%v", bool(v)) }
 func (v boolValue) Type() Type     { return Bool }
 
-func makeInt(b *ast.BasicLit) (Value, error) {
-	i, err := strconv.ParseInt(b.Lit, 0, 64)
+func makeInt(lit string) (Value, error) {
+	i, err := strconv.ParseInt(lit, 0, 64)
 	return intValue(i), err
 }
 

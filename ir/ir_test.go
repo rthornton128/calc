@@ -19,6 +19,7 @@ func TestPrint(t *testing.T) {
 	test_handler(t, "example8", "(decl main int ((var a int) a))")
 	test_handler(t, "example9", "(decl main int ((var (= a 42)) a))")
 }
+
 func test_handler(t *testing.T, name, src string) {
 	n, err := parse.ParseExpression(name, src)
 	if err != nil {
@@ -33,5 +34,9 @@ func test_handler(t *testing.T, name, src string) {
 		},
 	}
 
-	t.Log(ir.MakePackage(pkg, name))
+	p := ir.MakePackage(pkg, name)
+	t.Log(p)
+	t.Log(ir.FoldConstants(p))
+	ir.Tag(p)
+
 }

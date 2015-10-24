@@ -23,7 +23,7 @@ func MakePackage(pkg *ast.Package, name string) *Package {
 func (p *Package) Name() string  { return p.name }
 func (p *Package) Scope() *Scope { return p.scope }
 func (p *Package) String() string {
-	return fmt.Sprintf("package: %s { %s }\n", p.name, p.scope)
+	return fmt.Sprintf("package: %s { %s }", p.name, p.scope)
 }
 
 func MakeFile(f *ast.File, parent *Scope) {
