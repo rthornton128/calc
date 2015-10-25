@@ -8,8 +8,8 @@ import (
 
 type Declaration struct {
 	object
-	body   Object
-	params []string
+	Body   Object
+	Params []string
 }
 
 func MakeDeclaration(d *ast.DeclExpr, parent *Scope) *Declaration {
@@ -21,18 +21,18 @@ func MakeDeclaration(d *ast.DeclExpr, parent *Scope) *Declaration {
 	}
 
 	return &Declaration{
-		object: newObject(d.Name.Name, d.Type.Name, scope),
-		params: params,
-		body:   makeExpr(d.Body, scope),
+		object: newObject(d.Name.Name, d.Type.Name, d.Pos(), FuncKind, scope),
+		Params: params,
+		Body:   makeExpr(d.Body, scope),
 	}
 }
 
 func (d *Declaration) String() string {
 	var out string
-	for _, s := range d.params {
+	for _, s := range d.Params {
 		out += d.scope.Lookup(s).String()
 	}
-	return fmt.Sprintf("decl {%s %s (%s) %s}", d.name, d.typ, out, d.body)
+	return fmt.Sprintf("decl {%s %s (%s) %s}", d.name, d.typ, out, d.Body)
 }
 
 type Param struct {
@@ -41,7 +41,8 @@ type Param struct {
 }
 
 func MakeParam(p *ast.Ident, parent *Scope) *Param {
-	return &Param{object: newObject(p.Name, p.Object.Type.Name, parent)}
+	return &Param{object: newObject(p.Name, p.Object.Type.Name, p.Pos(), VarKind,
+		parent)}
 }
 
 func (p *Param) ID() int      { return p.id }

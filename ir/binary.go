@@ -10,13 +10,13 @@ import (
 type Binary struct {
 	object
 	id  int
-	op  token.Token
-	lhs Object
-	rhs Object
+	Op  token.Token
+	Lhs Object
+	Rhs Object
 }
 
 func makeBinary(b *ast.BinaryExpr, parent *Scope) *Binary {
-	o := newObject("binary", "", parent)
+	o := newObject("binary", "", b.Pos(), None, parent)
 	o.typ = binaryType(b.Op)
 
 	lhs := makeExpr(b.List[0], parent)
@@ -24,9 +24,9 @@ func makeBinary(b *ast.BinaryExpr, parent *Scope) *Binary {
 		rhs := makeExpr(e, parent)
 		lhs = Object(&Binary{
 			object: o,
-			op:     b.Op,
-			lhs:    lhs,
-			rhs:    rhs,
+			Op:     b.Op,
+			Lhs:    lhs,
+			Rhs:    rhs,
 		})
 	}
 	return lhs.(*Binary)
@@ -44,26 +44,26 @@ func binaryType(t token.Token) Type {
 func (b *Binary) ID() int      { return b.id }
 func (b *Binary) SetID(id int) { b.id = id }
 func (b *Binary) String() string {
-	return fmt.Sprintf("(%s %s %s)", b.lhs.String(), b.op, b.rhs.String())
+	return fmt.Sprintf("(%s %s %s)", b.Lhs.String(), b.Op, b.Rhs.String())
 }
 
 type Unary struct {
 	object
-	op  string
-	rhs Object
+	Op  string
+	Rhs Object
 }
 
 func makeUnary(u *ast.UnaryExpr, parent *Scope) *Unary {
-	o := newObject("unary", "", parent)
+	o := newObject("unary", "", u.Pos(), None, parent)
 	o.typ = Int
 
 	return &Unary{
 		object: o,
-		op:     u.Op,
-		rhs:    makeExpr(u.Value, parent),
+		Op:     u.Op,
+		Rhs:    makeExpr(u.Value, parent),
 	}
 }
 
 func (u *Unary) String() string {
-	return fmt.Sprintf("%s(%s)", u.op, u.rhs.String())
+	return fmt.Sprintf("%s(%s)", u.Op, u.Rhs.String())
 }

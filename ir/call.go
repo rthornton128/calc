@@ -9,7 +9,7 @@ import (
 
 type Call struct {
 	object
-	args []Object
+	Args []Object
 }
 
 func makeCall(c *ast.CallExpr, parent *Scope) *Call {
@@ -18,14 +18,14 @@ func makeCall(c *ast.CallExpr, parent *Scope) *Call {
 		args[i] = makeExpr(a, parent)
 	}
 	return &Call{
-		object: newObject(c.Name.Name, "", parent),
-		args:   args,
+		object: newObject(c.Name.Name, "", c.Pos(), None, parent),
+		Args:   args,
 	}
 }
 
 func (c *Call) String() string {
 	var out []string
-	for _, a := range c.args {
+	for _, a := range c.Args {
 		out = append(out, a.String())
 	}
 	return fmt.Sprintf("{call: %s (%s)}", c.Name(), strings.Join(out, ","))

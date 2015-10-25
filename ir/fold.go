@@ -13,17 +13,17 @@ func FoldConstants(pkg *Package) *Package {
 func fold(o Object) Object {
 	switch t := o.(type) {
 	case *Assignment:
-		t.rhs = fold(t.rhs)
+		t.Rhs = fold(t.Rhs)
 	case *Binary:
-		t.lhs = fold(t.lhs)
-		t.rhs = fold(t.rhs)
+		t.Lhs = fold(t.Lhs)
+		t.Rhs = fold(t.Rhs)
 		return foldBinary(t)
 	case *Block:
-		for i, e := range t.exprs {
-			t.exprs[i] = fold(e)
+		for i, e := range t.Exprs {
+			t.Exprs[i] = fold(e)
 		}
 	case *Declaration:
-		t.body = fold(t.body)
+		t.Body = fold(t.Body)
 	case *If:
 		t.Cond = fold(t.Cond)
 		t.Then = fold(t.Then)
@@ -31,7 +31,7 @@ func fold(o Object) Object {
 			t.Else = fold(t.Else)
 		}
 	case *Unary:
-		t.rhs = fold(t.rhs)
+		t.Rhs = fold(t.Rhs)
 		return foldUnary(t)
 	case *Variable:
 		t.Assign = fold(t.Assign)
@@ -40,14 +40,14 @@ func fold(o Object) Object {
 }
 
 func foldBinary(b *Binary) Object {
-	lhs, lhsOk := b.lhs.(*Constant)
-	rhs, rhsOk := b.rhs.(*Constant)
+	lhs, lhsOk := b.Lhs.(*Constant)
+	rhs, rhsOk := b.Rhs.(*Constant)
 
 	if lhsOk && rhsOk {
 		switch b.Type() {
 		case Int:
 			l, r := int64(lhs.value.(intValue)), int64(rhs.value.(intValue))
-			switch b.op {
+			switch b.Op {
 			case token.ADD:
 				lhs.value = intValue(l + r)
 			case token.MUL:
@@ -62,7 +62,7 @@ func foldBinary(b *Binary) Object {
 			return lhs
 		case Bool:
 			l, r := int64(lhs.value.(intValue)), int64(rhs.value.(intValue))
-			switch b.op {
+			switch b.Op {
 			case token.EQL:
 				lhs.value = boolValue(l == r)
 			case token.NEQ:
@@ -83,8 +83,8 @@ func foldBinary(b *Binary) Object {
 }
 
 func foldUnary(u *Unary) Object {
-	if c, ok := u.rhs.(*Constant); ok {
-		switch u.op {
+	if c, ok := u.Rhs.(*Constant); ok {
+		switch u.Op {
 		case "+":
 			c.value = intValue(+int64(c.value.(intValue)))
 		case "-":

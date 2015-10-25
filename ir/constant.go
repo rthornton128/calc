@@ -32,7 +32,7 @@ func makeConstant(b *ast.BasicLit, parent *Scope) *Constant {
 		//v, _ := makeBool(b.Name) // TODO handle error
 	}
 	return &Constant{
-		object: newObject(v.String(), v.Type().String(), parent),
+		object: newObject(v.String(), v.Type().String(), b.Pos(), None, parent),
 		value:  v,
 	}
 }

@@ -9,7 +9,7 @@ import (
 
 type Block struct {
 	object
-	exprs []Object
+	Exprs []Object
 }
 
 func makeBlock(l *ast.ExprList, parent *Scope) *Block {
@@ -18,14 +18,14 @@ func makeBlock(l *ast.ExprList, parent *Scope) *Block {
 		list[i] = makeExpr(e, parent)
 	}
 	return &Block{
-		object: newObject("block", "", parent),
-		exprs:  list,
+		object: newObject("block", "", l.Pos(), None, parent),
+		Exprs:  list,
 	}
 }
 
 func (b *Block) String() string {
 	var out []string
-	for _, e := range b.exprs {
+	for _, e := range b.Exprs {
 		out = append(out, e.String())
 	}
 	return fmt.Sprintf("{%s}", strings.Join(out, ","))

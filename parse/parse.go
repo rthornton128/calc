@@ -30,7 +30,7 @@ func ParseExpression(name, src string) (ast.Node, error) {
 	fset := token.NewFileSet()
 	file := fset.Add(name, src)
 	p.init(file, name, string(src), nil)
-	node := p.parseGenExpr()
+	node := p.parseFile()
 
 	if p.errors.Count() > 0 {
 		return nil, p.errors

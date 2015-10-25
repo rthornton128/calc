@@ -8,22 +8,18 @@ import (
 
 type Package struct {
 	object
-	name  string
-	scope *Scope
 }
 
 func MakePackage(pkg *ast.Package, name string) *Package {
-	p := &Package{name: name, scope: newScope(nil)}
+	p := &Package{object: newObject(name, "", pkg.Pos(), None, newScope(nil))}
 	for _, f := range pkg.Files {
-		MakeFile(f, p.scope)
+		MakeFile(f, p.Scope())
 	}
 	return p
 }
 
-func (p *Package) Name() string  { return p.name }
-func (p *Package) Scope() *Scope { return p.scope }
 func (p *Package) String() string {
-	return fmt.Sprintf("package: %s { %s }", p.name, p.scope)
+	return fmt.Sprintf("package: %s {%s}", p.name, p.scope)
 }
 
 func MakeFile(f *ast.File, parent *Scope) {

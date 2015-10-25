@@ -28,6 +28,14 @@ func (s *Scope) Lookup(name string) Object {
 	return s.parent.Lookup(name)
 }
 
+func (s *Scope) Names() []string {
+	names := make([]string, 0)
+	for k := range s.m {
+		names = append(names, k)
+	}
+	return names
+}
+
 func (s *Scope) String() string {
 	var out string
 	for _, v := range s.m {

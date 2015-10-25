@@ -8,18 +8,18 @@ import (
 
 type Assignment struct {
 	object
-	lhs string
-	rhs Object
+	Lhs string
+	Rhs Object
 }
 
 func makeAssignment(a *ast.AssignExpr, parent *Scope) *Assignment {
 	return &Assignment{
-		object: newObject(a.Name.Name, "", parent),
-		lhs:    a.Name.Name,
-		rhs:    makeExpr(a.Value, parent),
+		object: newObject(a.Name.Name, "", a.Pos(), None, parent),
+		Lhs:    a.Name.Name,
+		Rhs:    makeExpr(a.Value, parent),
 	}
 }
 
 func (a *Assignment) String() string {
-	return fmt.Sprintf("{%s=%s}", a.lhs, a.rhs.String())
+	return fmt.Sprintf("{%s=%s}", a.Lhs, a.Rhs.String())
 }
