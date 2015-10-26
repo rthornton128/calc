@@ -59,9 +59,8 @@ type DeclExpr struct {
 }
 
 type Expression struct {
-	Opening  token.Pos
-	Closing  token.Pos
-	RealType Type
+	Opening token.Pos
+	Closing token.Pos
 }
 
 type ExprList struct {
@@ -77,7 +76,7 @@ type File struct {
 type Ident struct {
 	NamePos token.Pos
 	Name    string
-	Object  *Object // may be nil (ie. Name is a type keyword)
+	Type    *Ident
 }
 
 type IfExpr struct {
@@ -91,13 +90,12 @@ type IfExpr struct {
 }
 
 type Object struct {
-	NamePos  token.Pos
-	Name     string
-	Kind     ObKind
-	ID       int
-	RealType Type
-	Type     *Ident
-	Value    Expr
+	NamePos token.Pos
+	Name    string
+	Kind    ObKind
+	ID      int
+	Type    *Ident
+	Value   Expr
 }
 
 type ObKind int
@@ -118,16 +116,11 @@ type UnaryExpr struct {
 	Value Expr
 }
 
-type Value struct {
-	Value interface{}
-	Type  token.Token // s/b token.Kind?
-}
-
 type VarExpr struct {
 	Expression
-	Var    token.Pos
-	Name   *Ident
-	Object *Object
+	Var   token.Pos
+	Name  *Ident
+	Value Expr
 }
 
 func (b *BasicLit) Pos() token.Pos   { return b.LitPos }
@@ -136,7 +129,6 @@ func (f *File) Pos() token.Pos       { return token.NoPos }
 func (i *Ident) Pos() token.Pos      { return i.NamePos }
 func (p *Package) Pos() token.Pos    { return token.NoPos }
 func (u *UnaryExpr) Pos() token.Pos  { return u.OpPos }
-func (v *Value) Pos() token.Pos      { return token.NoPos }
 
 func (b *BasicLit) End() token.Pos   { return b.LitPos + token.Pos(len(b.Lit)) }
 func (e *Expression) End() token.Pos { return e.Closing }
@@ -144,13 +136,11 @@ func (f *File) End() token.Pos       { return token.NoPos }
 func (i *Ident) End() token.Pos      { return i.NamePos + token.Pos(len(i.Name)) }
 func (p *Package) End() token.Pos    { return token.NoPos }
 func (u *UnaryExpr) End() token.Pos  { return u.Value.End() }
-func (v *Value) End() token.Pos      { return token.NoPos }
 
 func (b *BasicLit) exprNode()   {}
 func (e *Expression) exprNode() {}
 func (i *Ident) exprNode()      {}
 func (u *UnaryExpr) exprNode()  {}
-func (v *Value) exprNode()      {}
 
 const (
 	Decl ObKind = iota

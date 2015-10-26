@@ -24,18 +24,14 @@ type Variable struct {
 }
 
 func makeVariable(ve *ast.VarExpr, parent *Scope) *Variable {
-	var t string
-	if ve.Object.Type != nil {
-		t = ve.Object.Type.Name
-	}
-
 	var assign Object = nil
-	if ve.Object.Value != nil && !reflect.ValueOf(ve.Object.Value).IsNil() {
-		assign = makeExpr(ve.Object.Value, parent)
+	if ve.Value != nil && !reflect.ValueOf(ve.Value).IsNil() {
+		assign = makeExpr(ve.Value, parent)
 	}
 
 	v := &Variable{
-		object: newObject(ve.Name.Name, t, ve.Pos(), VarKind, parent),
+		object: newObject(ve.Name.Name, ve.Name.Type.Name, ve.Pos(),
+			VarKind, parent),
 		Assign: assign,
 	}
 

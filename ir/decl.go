@@ -41,7 +41,7 @@ type Param struct {
 }
 
 func MakeParam(p *ast.Ident, parent *Scope) *Param {
-	return &Param{object: newObject(p.Name, p.Object.Type.Name, p.Pos(), VarKind,
+	return &Param{object: newObject(p.Name, p.Type.Name, p.Pos(), VarKind,
 		parent)}
 }
 

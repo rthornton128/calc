@@ -22,21 +22,17 @@ import (
 )
 
 type compiler struct {
-	fp       *os.File
-	fset     *token.FileSet
-	errors   token.ErrorList
-	nextID   int
-	curScope *ir.Scope
+	fp     *os.File
+	fset   *token.FileSet
+	errors token.ErrorList
 }
 
 // CompileFile generates a C source file for the corresponding file
 // specified by path. The .calc extension for the filename in path is
 // replaced with .c for the C source output.
 func CompileFile(path string, opt bool) error {
-	var c compiler
-
-	c.fset = token.NewFileSet()
-	f, err := parse.ParseFile(c.fset, path, nil)
+	fset := token.NewFileSet()
+	f, err := parse.ParseFile(fset, path, nil)
 	if err != nil {
 		return err
 	}
@@ -45,7 +41,10 @@ func CompileFile(path string, opt bool) error {
 		Scope: ast.NewScope(nil),
 		Files: []*ast.File{f},
 	}, filepath.Base(path))
-	ir.TypeCheck(pkg)
+
+	if err := ir.TypeCheck(pkg, fset); err != nil {
+		return err
+	}
 	if opt {
 		pkg = ir.FoldConstants(pkg)
 	}
@@ -58,8 +57,7 @@ func CompileFile(path string, opt bool) error {
 	}
 	defer fp.Close()
 
-	c.fp = fp
-	c.nextID = 1
+	c := &compiler{fp: fp}
 
 	c.emitHeaders()
 	c.compPackage(pkg)
@@ -75,14 +73,16 @@ func CompileFile(path string, opt bool) error {
 // directory specified by path. The C source file uses the same name as
 // directory rather than any individual file.
 func CompileDir(path string, opt bool) error {
-	fs := token.NewFileSet()
-	p, err := parse.ParseDir(fs, path)
+	fset := token.NewFileSet()
+	p, err := parse.ParseDir(fset, path)
 	if err != nil {
 		return err
 	}
 
 	pkg := ir.MakePackage(p, filepath.Base(path))
-	ir.TypeCheck(pkg)
+	if err := ir.TypeCheck(pkg, fset); err != nil {
+		return err
+	}
 	if opt {
 		pkg = ir.FoldConstants(pkg)
 	}
@@ -94,7 +94,7 @@ func CompileDir(path string, opt bool) error {
 	}
 	defer fp.Close()
 
-	c := &compiler{fp: fp, fset: fs, nextID: 1}
+	c := &compiler{fp: fp, fset: fset}
 
 	c.emitHeaders()
 	c.compPackage(pkg)
