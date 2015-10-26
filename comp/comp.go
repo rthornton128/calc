@@ -38,7 +38,6 @@ func CompileFile(path string, opt bool) error {
 	}
 
 	pkg := ir.MakePackage(&ast.Package{
-		Scope: ast.NewScope(nil),
 		Files: []*ast.File{f},
 	}, filepath.Base(path))
 

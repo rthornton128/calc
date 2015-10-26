@@ -52,7 +52,6 @@ type DeclExpr struct {
 	Type   *Ident
 	Params []*Ident
 	Body   Expr
-	Scope  *Scope
 }
 
 type Expression struct {
@@ -67,7 +66,6 @@ type ExprList struct {
 
 type File struct {
 	Decls []*DeclExpr
-	Scope *Scope
 }
 
 type Ident struct {
@@ -78,12 +76,11 @@ type Ident struct {
 
 type IfExpr struct {
 	Expression
-	If    token.Pos
-	Type  *Ident
-	Cond  Expr
-	Then  Expr
-	Else  Expr
-	Scope *Scope
+	If   token.Pos
+	Type *Ident
+	Cond Expr
+	Then Expr
+	Else Expr
 }
 
 type Object struct {
@@ -93,7 +90,6 @@ type Object struct {
 }
 
 type Package struct {
-	Scope *Scope
 	Files []*File
 }
 
@@ -119,6 +115,7 @@ func (b *BasicLit) Pos() token.Pos   { return b.LitPos }
 func (e *Expression) Pos() token.Pos { return e.Opening }
 func (f *File) Pos() token.Pos       { return token.NoPos }
 func (i *Ident) Pos() token.Pos      { return i.NamePos }
+func (o *Object) Pos() token.Pos     { return o.NamePos }
 func (p *Package) Pos() token.Pos    { return token.NoPos }
 func (u *UnaryExpr) Pos() token.Pos  { return u.OpPos }
 

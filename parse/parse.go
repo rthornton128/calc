@@ -89,7 +89,6 @@ func ParseDir(fset *token.FileSet, path string) (*ast.Package, error) {
 	var files []*ast.File
 	scope := ast.NewScope(nil)
 
-	// TODO: use concurrency
 	for _, name := range fnames {
 		f, err := ParseFile(fset, filepath.Join(path, name), scope)
 		if f == nil {
@@ -97,7 +96,7 @@ func ParseDir(fset *token.FileSet, path string) (*ast.Package, error) {
 		}
 		files = append(files, f)
 	}
-	return &ast.Package{Scope: scope, Files: files}, nil
+	return &ast.Package{Files: files}, nil
 }
 
 func filterByExt(names []string) []string {
@@ -161,7 +160,7 @@ func (p *parser) init(file *token.File, fname, src string, s *ast.Scope) {
 	p.scanner.Init(p.file, src)
 	p.listok = false
 	p.curScope = s
-	p.topScope = p.curScope
+	p.topScope = s
 	p.next()
 }
 
@@ -275,7 +274,6 @@ func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
 		Type:   typ,
 		Params: list,
 		Body:   p.checkExpr(body),
-		Scope:  p.curScope,
 	}
 
 	p.closeScope()
@@ -386,7 +384,7 @@ func (p *parser) parseFile() *ast.File {
 	if len(decls) < 1 {
 		p.addError("reached end of file without any declarations")
 	}
-	return &ast.File{Decls: decls, Scope: p.topScope}
+	return &ast.File{Decls: decls}
 }
 
 func (p *parser) parseIdent() *ast.Ident {
@@ -401,7 +399,6 @@ func (p *parser) parseIfExpr(open token.Pos) *ast.IfExpr {
 	typ := p.parseType()
 
 	p.openScope()
-	scope := p.curScope
 	then := p.tryExprOrList()
 	var els ast.Expr
 	if p.tok != token.RPAREN {
@@ -415,12 +412,11 @@ func (p *parser) parseIfExpr(open token.Pos) *ast.IfExpr {
 			Opening: open,
 			Closing: end,
 		},
-		If:    pos,
-		Type:  typ,
-		Cond:  cond,
-		Then:  then,
-		Else:  els,
-		Scope: scope,
+		If:   pos,
+		Type: typ,
+		Cond: cond,
+		Then: then,
+		Else: els,
 	}
 }
 
@@ -438,7 +434,10 @@ func (p *parser) parseParamList() []*ast.Ident {
 					NamePos: param.Pos(),
 				}
 				param.Type = ident
-				p.curScope.Insert(o)
+				if prev := p.curScope.Insert(o); prev != nil {
+					p.addError("duplicate parameter ", param.Name,
+						"; previously declared at", p.file.Position(prev.Pos()))
+				}
 			}
 			start = count
 			continue
@@ -490,14 +489,9 @@ func (p *parser) parseVarExpr(open token.Pos) *ast.VarExpr {
 		Kind:    ast.VarDecl,
 	})
 	if prev != nil {
-		switch prev.Kind {
-		case ast.FuncDecl:
-			p.addError(name.Name, "redeclared; declared as function at ",
-				p.file.Position(prev.NamePos))
-		case ast.VarDecl:
-			p.addError(name.Name, "redeclared; declared as variable at ",
-				p.file.Position(prev.NamePos))
-		}
+		p.addError(name.Name, "redeclared; declared as ", prev.Kind.String(),
+			" at ", p.file.Position(prev.NamePos))
+
 	}
 
 	return &ast.VarExpr{

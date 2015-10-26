@@ -7,3 +7,14 @@ const (
 	FuncDecl
 	VarDecl
 )
+
+func (k Kind) String() string {
+	switch k {
+	case FuncDecl:
+		return "function"
+	case VarDecl:
+		return "variable"
+	default:
+		return ""
+	}
+}
