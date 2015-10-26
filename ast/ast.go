@@ -89,7 +89,7 @@ type IfExpr struct {
 type Object struct {
 	NamePos token.Pos
 	Name    string
-	Kind    token.Kind
+	Kind    Kind
 }
 
 type Package struct {

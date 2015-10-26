@@ -26,10 +26,10 @@ type Constant struct {
 func makeConstant(b *ast.BasicLit, parent *Scope) *Constant {
 	var v Value
 	switch b.Kind {
+	case token.BOOL:
+		v, _ = makeBool(b.Lit) // TODO handle error
 	case token.INTEGER:
 		v, _ = makeInt(b.Lit) // TODO handle error
-		//case token.BOOL:
-		//v, _ := makeBool(b.Name) // TODO handle error
 	}
 	return &Constant{
 		object: newObject(v.String(), v.Type().String(), b.Pos(), ast.None, parent),

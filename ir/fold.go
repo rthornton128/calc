@@ -61,20 +61,31 @@ func foldBinary(b *Binary) Object {
 			}
 			return lhs
 		case Bool:
-			l, r := int64(lhs.value.(intValue)), int64(rhs.value.(intValue))
-			switch b.Op {
-			case token.EQL:
-				lhs.value = boolValue(l == r)
-			case token.NEQ:
-				lhs.value = boolValue(l != r)
-			case token.GTT:
-				lhs.value = boolValue(l > r)
-			case token.GTE:
-				lhs.value = boolValue(l >= r)
-			case token.LST:
-				lhs.value = boolValue(l < r)
-			case token.LTE:
-				lhs.value = boolValue(l <= r)
+			switch lhs.Type() {
+			case Bool:
+				l, r := bool(lhs.value.(boolValue)), bool(rhs.value.(boolValue))
+				switch b.Op {
+				case token.EQL:
+					lhs.value = boolValue(l == r)
+				case token.NEQ:
+					lhs.value = boolValue(l != r)
+				}
+			case Int:
+				l, r := int64(lhs.value.(intValue)), int64(rhs.value.(intValue))
+				switch b.Op {
+				case token.EQL:
+					lhs.value = boolValue(l == r)
+				case token.NEQ:
+					lhs.value = boolValue(l != r)
+				case token.GTT:
+					lhs.value = boolValue(l > r)
+				case token.GTE:
+					lhs.value = boolValue(l >= r)
+				case token.LST:
+					lhs.value = boolValue(l < r)
+				case token.LTE:
+					lhs.value = boolValue(l <= r)
+				}
 			}
 			return lhs
 		}

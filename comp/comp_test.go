@@ -43,8 +43,8 @@ func TestFunc(t *testing.T) {
 }
 
 func TestIfThenElse(t *testing.T) {
-	test_handler(t, "(decl main int (if 1 int 99))", "99")
-	test_handler(t, "(decl main int (if 0 int 2 3))", "3")
+	test_handler(t, "(decl main int (if true int 99))", "99")
+	test_handler(t, "(decl main int (if false int 2 3))", "3")
 	test_handler(t, "(decl main int (if (< 2 3) int 7 3))", "7")
 	test_handler(t, "(decl main int ((var a int) (if (< a 3) int 1 3)))", "1")
 }

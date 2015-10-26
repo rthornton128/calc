@@ -29,9 +29,13 @@ func makeVariable(ve *ast.VarExpr, parent *Scope) *Variable {
 		assign = makeExpr(ve.Value, parent)
 	}
 
+	var typ string
+	if ve.Name.Type != nil {
+		typ = ve.Name.Type.Name
+	}
+
 	v := &Variable{
-		object: newObject(ve.Name.Name, ve.Name.Type.Name, ve.Pos(),
-			ast.VarDecl, parent),
+		object: newObject(ve.Name.Name, typ, ve.Pos(), ast.VarDecl, parent),
 		Assign: assign,
 	}
 

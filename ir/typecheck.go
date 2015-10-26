@@ -15,7 +15,10 @@ func TypeCheck(pkg *Package, fs *token.FileSet) error {
 	for _, decl := range pkg.Scope().m {
 		t.check(decl)
 	}
-	return t.ErrorList
+	if t.ErrorList.Count() != 0 {
+		return t.ErrorList
+	}
+	return nil
 }
 
 func (tc *typeChecker) check(o Object) {
@@ -40,13 +43,17 @@ func (tc *typeChecker) check(o Object) {
 	case *Binary:
 		tc.check(t.Lhs)
 		tc.check(t.Rhs)
-		if t.Lhs.Type() != Int {
-			tc.error(t.Pos(), "expected type ", Int, " but argument is type ",
+		typ := Int
+		if (t.Op == token.EQL || t.Op == token.NEQ) && t.Lhs.Type() == Bool {
+			typ = Bool
+		}
+		if t.Lhs.Type() != typ {
+			tc.error(t.Pos(), "binary expected type ", typ, " but lhs is type ",
 				t.Lhs.Type())
 			return
 		}
-		if t.Rhs.Type() != Int {
-			tc.error(t.Pos(), "expected type ", Int, " but argument is type ",
+		if t.Rhs.Type() != typ {
+			tc.error(t.Pos(), "binary expected type ", typ, " but rhs is type ",
 				t.Rhs.Type())
 			return
 		}

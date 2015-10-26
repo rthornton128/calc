@@ -179,7 +179,7 @@ func (c *compiler) compObject(o ir.Object) string {
 
 func (c *compiler) compAssignment(a *ir.Assignment) {
 	o := a.Scope().Lookup(a.Lhs)
-	c.emit("%s = %s;\n", c.compObject(o), c.compObject(a.Rhs))
+	c.emit("_v%d = %s;\n", o.(ir.IDer).ID(), c.compObject(a.Rhs))
 }
 
 func (c *compiler) compBinary(b *ir.Binary) string {

@@ -16,6 +16,7 @@ const (
 	ILLEGAL
 
 	lit_start
+	BOOL
 	IDENT
 	INTEGER
 	lit_end
@@ -56,6 +57,7 @@ const (
 var tok_strings = map[Token]string{
 	EOF:     "EOF",
 	ILLEGAL: "Illegal",
+	BOOL:    "Boolean",
 	IDENT:   "Identifier",
 	INTEGER: "Integer",
 	LPAREN:  "(",
@@ -93,6 +95,9 @@ func (t Token) IsKeyword() bool {
 }
 
 func Lookup(str string) Token {
+	if str == "true" || str == "false" {
+		return BOOL
+	}
 	for t, s := range tok_strings {
 		if s == str {
 			return t

@@ -283,14 +283,14 @@ func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
 	prev := p.curScope.Insert(&ast.Object{
 		NamePos: name.NamePos,
 		Name:    name.Name,
-		Kind:    token.FuncDecl,
+		Kind:    ast.FuncDecl,
 	})
 	if prev != nil {
 		switch prev.Kind {
-		case token.FuncDecl:
+		case ast.FuncDecl:
 			p.addError(name.Name, "redeclared; declared as function at ",
 				p.file.Position(prev.NamePos))
-		case token.VarDecl:
+		case ast.VarDecl:
 			p.addError(name.Name, "redeclared; declared as variable at ",
 				p.file.Position(prev.NamePos))
 		}
@@ -362,7 +362,7 @@ func (p *parser) parseGenExpr() ast.Expr {
 		expr = p.parseExpr()
 	case token.IDENT:
 		expr = p.parseIdent()
-	case token.INTEGER:
+	case token.BOOL, token.INTEGER:
 		expr = p.parseBasicLit()
 	case token.SUB:
 		expr = p.parseUnaryExpr()
@@ -433,7 +433,7 @@ func (p *parser) parseParamList() []*ast.Ident {
 		if p.tok == token.COMMA || p.tok == token.RPAREN {
 			for _, param := range list[start:] {
 				o := &ast.Object{
-					Kind:    token.VarDecl,
+					Kind:    ast.VarDecl,
 					Name:    param.Name,
 					NamePos: param.Pos(),
 				}
@@ -487,14 +487,14 @@ func (p *parser) parseVarExpr(open token.Pos) *ast.VarExpr {
 	prev := p.curScope.Insert(&ast.Object{
 		NamePos: name.NamePos,
 		Name:    name.Name,
-		Kind:    token.VarDecl,
+		Kind:    ast.VarDecl,
 	})
 	if prev != nil {
 		switch prev.Kind {
-		case token.FuncDecl:
+		case ast.FuncDecl:
 			p.addError(name.Name, "redeclared; declared as function at ",
 				p.file.Position(prev.NamePos))
-		case token.VarDecl:
+		case ast.VarDecl:
 			p.addError(name.Name, "redeclared; declared as variable at ",
 				p.file.Position(prev.NamePos))
 		}

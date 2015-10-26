@@ -6,6 +6,7 @@ import (
 	"github.com/rthornton128/calc/ast"
 	"github.com/rthornton128/calc/ir"
 	"github.com/rthornton128/calc/parse"
+	"github.com/rthornton128/calc/token"
 )
 
 func TestPrint(t *testing.T) {
@@ -18,7 +19,7 @@ func TestPrint(t *testing.T) {
 	test_handler(t, "example7", "(decl main int (if (== 1 1) int 1 0))")
 	test_handler(t, "example8", "(decl main int ((var a int) a))")
 	test_handler(t, "example9", "(decl main int ((var (= a 42)) a))")
-	test_handler(t, "example6", "(decl main int ((var a int)(= a 42) a))")
+	test_handler(t, "examplea", "(decl main int ((var a int)(= a 42) a))")
 }
 
 func test_handler(t *testing.T, name, src string) {
@@ -34,7 +35,9 @@ func test_handler(t *testing.T, name, src string) {
 
 	p := ir.MakePackage(pkg, name)
 	t.Log(p)
-	ir.TypeCheck(p)
+	fset := token.NewFileSet()
+	fset.Add(name, src)
+	ir.TypeCheck(p, fset)
 	t.Log(ir.FoldConstants(p))
 	ir.Tag(p)
 
