@@ -18,7 +18,7 @@ func makeBlock(l *ast.ExprList, parent *Scope) *Block {
 		list[i] = makeExpr(e, parent)
 	}
 	return &Block{
-		object: newObject("block", "", l.Pos(), None, parent),
+		object: newObject("block", "", l.Pos(), ast.None, parent),
 		Exprs:  list,
 	}
 }

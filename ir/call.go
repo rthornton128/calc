@@ -18,7 +18,7 @@ func makeCall(c *ast.CallExpr, parent *Scope) *Call {
 		args[i] = makeExpr(a, parent)
 	}
 	return &Call{
-		object: newObject(c.Name.Name, "", c.Pos(), None, parent),
+		object: newObject(c.Name.Name, "", c.Pos(), ast.None, parent),
 		Args:   args,
 	}
 }

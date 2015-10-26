@@ -17,7 +17,7 @@ type If struct {
 func makeIf(i *ast.IfExpr, parent *Scope) *If {
 	scope := newScope(parent)
 	return &If{
-		object: newObject("if", i.Type.Name, i.Pos(), None, scope),
+		object: newObject("if", i.Type.Name, i.Pos(), ast.None, scope),
 		Cond:   makeExpr(i.Cond, parent),
 		Then:   makeExpr(i.Then, scope),
 		Else:   makeExpr(i.Else, scope),

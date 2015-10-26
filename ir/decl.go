@@ -21,7 +21,7 @@ func MakeDeclaration(d *ast.DeclExpr, parent *Scope) *Declaration {
 	}
 
 	return &Declaration{
-		object: newObject(d.Name.Name, d.Type.Name, d.Pos(), FuncKind, scope),
+		object: newObject(d.Name.Name, d.Type.Name, d.Pos(), ast.FuncDecl, scope),
 		Params: params,
 		Body:   makeExpr(d.Body, scope),
 	}
@@ -41,7 +41,7 @@ type Param struct {
 }
 
 func MakeParam(p *ast.Ident, parent *Scope) *Param {
-	return &Param{object: newObject(p.Name, p.Type.Name, p.Pos(), VarKind,
+	return &Param{object: newObject(p.Name, p.Type.Name, p.Pos(), ast.VarDecl,
 		parent)}
 }
 

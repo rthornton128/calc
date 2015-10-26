@@ -14,7 +14,7 @@ type Assignment struct {
 
 func makeAssignment(a *ast.AssignExpr, parent *Scope) *Assignment {
 	return &Assignment{
-		object: newObject(a.Name.Name, "", a.Pos(), None, parent),
+		object: newObject(a.Name.Name, "", a.Pos(), ast.None, parent),
 		Lhs:    a.Name.Name,
 		Rhs:    makeExpr(a.Value, parent),
 	}

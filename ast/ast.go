@@ -7,13 +7,10 @@
 
 package ast
 
-import (
-	"github.com/rthornton128/calc/token"
-)
+import "github.com/rthornton128/calc/token"
 
 type Node interface {
 	Pos() token.Pos
-	End() token.Pos
 }
 
 type Expr interface {
@@ -92,13 +89,8 @@ type IfExpr struct {
 type Object struct {
 	NamePos token.Pos
 	Name    string
-	Kind    ObKind
-	ID      int
-	Type    *Ident
-	Value   Expr
+	Kind    token.Kind
 }
-
-type ObKind int
 
 type Package struct {
 	Scope *Scope
@@ -130,22 +122,10 @@ func (i *Ident) Pos() token.Pos      { return i.NamePos }
 func (p *Package) Pos() token.Pos    { return token.NoPos }
 func (u *UnaryExpr) Pos() token.Pos  { return u.OpPos }
 
-func (b *BasicLit) End() token.Pos   { return b.LitPos + token.Pos(len(b.Lit)) }
-func (e *Expression) End() token.Pos { return e.Closing }
-func (f *File) End() token.Pos       { return token.NoPos }
-func (i *Ident) End() token.Pos      { return i.NamePos + token.Pos(len(i.Name)) }
-func (p *Package) End() token.Pos    { return token.NoPos }
-func (u *UnaryExpr) End() token.Pos  { return u.Value.End() }
-
 func (b *BasicLit) exprNode()   {}
 func (e *Expression) exprNode() {}
 func (i *Ident) exprNode()      {}
 func (u *UnaryExpr) exprNode()  {}
-
-const (
-	Decl ObKind = iota
-	Var
-)
 
 func NewScope(parent *Scope) *Scope {
 	return &Scope{Parent: parent, Table: make(map[string]*Object)}

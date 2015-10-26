@@ -1,17 +1,12 @@
 package ir
 
-import "github.com/rthornton128/calc/token"
-
-type Kind int
-
-const (
-	None Kind = iota + 1
-	FuncKind
-	VarKind
+import (
+	"github.com/rthornton128/calc/ast"
+	"github.com/rthornton128/calc/token"
 )
 
 type Object interface {
-	Kind() Kind
+	Kind() ast.Kind
 	Name() string
 	Pos() token.Pos
 	Scope() *Scope
@@ -25,14 +20,14 @@ type IDer interface {
 }
 
 type object struct {
-	kind  Kind
+	kind  ast.Kind
 	name  string
 	pos   token.Pos
 	scope *Scope
 	typ   Type
 }
 
-func newObject(name, t string, p token.Pos, k Kind, s *Scope) object {
+func newObject(name, t string, p token.Pos, k ast.Kind, s *Scope) object {
 	return object{
 		kind:  k,
 		name:  name,
@@ -42,7 +37,7 @@ func newObject(name, t string, p token.Pos, k Kind, s *Scope) object {
 	}
 }
 
-func (o object) Kind() Kind     { return o.kind }
+func (o object) Kind() ast.Kind { return o.kind }
 func (o object) Name() string   { return o.name }
 func (o object) Pos() token.Pos { return o.pos }
 func (o object) Scope() *Scope  { return o.scope }

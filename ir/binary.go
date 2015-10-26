@@ -16,7 +16,7 @@ type Binary struct {
 }
 
 func makeBinary(b *ast.BinaryExpr, parent *Scope) *Binary {
-	o := newObject("binary", "", b.Pos(), None, parent)
+	o := newObject("binary", "", b.Pos(), ast.None, parent)
 	o.typ = binaryType(b.Op)
 
 	lhs := makeExpr(b.List[0], parent)
@@ -54,7 +54,7 @@ type Unary struct {
 }
 
 func makeUnary(u *ast.UnaryExpr, parent *Scope) *Unary {
-	o := newObject("unary", "", u.Pos(), None, parent)
+	o := newObject("unary", "", u.Pos(), ast.None, parent)
 	o.typ = Int
 
 	return &Unary{

@@ -1,6 +1,9 @@
 package ir
 
-import "github.com/rthornton128/calc/token"
+import (
+	"github.com/rthornton128/calc/ast"
+	"github.com/rthornton128/calc/token"
+)
 
 type typeChecker struct {
 	token.ErrorList
@@ -23,7 +26,7 @@ func (tc *typeChecker) check(o Object) {
 			tc.error(t.Pos(), "undeclared variable ", t.Lhs)
 			return
 		}
-		if o.Kind() != VarKind {
+		if o.Kind() != ast.VarDecl {
 			tc.error(t.Pos(), "may only assign to variables but ", o.Name(), " is ",
 				o.Kind())
 			return
@@ -58,7 +61,7 @@ func (tc *typeChecker) check(o Object) {
 			tc.error(t.Pos(), "calling undeclared function ", t.Name())
 			return
 		}
-		if o.Kind() != FuncKind {
+		if o.Kind() != ast.FuncDecl {
 			tc.error(t.Pos(), "call expects function got ", o.Kind())
 			return
 		}
@@ -105,7 +108,7 @@ func (tc *typeChecker) check(o Object) {
 			tc.error(t.Pos(), "undeclared variable ", t.Name())
 			return
 		}
-		if o.Kind() != VarKind {
+		if o.Kind() != ast.VarDecl {
 			tc.error(t.Pos(), "may non reference non-variable ", o.Kind(), " named ",
 				t.Name())
 			return

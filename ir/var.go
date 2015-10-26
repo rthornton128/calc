@@ -10,7 +10,7 @@ import (
 type Var struct{ object }
 
 func makeVar(i *ast.Ident, parent *Scope) *Var {
-	return &Var{object: newObject(i.Name, "", i.Pos(), VarKind, parent)}
+	return &Var{object: newObject(i.Name, "", i.Pos(), ast.VarDecl, parent)}
 }
 
 func (i *Var) String() string {
@@ -31,7 +31,7 @@ func makeVariable(ve *ast.VarExpr, parent *Scope) *Variable {
 
 	v := &Variable{
 		object: newObject(ve.Name.Name, ve.Name.Type.Name, ve.Pos(),
-			VarKind, parent),
+			ast.VarDecl, parent),
 		Assign: assign,
 	}
 

@@ -250,7 +250,7 @@ func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
 		return nil
 	}
 	pos := p.expect(token.DECL)
-	nam := p.parseIdent()
+	name := p.parseIdent()
 
 	p.openScope()
 
@@ -271,27 +271,29 @@ func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
 			Closing: end,
 		},
 		Decl:   pos,
-		Name:   nam,
+		Name:   name,
 		Type:   typ,
 		Params: list,
 		Body:   p.checkExpr(body),
 		Scope:  p.curScope,
 	}
 
-	// create an object for the function and associate it with its name
-	ob := &ast.Object{
-		NamePos: nam.NamePos,
-		Name:    nam.Name,
-		Kind:    ast.Decl,
-		Type:    typ,
-		Value:   decl,
-	}
-
 	p.closeScope()
 
-	if old := p.curScope.Insert(ob); old != nil {
-		p.addError("redeclaration of function not allowed, originally declared "+
-			"at: ", p.file.Position(old.NamePos))
+	prev := p.curScope.Insert(&ast.Object{
+		NamePos: name.NamePos,
+		Name:    name.Name,
+		Kind:    token.FuncDecl,
+	})
+	if prev != nil {
+		switch prev.Kind {
+		case token.FuncDecl:
+			p.addError(name.Name, "redeclared; declared as function at ",
+				p.file.Position(prev.NamePos))
+		case token.VarDecl:
+			p.addError(name.Name, "redeclared; declared as variable at ",
+				p.file.Position(prev.NamePos))
+		}
 	}
 
 	return decl
@@ -431,8 +433,9 @@ func (p *parser) parseParamList() []*ast.Ident {
 		if p.tok == token.COMMA || p.tok == token.RPAREN {
 			for _, param := range list[start:] {
 				o := &ast.Object{
-					Kind: ast.Var,
-					Name: param.Name,
+					Kind:    token.VarDecl,
+					Name:    param.Name,
+					NamePos: param.Pos(),
 				}
 				param.Type = ident
 				p.curScope.Insert(o)
@@ -462,13 +465,10 @@ func (p *parser) parseUnaryExpr() *ast.UnaryExpr {
 }
 
 func (p *parser) parseVarExpr(open token.Pos) *ast.VarExpr {
-	var (
-		name  *ast.Ident
-		vtype *ast.Ident
-		value *ast.AssignExpr
-	)
 	varpos := p.expect(token.VAR)
 
+	var name *ast.Ident
+	var value *ast.AssignExpr
 	switch p.tok {
 	case token.IDENT:
 		name = p.parseIdent()
@@ -476,27 +476,29 @@ func (p *parser) parseVarExpr(open token.Pos) *ast.VarExpr {
 		value = p.parseAssignExpr(p.expect(token.LPAREN))
 		name = value.Name
 	default:
-		name = &ast.Ident{NamePos: token.NoPos, Name: "NoName"}
 		p.addError("expected identifier or assignment")
+		name = &ast.Ident{NamePos: token.NoPos, Name: "NoName"}
 	}
 	if value == nil || p.tok == token.IDENT {
-		vtype = p.parseType()
+		name.Type = p.parseType()
 	}
 	end := p.expect(token.RPAREN)
 
-	ob := &ast.Object{
+	prev := p.curScope.Insert(&ast.Object{
 		NamePos: name.NamePos,
 		Name:    name.Name,
-		Kind:    ast.Var,
-		Value:   value,
+		Kind:    token.VarDecl,
+	})
+	if prev != nil {
+		switch prev.Kind {
+		case token.FuncDecl:
+			p.addError(name.Name, "redeclared; declared as function at ",
+				p.file.Position(prev.NamePos))
+		case token.VarDecl:
+			p.addError(name.Name, "redeclared; declared as variable at ",
+				p.file.Position(prev.NamePos))
+		}
 	}
-
-	if old := p.curScope.Insert(ob); old != nil {
-		p.addError("redeclaration of variable not allowed; original "+
-			"declaration at: ", p.file.Position(old.NamePos))
-	}
-
-	name.Type = vtype
 
 	return &ast.VarExpr{
 		Expression: ast.Expression{Opening: open, Closing: end},
