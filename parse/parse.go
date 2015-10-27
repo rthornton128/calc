@@ -362,7 +362,7 @@ func (p *parser) parseGenExpr() ast.Expr {
 		expr = p.parseIdent()
 	case token.BOOL, token.INTEGER:
 		expr = p.parseBasicLit()
-	case token.SUB:
+	case token.ADD, token.SUB:
 		expr = p.parseUnaryExpr()
 	default:
 		p.addError("Expected expression, got '" + p.lit + "'")
