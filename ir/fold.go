@@ -2,12 +2,14 @@ package ir
 
 import "github.com/rthornton128/calc/token"
 
-func FoldConstants(pkg *Package) *Package {
-	for k, v := range pkg.scope.m {
-		pkg.scope.m[k] = fold(v)
+func FoldConstants(o Object) Object {
+	if pkg, ok := o.(*Package); ok {
+		for k, v := range pkg.scope.m {
+			pkg.scope.m[k] = fold(v)
+		}
+		return pkg
 	}
-
-	return pkg
+	return fold(o)
 }
 
 func fold(o Object) Object {

@@ -17,8 +17,8 @@ type Test struct {
 
 func TestSimple(t *testing.T) {
 	tests := []Test{
-		{src: "(decl main int 42)", pass: true},
-		{src: "(decl main bool true)", pass: true},
+		{src: "42", pass: true},
+		{src: "true", pass: true},
 	}
 	for i, test := range tests {
 		test_handler(t, fmt.Sprintf("example%d", i), test)
@@ -40,9 +40,9 @@ func TestDeclaration(t *testing.T) {
 
 func TestBinary(t *testing.T) {
 	tests := []Test{
-		{src: "(decl main int (+ 2 3))", pass: true},
-		{src: "(decl main int (* 2 3 4 5 6))", pass: true},
-		{src: "(decl main int (/ (* 2 3) (% 4 5) (- 8 6)))", pass: true},
+		{src: "(+ 2 3)", pass: true},
+		{src: "(* 2 3 4 5 6)", pass: true},
+		{src: "(/ (* 2 3) (% 4 5) (- 8 6))", pass: true},
 		{src: "(decl main bool (!= 2 3))", pass: true},
 		{src: "(decl main int (+ main 1))", pass: false},
 		{src: "(decl main(a b int) bool (< a b))", pass: true},
@@ -57,9 +57,9 @@ func TestBinary(t *testing.T) {
 
 func TestIf(t *testing.T) {
 	tests := []Test{
-		{src: "(decl main int (if (== 1 1) int 1 0))", pass: true},
-		{src: "(decl main int (if (!= 1 1) int 1 true))", pass: false},
-		{src: "(decl main int (if (< 1 1) int false 1))", pass: false},
+		{src: "(if (== 1 1) int 1 0)", pass: true},
+		{src: "(if (!= 1 1) int 1 true)", pass: false},
+		{src: "(if (< 1 1) int false 1)", pass: false},
 		{src: "(decl main (a b int) int (if (<= a b) int 0 1))", pass: true},
 		{src: "(decl main (a b int) int (if (> a b) int 0 1))", pass: true},
 		{src: "(decl main (a b int) int (if (>= a b) int 0 1))", pass: true},
@@ -73,8 +73,8 @@ func TestIf(t *testing.T) {
 
 func TestUnary(t *testing.T) {
 	tests := []Test{
-		{src: "(decl main int -24)", pass: true},
-		{src: "(decl main int +(- 3 5))", pass: true},
+		{src: "-24", pass: true},
+		{src: "+(- 3 5)", pass: true},
 	}
 	for i, test := range tests {
 		test_handler(t, fmt.Sprintf("example%d", i), test)
@@ -98,26 +98,28 @@ func TestVar(t *testing.T) {
 }
 
 func test_handler(t *testing.T, name string, test Test) {
-	n, err := parse.ParseExpression(name, test.src)
+	expr, err := parse.ParseExpression(name, test.src)
 	if err != nil {
 		t.Fatal(err)
 	}
-	pkg := &ast.Package{
-		Files: []*ast.File{n.(*ast.File)},
-	}
 
-	p := ir.MakePackage(pkg, name)
-	t.Log(p)
+	var o ir.Object
+	if decl, ok := expr.(*ast.DeclExpr); ok {
+		o = ir.MakeDeclaration(decl, ir.NewScope(nil))
+	} else {
+		o = ir.MakeExpr(expr, ir.NewScope(nil))
+	}
+	t.Log(o)
 	fset := token.NewFileSet()
 	fset.Add(name, test.src)
-	if err := ir.TypeCheck(p, fset); (err == nil) != test.pass {
+	if err := ir.TypeCheck(o, fset); (err == nil) != test.pass {
 		t.Logf("expected %v got %v", test.pass, err == nil)
 		if err != nil {
 			t.Log(err)
 		}
 		t.Fail()
 	}
-	t.Log(ir.FoldConstants(p))
-	ir.Tag(p)
+	t.Log(ir.FoldConstants(o))
+	ir.Tag(o)
 
 }

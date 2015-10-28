@@ -24,13 +24,13 @@ import (
 // representing the root of the expression. This function is intended to
 // facilitate testing and is not use by the compiler itself. The name is
 // used in error reporting
-func ParseExpression(name, src string) (ast.Node, error) {
+func ParseExpression(name, src string) (ast.Expr, error) {
 	var p parser
 
 	fset := token.NewFileSet()
 	file := fset.Add(name, src)
 	p.init(file, name, string(src), nil)
-	node := p.parseFile()
+	node := p.parseGenExpr()
 
 	if p.errors.Count() > 0 {
 		return nil, p.errors
@@ -42,24 +42,26 @@ func ParseExpression(name, src string) (ast.Node, error) {
 // to an ast.File object. The file should contain Calc source code and
 // have the .calc file extension.
 // The returned AST object ast.File is nil if there is an error.
-func ParseFile(fset *token.FileSet, filename string, s *ast.Scope) (*ast.File, error) {
-	fi, err := os.Stat(filename)
-	if err != nil {
-		return nil, err
-	}
+func ParseFile(fset *token.FileSet, filename, src string) (*ast.File, error) {
+	if src == "" {
+		fi, err := os.Stat(filename)
+		if err != nil {
+			return nil, err
+		}
 
-	var p parser
-	var f *ast.File
-	if ext := filepath.Ext(fi.Name()); ext != ".calc" {
-		return nil, fmt.Errorf("unknown file extension, must be .calc")
-	}
-	src, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, err
+		if ext := filepath.Ext(fi.Name()); ext != ".calc" {
+			return nil, fmt.Errorf("unknown file extension, must be .calc")
+		}
+		b, err := ioutil.ReadFile(filename)
+		if err != nil {
+			return nil, err
+		}
+		src = string(b)
 	}
 	file := fset.Add(filepath.Base(filename), string(src))
-	p.init(file, filename, string(src), s)
-	f = p.parseFile()
+	var p parser
+	p.init(file, filename, string(src), ast.NewScope(nil))
+	f := p.parseFile()
 
 	if p.errors.Count() > 0 {
 		return nil, p.errors
@@ -87,10 +89,9 @@ func ParseDir(fset *token.FileSet, path string) (*ast.Package, error) {
 	}
 
 	var files []*ast.File
-	scope := ast.NewScope(nil)
 
 	for _, name := range fnames {
-		f, err := ParseFile(fset, filepath.Join(path, name), scope)
+		f, err := ParseFile(fset, filepath.Join(path, name), "")
 		if f == nil {
 			return nil, err
 		}

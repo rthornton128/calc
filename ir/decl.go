@@ -13,7 +13,7 @@ type Declaration struct {
 }
 
 func MakeDeclaration(d *ast.DeclExpr, parent *Scope) *Declaration {
-	scope := newScope(parent)
+	scope := NewScope(parent)
 	params := make([]string, len(d.Params))
 	for i, p := range d.Params {
 		params[i] = p.Name
@@ -23,7 +23,7 @@ func MakeDeclaration(d *ast.DeclExpr, parent *Scope) *Declaration {
 	return &Declaration{
 		object: newObject(d.Name.Name, d.Type.Name, d.Pos(), ast.FuncDecl, scope),
 		Params: params,
-		Body:   makeExpr(d.Body, scope),
+		Body:   MakeExpr(d.Body, scope),
 	}
 }
 

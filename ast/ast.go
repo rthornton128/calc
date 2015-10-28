@@ -108,7 +108,7 @@ type VarExpr struct {
 	Expression
 	Var   token.Pos
 	Name  *Ident
-	Value Expr
+	Value *AssignExpr
 }
 
 func (b *BasicLit) Pos() token.Pos   { return b.LitPos }

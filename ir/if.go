@@ -15,14 +15,14 @@ type If struct {
 }
 
 func makeIf(ie *ast.IfExpr, parent *Scope) *If {
-	scope := newScope(parent)
+	scope := NewScope(parent)
 	i := &If{
 		object: newObject("if", ie.Type.Name, ie.Pos(), ast.None, scope),
-		Cond:   makeExpr(ie.Cond, parent),
-		Then:   makeExpr(ie.Then, scope),
+		Cond:   MakeExpr(ie.Cond, parent),
+		Then:   MakeExpr(ie.Then, scope),
 	}
 	if ie.Else != nil {
-		i.Else = makeExpr(ie.Else, scope)
+		i.Else = MakeExpr(ie.Else, scope)
 	}
 	return i
 }

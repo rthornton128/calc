@@ -55,51 +55,68 @@ var typeStrings = []string{
 
 func (t Type) String() string { return typeStrings[int(t)] }
 
-func nodeTest(types []Type, t *testing.T) func(node ast.Node) {
-	typ := UNKNOWN
-	i := 0
-	return func(node ast.Node) {
-		switch node.(type) {
-		case *ast.AssignExpr:
-			typ = ASSIGN
-		case *ast.BasicLit:
-			typ = BASIC
-		case *ast.BinaryExpr:
-			typ = BINARY
-		case *ast.CallExpr:
-			typ = CALL
-		case *ast.DeclExpr:
-			typ = DECL
-		case *ast.ExprList:
-			typ = LIST
-		case *ast.File:
-			typ = FILE
-		case *ast.Ident:
-			t.Log("ident:", node.(*ast.Ident).Name)
-			typ = IDENT
-		case *ast.IfExpr:
-			typ = IF
-		case *ast.UnaryExpr:
-			typ = UNARY
-		case *ast.VarExpr:
-			typ = VAR
-		}
-		if types[i] != typ {
-			t.Fatal("Walk index:", i, "Expected:", types[i], "Got:", typ)
-		}
-		i++
+type Tester struct {
+	i     int
+	t     *testing.T
+	types []Type
+}
+
+func (t *Tester) Visit(n ast.Node) bool {
+	var typ Type
+	switch n.(type) {
+	case *ast.AssignExpr:
+		typ = ASSIGN
+	case *ast.BasicLit:
+		typ = BASIC
+	case *ast.BinaryExpr:
+		typ = BINARY
+	case *ast.CallExpr:
+		typ = CALL
+	case *ast.DeclExpr:
+		typ = DECL
+	case *ast.ExprList:
+		typ = LIST
+	case *ast.File:
+		typ = FILE
+	case *ast.Ident:
+		typ = IDENT
+	case *ast.IfExpr:
+		typ = IF
+	case *ast.UnaryExpr:
+		typ = UNARY
+	case *ast.VarExpr:
+		typ = VAR
 	}
+	if t.i >= len(t.types) {
+		t.t.Logf("exceeded expected number of types (%d)", len(t.types))
+		t.t.Fail()
+		return false
+	}
+	if t.types[t.i] != typ {
+		t.t.Log("Walk index:", t.i, "Expected:", t.types[t.i], "Got:", typ)
+		t.t.Fail()
+	}
+	t.i++
+	return true
 }
 
 func handleTests(t *testing.T, tests []Test) {
 	for _, test := range tests {
-		f, _ := parse.ParseExpression(test.name, test.src)
-		if f == nil && test.pass {
-			t.Log(f == nil)
-			t.Log(!test.pass)
-			t.Fatal("Failed to parse")
+		f, err := parse.ParseExpression(test.name, test.src)
+		if err != nil {
+			t.Logf("%s: %s", test.name, err)
 		}
-		ast.Walk(f, nodeTest(test.types, t))
+		if f == nil {
+			t.Logf("%s: expr is nil", test.name)
+		}
+
+		if test.pass {
+			ast.Walk(f, &Tester{types: test.types, t: t})
+		}
+		if t.Failed() {
+			t.Logf("%s: %#v", test.name, f)
+			t.Fatalf("%s: failed parsing expression: %s", test.name, test.src)
+		}
 	}
 }
 
@@ -116,7 +133,6 @@ func TestParseBinary(t *testing.T) {
 		{"basic1", "(+ 2 3)", []Type{BINARY, BASIC, BASIC}, true},
 		{"basic2", "(+ 2 b)", []Type{BINARY, BASIC, IDENT}, true},
 		{"basic3", "(+ a b)", []Type{BINARY, IDENT, IDENT}, true},
-		{"basic4", "+ 3 5)", []Type{}, false},
 		{"basic5", "(- 5)", []Type{}, false},
 		{"basic6", "(3 5 +)", []Type{}, false},
 		{"basic7", "(3 + 4)", []Type{}, false},
@@ -132,8 +148,8 @@ func TestParseBinary(t *testing.T) {
 
 func TestParseCall(t *testing.T) {
 	tests := []Test{
-		{"call1", "(add 1 2)", []Type{CALL, IDENT, BASIC, BASIC}, true},
-		{"call2", "(nothing)", []Type{CALL, IDENT}, true},
+		{"call1", "(nothing)", []Type{CALL}, true},
+		{"call2", "(add 1 2)", []Type{CALL, BASIC, BASIC}, true},
 	}
 	handleTests(t, tests)
 }
@@ -152,11 +168,11 @@ func TestParseComment(t *testing.T) {
 func TestParseDecl(t *testing.T) {
 	tests := []Test{
 		{"decl1", "(decl func int 0)",
-			[]Type{DECL, IDENT, IDENT, BASIC}, true},
+			[]Type{DECL, BASIC}, true},
 		{"decl2", "(decl five int (+ 2 3))",
-			[]Type{DECL, IDENT, IDENT, BINARY, BASIC, BASIC}, true},
+			[]Type{DECL, BINARY, BASIC, BASIC}, true},
 		{"decl3", "(decl add(a b int) int (+ a b))",
-			[]Type{DECL, IDENT, IDENT, IDENT, IDENT, BINARY, IDENT, IDENT}, true},
+			[]Type{DECL, BINARY, IDENT, IDENT}, true},
 		{"decl4", "(decl main () int a)", []Type{}, false},
 		{"decl5", "(decl main int ())", []Type{}, false},
 		{"decl6", "decl main int)", []Type{}, false},
@@ -166,20 +182,15 @@ func TestParseDecl(t *testing.T) {
 
 func TestParseIf(t *testing.T) {
 	tests := []Test{
-		{"if1", "(if 1 int 3)", []Type{IF, BASIC, IDENT, BASIC}, true},
-		{"if2", "(if (< a b) int a ((+ b 1) b))",
-			[]Type{IF, BINARY, IDENT, IDENT, IDENT, IDENT, LIST, BINARY, IDENT,
+		{"if1", "(if 1 int 3)", []Type{IF, BASIC, BASIC}, true},
+		{"if2", "(if false int 3)", []Type{IF, BASIC, BASIC}, true},
+		{"if3", "(if asdf int 3)", []Type{IF, IDENT, BASIC}, true},
+		{"if4", "(if var int 3)", []Type{IF, IDENT, BASIC}, false},
+		{"if5", "(if (< a b) int a ((+ b 1) b))",
+			[]Type{IF, BINARY, IDENT, IDENT, IDENT, LIST, BINARY, IDENT,
 				BASIC, IDENT}, true},
-		{"if3", "(if (< a b) ((= a b)))",
+		{"if6", "(if (< a b) int ((= a b)))",
 			[]Type{IF, BINARY, IDENT, IDENT, LIST, ASSIGN, IDENT, IDENT}, true},
-	}
-	handleTests(t, tests)
-}
-
-func TestParseNested(t *testing.T) {
-	tests := []Test{
-		{"nested1", "(+ (/ 9 3) 5 (- 3 1))",
-			[]Type{BINARY, BINARY, BASIC, BASIC, BASIC, BINARY, BASIC, BASIC}, true},
 	}
 	handleTests(t, tests)
 }
@@ -189,18 +200,18 @@ func TestParseUnary(t *testing.T) {
 		{"unary1", "-24", []Type{UNARY, BASIC}, true},
 		{"unary2", "-a", []Type{UNARY, IDENT}, true},
 		{"unary3", "-(foo)", []Type{UNARY, CALL, IDENT}, true},
-		{"unary4", "-(+ 2 3)", []Type{UNARY, BINARY, BASIC, BASIC}, true},
-		{"unary5", "-(decl foo int)", []Type{}, false},
+		{"unary4", "+(+ 2 3)", []Type{UNARY, BINARY, BASIC, BASIC}, true},
+		{"unary5", "+(decl foo int)", []Type{}, false},
 	}
 	handleTests(t, tests)
 }
 
 func TestParseVar(t *testing.T) {
 	tests := []Test{
-		{"var1", "(var a int)", []Type{VAR, IDENT, IDENT}, true},
+		{"var1", "(var a int)", []Type{VAR}, true},
 		{"var2", "(var (= a 5) int)",
-			[]Type{VAR, IDENT, IDENT, ASSIGN, IDENT, BASIC}, true},
-		{"var3", "(var (= a 5))", []Type{VAR, IDENT, ASSIGN, IDENT, BASIC}, true},
+			[]Type{VAR, ASSIGN, BASIC}, true},
+		{"var3", "(var (= a 5))", []Type{VAR, ASSIGN, BASIC}, true},
 		{"var4", "(var a)", []Type{}, false},
 		{"var5", "(var (+ a b))", []Type{}, false},
 		{"var6", "(var 23)", []Type{}, false},

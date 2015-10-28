@@ -1,9 +1,13 @@
 package ir
 
-func Tag(pkg *Package) {
+func Tag(o Object) {
 	var nextID int
-	for _, v := range pkg.Scope().m {
-		tag(v, &nextID)
+	if pkg, ok := o.(*Package); ok {
+		for _, v := range pkg.Scope().m {
+			tag(v, &nextID)
+		}
+	} else {
+		tag(o, &nextID)
 	}
 }
 

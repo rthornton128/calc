@@ -15,7 +15,7 @@ type Block struct {
 func makeBlock(l *ast.ExprList, parent *Scope) *Block {
 	list := make([]Object, len(l.List))
 	for i, e := range l.List {
-		list[i] = makeExpr(e, parent)
+		list[i] = MakeExpr(e, parent)
 	}
 	return &Block{
 		object: newObject("block", "", l.Pos(), ast.None, parent),

@@ -2,7 +2,7 @@ package ir
 
 import "github.com/rthornton128/calc/ast"
 
-func makeExpr(e ast.Expr, parent *Scope) Object {
+func MakeExpr(e ast.Expr, parent *Scope) Object {
 	switch t := e.(type) {
 	case *ast.AssignExpr:
 		return makeAssignment(t, parent)

@@ -5,7 +5,7 @@ type Scope struct {
 	parent *Scope
 }
 
-func newScope(p *Scope) *Scope {
+func NewScope(p *Scope) *Scope {
 	return &Scope{
 		m:      make(map[string]Object),
 		parent: p,

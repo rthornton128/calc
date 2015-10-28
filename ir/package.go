@@ -11,7 +11,7 @@ type Package struct {
 }
 
 func MakePackage(pkg *ast.Package, name string) *Package {
-	p := &Package{object: newObject(name, "", pkg.Pos(), ast.None, newScope(nil))}
+	p := &Package{object: newObject(name, "", pkg.Pos(), ast.None, NewScope(nil))}
 	for _, f := range pkg.Files {
 		MakeFile(f, p.Scope())
 	}

@@ -2,7 +2,6 @@ package ir
 
 import (
 	"fmt"
-	"reflect"
 
 	"github.com/rthornton128/calc/ast"
 )
@@ -25,8 +24,8 @@ type Variable struct {
 
 func makeVariable(ve *ast.VarExpr, parent *Scope) *Variable {
 	var assign Object = nil
-	if ve.Value != nil && !reflect.ValueOf(ve.Value).IsNil() {
-		assign = makeExpr(ve.Value, parent)
+	if ve.Value != nil {
+		assign = MakeExpr(ve.Value, parent)
 	}
 
 	var typ string

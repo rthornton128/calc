@@ -16,7 +16,7 @@ func makeAssignment(a *ast.AssignExpr, parent *Scope) *Assignment {
 	return &Assignment{
 		object: newObject(a.Name.Name, "", a.Pos(), ast.None, parent),
 		Lhs:    a.Name.Name,
-		Rhs:    makeExpr(a.Value, parent),
+		Rhs:    MakeExpr(a.Value, parent),
 	}
 }
 

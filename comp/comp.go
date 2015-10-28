@@ -32,7 +32,7 @@ type compiler struct {
 // replaced with .c for the C source output.
 func CompileFile(path string, opt bool) error {
 	fset := token.NewFileSet()
-	f, err := parse.ParseFile(fset, path, nil)
+	f, err := parse.ParseFile(fset, path, "")
 	if err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func CompileFile(path string, opt bool) error {
 		return err
 	}
 	if opt {
-		pkg = ir.FoldConstants(pkg)
+		pkg = ir.FoldConstants(pkg).(*ir.Package)
 	}
 	ir.Tag(pkg)
 
@@ -83,7 +83,7 @@ func CompileDir(path string, opt bool) error {
 		return err
 	}
 	if opt {
-		pkg = ir.FoldConstants(pkg)
+		pkg = ir.FoldConstants(pkg).(*ir.Package)
 	}
 	ir.Tag(pkg)
 

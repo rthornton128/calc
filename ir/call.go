@@ -15,7 +15,7 @@ type Call struct {
 func makeCall(c *ast.CallExpr, parent *Scope) *Call {
 	args := make([]Object, len(c.Args))
 	for i, a := range c.Args {
-		args[i] = makeExpr(a, parent)
+		args[i] = MakeExpr(a, parent)
 	}
 	return &Call{
 		object: newObject(c.Name.Name, "", c.Pos(), ast.None, parent),

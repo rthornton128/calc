@@ -10,10 +10,14 @@ type typeChecker struct {
 	fset *token.FileSet
 }
 
-func TypeCheck(pkg *Package, fs *token.FileSet) error {
+func TypeCheck(o Object, fs *token.FileSet) error {
 	t := &typeChecker{ErrorList: make(token.ErrorList, 0), fset: fs}
-	for _, decl := range pkg.Scope().m {
-		t.check(decl)
+	if pkg, ok := o.(*Package); ok {
+		for _, decl := range pkg.Scope().m {
+			t.check(decl)
+		}
+	} else {
+		t.check(o)
 	}
 	if t.ErrorList.Count() != 0 {
 		return t.ErrorList

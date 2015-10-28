@@ -19,9 +19,9 @@ func makeBinary(b *ast.BinaryExpr, parent *Scope) *Binary {
 	o := newObject("binary", "", b.Pos(), ast.None, parent)
 	o.typ = binaryType(b.Op)
 
-	lhs := makeExpr(b.List[0], parent)
+	lhs := MakeExpr(b.List[0], parent)
 	for _, e := range b.List[1:] {
-		rhs := makeExpr(e, parent)
+		rhs := MakeExpr(e, parent)
 		lhs = Object(&Binary{
 			object: o,
 			Op:     b.Op,
@@ -60,7 +60,7 @@ func makeUnary(u *ast.UnaryExpr, parent *Scope) *Unary {
 	return &Unary{
 		object: o,
 		Op:     u.Op,
-		Rhs:    makeExpr(u.Value, parent),
+		Rhs:    MakeExpr(u.Value, parent),
 	}
 }
 

@@ -20,9 +20,9 @@ func TestBasicLit(t *testing.T) {
 		Kind:   token.INTEGER,
 		Lit:    "24",
 	}
-	pos, end := token.Pos(1), token.Pos(3)
-	if b.Pos() != pos || b.End() != end {
-		t.Fatal("Expected:", pos, end, "Got:", b.Pos(), b.End())
+	pos := token.Pos(1)
+	if b.Pos() != pos {
+		t.Fatal("Expected:", pos, "Got:", b.Pos())
 	}
 }
 
@@ -50,8 +50,5 @@ func TestBinaryExpr(t *testing.T) {
 
 	if b.Pos() != token.Pos(1) {
 		t.Fatal("BinaryExpr: Expected: 1 Got:", b.Pos())
-	}
-	if b.End() != token.Pos(7) {
-		t.Fatal("BinaryExpr: Expected: 7 Got:", b.End())
 	}
 }
