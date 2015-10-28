@@ -390,14 +390,13 @@ func (p *parser) parseFile() *ast.File {
 
 func (p *parser) parseIdent() *ast.Ident {
 	name := p.lit
-	pos := p.expect(token.IDENT)
-	return &ast.Ident{NamePos: pos, Name: name}
+	return &ast.Ident{NamePos: p.expect(token.IDENT), Name: name}
 }
 
 func (p *parser) parseIfExpr(open token.Pos) *ast.IfExpr {
 	pos := p.expect(token.IF)
 	cond := p.parseGenExpr()
-	typ := p.parseType()
+	typ := p.parseIdent()
 
 	p.openScope()
 	then := p.tryExprOrList()
@@ -452,11 +451,6 @@ func (p *parser) parseParamList() []*ast.Ident {
 	return list
 }
 
-func (p *parser) parseType() *ast.Ident {
-	name := p.lit
-	return &ast.Ident{NamePos: p.expect(token.IDENT), Name: name}
-}
-
 func (p *parser) parseUnaryExpr() *ast.UnaryExpr {
 	pos, op := p.pos, p.lit
 	p.next()
@@ -480,7 +474,7 @@ func (p *parser) parseVarExpr(open token.Pos) *ast.VarExpr {
 		name = &ast.Ident{NamePos: token.NoPos, Name: "NoName"}
 	}
 	if value == nil || p.tok == token.IDENT {
-		name.Type = p.parseType()
+		name.Type = p.parseIdent()
 	}
 	end := p.expect(token.RPAREN)
 
