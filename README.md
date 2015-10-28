@@ -1,10 +1,10 @@
 # Prerequisites
 
  * Make sure GOPATH/bin is in your PATH environmental variable
- * C compiler; GCC is recommended (see Usage: Alternate C Compilers, below
+ * C compiler; GCC is used by default (see Usage: Alternate C Compilers, below
    if you wish to use something other than GCC)
- * *(Windows Only)* Mingw or some kind of make program compatible with GNU
-   Make. Msys is __not__ required.
+ * *(Windows Only)* Mingw or makefile program compatible with GNU
+   Make. An Msys install is __not__ required.
 
 # Install
 
@@ -20,13 +20,15 @@ the corresponding version you want. In the example below, Calc 1 has been used:
  3. `git clone -b calc1 http://github.com/rthornton128/calc`
 
 To install and use the compiler, change into the calc directory and run the
-following command:
+following command (see below if using master):
 
 	make install
 
 This will call 'go build' to install calcc and attempt to build the C
 runtime. Edit the Makefile in the root directory if you need to change the
 C compiler or tune any C compiler/linker flags.
+
+*Note* The current tip of Calc (what will be Calc 2.1) does away with the Makefile for now. You can now simply run 'go install' on the calcc directory to install the compiler.
 
 # Usage:
 
@@ -49,4 +51,6 @@ additional flags to calcc.
  * -ldflags=*linker flags*
 
 Check the usage for examples of the defaults to properly format the flags.
-Pay special attention to the -cout flag.
+Pay special attention to the -cout flag. 
+
+*Note* This feature has not been well tested and may exhibit bad behaviour.
