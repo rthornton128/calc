@@ -176,6 +176,9 @@ func TestParseDecl(t *testing.T) {
 		{"decl4", "(decl main () int a)", []Type{}, false},
 		{"decl5", "(decl main int ())", []Type{}, false},
 		{"decl6", "decl main int)", []Type{}, false},
+		{"decl7", "(decl fn int 1)(decl fn int 1)",
+			[]Type{DECL, BINARY, DECL, BINARY}, false},
+		{"decl8", "(var a int)(decl a int 1)", []Type{VAR, DECL, BINARY}, false},
 	}
 	handleTests(t, tests)
 }
