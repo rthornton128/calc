@@ -8,10 +8,15 @@
 package parse_test
 
 import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/rthornton128/calc/ast"
 	"github.com/rthornton128/calc/parse"
+	"github.com/rthornton128/calc/token"
 )
 
 type Test struct {
@@ -102,97 +107,123 @@ func (t *Tester) Visit(n ast.Node) bool {
 
 func handleTests(t *testing.T, tests []Test) {
 	for _, test := range tests {
-		f, err := parse.ParseExpression(test.name, test.src)
-		if err != nil {
-			t.Logf("%s: %s", test.name, err)
-		}
-		if f == nil {
-			t.Logf("%s: expr is nil", test.name)
-		}
+		e, err := parse.ParseExpression(test.name, test.src)
+		checkTest(t, test, e, err)
+	}
+}
 
-		if test.pass {
-			ast.Walk(f, &Tester{types: test.types, t: t})
-		}
-		if t.Failed() {
-			t.Logf("%s: %#v", test.name, f)
-			t.Fatalf("%s: failed parsing expression: %s", test.name, test.src)
-		}
+func handleFileTests(t *testing.T, tests []Test) {
+	for _, test := range tests {
+		f, err := parse.ParseFile(token.NewFileSet(), test.name, test.src)
+		checkTest(t, test, f, err)
+	}
+}
+
+func checkTest(t *testing.T, test Test, n ast.Node, err error) {
+	if err != nil {
+		t.Logf("error: %s", err)
+	}
+	if n == nil && len(test.types) != 0 {
+		t.Logf("%s: expr is nil, expected %d types", test.name, len(test.types))
+		t.Fail()
+	}
+
+	if test.pass {
+		ast.Walk(n, &Tester{types: test.types, t: t})
+	}
+	if t.Failed() {
+		t.Logf("%s: %#v", test.name, n)
+		t.Fatalf("%s: failed parsing expression: %s", test.name, test.src)
 	}
 }
 
 func TestParseBasic(t *testing.T) {
 	tests := []Test{
-		{"basic1", "24", []Type{BASIC}, true},
-		{"basic2", "a", []Type{IDENT}, true},
+		{"integer", "24", []Type{BASIC}, true},
+		{"var", "a", []Type{IDENT}, true},
 	}
 	handleTests(t, tests)
 }
 
 func TestParseBinary(t *testing.T) {
 	tests := []Test{
-		{"basic1", "(+ 2 3)", []Type{BINARY, BASIC, BASIC}, true},
-		{"basic2", "(+ 2 b)", []Type{BINARY, BASIC, IDENT}, true},
-		{"basic3", "(+ a b)", []Type{BINARY, IDENT, IDENT}, true},
-		{"basic5", "(- 5)", []Type{}, false},
-		{"basic6", "(3 5 +)", []Type{}, false},
-		{"basic7", "(3 + 4)", []Type{}, false},
-		{"basic8", "(+ 6 2", []Type{}, false},
-		{"basic9", "(d", []Type{}, false},
-		{"basic10", "(% / d)", []Type{}, false},
-		{"basic11", "(& 3 5)", []Type{}, false},
-		{"basic12", "((+ 3 5) 5)", []Type{}, false},
-		{"basic13", "(* (- 2 6) (+ 4 2)())", []Type{}, false},
+		{"simple", "(+ 2 3)", []Type{BINARY, BASIC, BASIC}, true},
+		{"one-var", "(+ 2 b)", []Type{BINARY, BASIC, IDENT}, true},
+		{"two-vars", "(+ a b)", []Type{BINARY, IDENT, IDENT}, true},
+		{"single-operand", "(- 5)", []Type{}, false},
+		{"post-fix", "(3 5 +)", []Type{}, false},
+		{"infix", "(3 + 4)", []Type{}, false},
+		{"no-closing", "(+ 6 2", []Type{}, false},
+		{"extra-open", "(d", []Type{}, false},
+		{"modulus-quotient", "(% / d)", []Type{}, false},
+		{"binary-and", "(& 3 5)", []Type{}, false},
+		{"no-operator-nested", "((+ 3 5) 5)", []Type{}, false},
+		{"multi-nested-with-empty", "(* (- 2 6) (+ 4 2)())", []Type{}, false},
 	}
 	handleTests(t, tests)
 }
 
 func TestParseCall(t *testing.T) {
 	tests := []Test{
-		{"call1", "(nothing)", []Type{CALL}, true},
-		{"call2", "(add 1 2)", []Type{CALL, BASIC, BASIC}, true},
+		{"no-args", "(nothing)", []Type{CALL}, true},
+		{"two-args", "(add 1 2)", []Type{CALL, BASIC, BASIC}, true},
 	}
 	handleTests(t, tests)
 }
 
 func TestParseComment(t *testing.T) {
 	tests := []Test{
-		{"comment1", "2; comment", []Type{BASIC}, true},
-		{"comment2", "2; comment\na", []Type{BASIC, IDENT}, true},
-		{"comment3", "; comment\na", []Type{IDENT}, true},
-		{"comment4", "(+ 2; comment\n3)", []Type{BINARY, BASIC, BASIC}, true},
-		{"comment5", ";comment", []Type{}, false},
+		{"simple", "2; comment", []Type{BASIC}, true},
+		{"nested-between-expr", "2; comment\na", []Type{BASIC, IDENT}, true},
+		{"first-line", "; comment\na", []Type{IDENT}, true},
+		{"nested-comment", "(+ 2; comment\n3)", []Type{BINARY, BASIC, BASIC}, true},
+		{"comment-only", ";comment", []Type{}, false},
 	}
 	handleTests(t, tests)
 }
 
 func TestParseDecl(t *testing.T) {
 	tests := []Test{
-		{"decl1", "(decl func int 0)",
+		{"simple", "(decl func int 0)",
 			[]Type{DECL, BASIC}, true},
-		{"decl2", "(decl five int (+ 2 3))",
+		{"no-param-binary", "(decl five int (+ 2 3))",
 			[]Type{DECL, BINARY, BASIC, BASIC}, true},
-		{"decl3", "(decl add(a b int) int (+ a b))",
+		{"two-param-binary", "(decl add(a b int) int (+ a b))",
 			[]Type{DECL, BINARY, IDENT, IDENT}, true},
-		{"decl4", "(decl main () int a)", []Type{}, false},
-		{"decl5", "(decl main int ())", []Type{}, false},
-		{"decl6", "decl main int)", []Type{}, false},
-		{"decl7", "(decl fn int 1)(decl fn int 1)",
-			[]Type{DECL, BINARY, DECL, BINARY}, false},
-		{"decl8", "(var a int)(decl a int 1)", []Type{VAR, DECL, BINARY}, false},
+		{"empty-params", "(decl main () int a)", []Type{}, false},
+		{"empty-expr-list", "(decl main int ())", []Type{}, false},
+		{"duplicate-param", "(decl fn (dup dup int) int 0)", []Type{}, false},
+		{"no-open", "decl main int)", []Type{}, false},
+		{"nested-decl", "(decl main int (decl fn int))", []Type{}, false},
 	}
 	handleTests(t, tests)
 }
 
+func TestParseDeclFile(t *testing.T) {
+	tests := []Test{
+		{"simple", "(decl main int 0)", []Type{FILE, DECL, BASIC}, true},
+		{"no-source-no-file", "", []Type{}, false},
+		{"no-decls", "42", []Type{}, false},
+		{"duplicate-decl", "(decl fn int 1)(decl fn int 1)",
+			[]Type{FILE, DECL, BINARY, DECL, BINARY}, false},
+		{"redeclared-var-decl", "(var a int)(decl a int 1)",
+			[]Type{FILE, VAR, DECL, BINARY}, false},
+	}
+	handleFileTests(t, tests)
+}
+
 func TestParseIf(t *testing.T) {
 	tests := []Test{
-		{"if1", "(if 1 int 3)", []Type{IF, BASIC, BASIC}, true},
-		{"if2", "(if false int 3)", []Type{IF, BASIC, BASIC}, true},
-		{"if3", "(if asdf int 3)", []Type{IF, IDENT, BASIC}, true},
-		{"if4", "(if var int 3)", []Type{IF, IDENT, BASIC}, false},
-		{"if5", "(if (< a b) int a ((+ b 1) b))",
+		{"then-only", "(if false int 3)", []Type{IF, BASIC, BASIC}, true},
+		{"then-else", "(if false int 3 4)", []Type{IF, BASIC, BASIC, BASIC}, true},
+		{"no-type", "(if false 0 1)", []Type{}, false},
+		{"integer-cond", "(if 1 int 3)", []Type{IF, BASIC, BASIC}, true},
+		{"var-cond", "(if asdf int 3)", []Type{IF, IDENT, BASIC}, true},
+		{"var-keyword", "(if var int 3)", []Type{}, false},
+		{"logical-cond-nested-binary-then", "(if (< a b) int a ((+ b 1) b))",
 			[]Type{IF, BINARY, IDENT, IDENT, IDENT, LIST, BINARY, IDENT,
 				BASIC, IDENT}, true},
-		{"if6", "(if (< a b) int ((= a b)))",
+		{"logical-cond-assign-then", "(if (< a b) int ((= a b)))",
 			[]Type{IF, BINARY, IDENT, IDENT, LIST, ASSIGN, IDENT, IDENT}, true},
 	}
 	handleTests(t, tests)
@@ -200,24 +231,83 @@ func TestParseIf(t *testing.T) {
 
 func TestParseUnary(t *testing.T) {
 	var tests = []Test{
-		{"unary1", "-24", []Type{UNARY, BASIC}, true},
-		{"unary2", "-a", []Type{UNARY, IDENT}, true},
-		{"unary3", "-(foo)", []Type{UNARY, CALL, IDENT}, true},
-		{"unary4", "+(+ 2 3)", []Type{UNARY, BINARY, BASIC, BASIC}, true},
-		{"unary5", "+(decl foo int)", []Type{}, false},
+		{"negate-integer", "-24", []Type{UNARY, BASIC}, true},
+		{"negate-var", "-a", []Type{UNARY, IDENT}, true},
+		{"negate-call", "-(foo)", []Type{UNARY, CALL, IDENT}, true},
+		{"positive-binary", "+(+ 2 3)", []Type{UNARY, BINARY, BASIC, BASIC}, true},
+		{"positive-decl", "+(decl foo int)", []Type{}, false},
 	}
 	handleTests(t, tests)
 }
 
 func TestParseVar(t *testing.T) {
 	tests := []Test{
-		{"var1", "(var a int)", []Type{VAR}, true},
-		{"var2", "(var (= a 5) int)",
+		{"simple", "(var a int)", []Type{VAR}, true},
+		{"with-assign", "(var (= a 5) int)",
 			[]Type{VAR, ASSIGN, BASIC}, true},
-		{"var3", "(var (= a 5))", []Type{VAR, ASSIGN, BASIC}, true},
-		{"var4", "(var a)", []Type{}, false},
-		{"var5", "(var (+ a b))", []Type{}, false},
-		{"var6", "(var 23)", []Type{}, false},
+		{"infer-type", "(var (= a 5))", []Type{VAR, ASSIGN, BASIC}, true},
+		{"no-type", "(var a)", []Type{}, false},
+		{"binary", "(var (+ a b))", []Type{}, false},
+		{"integer", "(var 23)", []Type{}, false},
+		{"redeclare", "(decl fn int ((var a int)(var a bool)0))", []Type{}, false},
 	}
 	handleTests(t, tests)
+}
+
+func TestParseFile(t *testing.T) {
+	test := Test{"bad-ext", "", []Type{}, false}
+
+	// test for file with bad extension
+	f, err := ioutil.TempFile("", "")
+	if err != nil {
+		t.Log(err)
+	}
+	defer func() {
+		f.Close()
+		err := os.Remove(f.Name())
+		t.Log(err)
+	}()
+	n, err := parse.ParseFile(token.NewFileSet(), f.Name(), "")
+	checkTest(t, test, n, err)
+
+	test = Test{"simple.calc", "(decl main int 0)", []Type{FILE, DECL, BASIC},
+		true}
+	f, err = os.Create(test.name)
+	if err != nil {
+		t.Log(err)
+	}
+	defer func() {
+		f.Close()
+		if err := os.Remove(f.Name()); err != nil {
+			t.Log(err)
+		}
+	}()
+
+	_, err = f.WriteString(test.src)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	n, err = parse.ParseFile(token.NewFileSet(), f.Name(), "")
+	checkTest(t, test, n, err)
+}
+
+func TestDirectory(t *testing.T) {
+	gopath := os.Getenv("GOPATH")
+	var path string
+	for _, p := range strings.Split(gopath, ";") {
+		tmp := filepath.Join(p, "src", "github.com", "rthornton128", "calc",
+			"examples", "package")
+		t.Log("testing path:", tmp)
+		if _, err := os.Stat(tmp); err == nil {
+			path = tmp
+			break
+		}
+	}
+
+	t.Log("using path:", path)
+	_, err := parse.ParseDir(token.NewFileSet(), path)
+	if err != nil {
+		t.Fatal(err)
+	}
 }

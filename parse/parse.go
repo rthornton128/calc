@@ -287,10 +287,10 @@ func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
 	if prev != nil {
 		switch prev.Kind {
 		case ast.FuncDecl:
-			p.addError(name.Name, "redeclared; declared as function at ",
+			p.addError(name.Name, " redeclared; declared as function at ",
 				p.file.Position(prev.NamePos))
 		case ast.VarDecl:
-			p.addError(name.Name, "redeclared; declared as variable at ",
+			p.addError(name.Name, " redeclared; declared as variable at ",
 				p.file.Position(prev.NamePos))
 		}
 	}
@@ -436,7 +436,7 @@ func (p *parser) parseParamList() []*ast.Ident {
 				param.Type = ident
 				if prev := p.curScope.Insert(o); prev != nil {
 					p.addError("duplicate parameter ", param.Name,
-						"; previously declared at", p.file.Position(prev.Pos()))
+						"; previously declared at ", p.file.Position(prev.Pos()))
 				}
 			}
 			start = count
@@ -484,7 +484,7 @@ func (p *parser) parseVarExpr(open token.Pos) *ast.VarExpr {
 		Kind:    ast.VarDecl,
 	})
 	if prev != nil {
-		p.addError(name.Name, "redeclared; declared as ", prev.Kind.String(),
+		p.addError(name.Name, " redeclared; declared as ", prev.Kind.String(),
 			" at ", p.file.Position(prev.NamePos))
 
 	}
