@@ -24,6 +24,10 @@ func fold(o Object) Object {
 		for i, e := range t.Exprs {
 			t.Exprs[i] = fold(e)
 		}
+	case *Call:
+		for i, e := range t.Args {
+			t.Args[i] = fold(e)
+		}
 	case *Declaration:
 		t.Body = fold(t.Body)
 	case *If:
@@ -55,6 +59,7 @@ func foldBinary(b *Binary) Object {
 			case token.MUL:
 				lhs.value = intValue(l * r)
 			case token.QUO:
+				// TODO div by zero
 				lhs.value = intValue(l / r)
 			case token.REM:
 				lhs.value = intValue(l % r)
