@@ -145,7 +145,5 @@ func test_handler(t *testing.T, test Test, name string, n ast.Node) {
 		}
 		t.Fail()
 	}
-	t.Log(ir.FoldConstants(o))
 	ir.Tag(o)
-
 }

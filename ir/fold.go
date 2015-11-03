@@ -104,7 +104,10 @@ func foldUnary(u *Unary) Object {
 	if c, ok := u.Rhs.(*Constant); ok {
 		switch u.Op {
 		case "+":
-			c.value = intValue(+int64(c.value.(intValue)))
+			val := intValue(+int64(c.value.(intValue)))
+			if val < 0 {
+				c.value = val * -1
+			}
 		case "-":
 			c.value = intValue(-int64(c.value.(intValue)))
 		}

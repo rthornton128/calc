@@ -1,5 +1,6 @@
 *.o
 *.swp
 *.a
+*.exe
+*.out
 test
-test.exe
