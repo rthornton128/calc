@@ -7,6 +7,7 @@ import (
 	"github.com/rthornton128/calc/ast"
 	"github.com/rthornton128/calc/ir"
 	"github.com/rthornton128/calc/parse"
+	"github.com/rthornton128/calc/token"
 )
 
 type FoldTest struct {
@@ -47,6 +48,22 @@ func TestBinaryFolding(t *testing.T) {
 	}
 }
 
+func TestBlockFolding(t *testing.T) {
+	src := "(decl f int ((+ 2 2)(* 4 3)(/ 6 2)(% 11 3) 0))"
+	name := "block"
+	expr, err := parse.ParseExpression(name, src)
+	if err != nil {
+		panic(err)
+	}
+	o := ir.FoldConstants(ir.MakeDeclaration(expr.(*ast.DeclExpr),
+		ir.NewScope(nil)))
+	o = o.(*ir.Declaration).Body
+	validate_constant(t, name, o.(*ir.Block).Exprs[0], FoldTest{src, "4"})
+	validate_constant(t, name, o.(*ir.Block).Exprs[1], FoldTest{src, "12"})
+	validate_constant(t, name, o.(*ir.Block).Exprs[2], FoldTest{src, "3"})
+	validate_constant(t, name, o.(*ir.Block).Exprs[3], FoldTest{src, "2"})
+}
+
 func TestCallFolding(t *testing.T) {
 	src := "(fn (== 3 2) (+ 2 2))"
 	name := "call"
@@ -73,6 +90,18 @@ func TestIfFolding(t *testing.T) {
 	validate_constant(t, name, o.(*ir.If).Cond, FoldTest{src, "true"})
 	validate_constant(t, name, o.(*ir.If).Then, FoldTest{src, "3"})
 	validate_constant(t, name, o.(*ir.If).Else, FoldTest{src, "6"})
+}
+
+func TestPackageFolding(t *testing.T) {
+	fs := token.NewFileSet()
+	f1, _ := parse.ParseFile(fs, "package", "(decl f1 int (+ 1 2))")
+	f2, _ := parse.ParseFile(fs, "package", "(decl f2 int (* 8 2))")
+	pkg := &ast.Package{Files: []*ast.File{f1, f2}}
+	o := ir.FoldConstants(ir.MakePackage(pkg, "package"))
+	o1 := o.(*ir.Package).Scope().Lookup("f1")
+	o2 := o.(*ir.Package).Scope().Lookup("f2")
+	validate_constant(t, "package", o1.(*ir.Declaration).Body, FoldTest{"", "3"})
+	validate_constant(t, "package", o2.(*ir.Declaration).Body, FoldTest{"", "16"})
 }
 
 func TestUnaryFolding(t *testing.T) {

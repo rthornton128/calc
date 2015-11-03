@@ -15,38 +15,13 @@ type Test struct {
 	pass bool
 }
 
-func TestSimple(t *testing.T) {
+func TestAssignment(t *testing.T) {
 	tests := []Test{
-		{src: "42", pass: true},
-		{src: "true", pass: true},
+		{src: "(= a 3)", pass: false},
+		{src: "(decl fn int ((var a int)(= a true) 0))", pass: false},
 	}
 	for i, test := range tests {
-		test_expression(t, fmt.Sprintf("example%d", i), test)
-	}
-}
-
-func TestDeclaration(t *testing.T) {
-	tests := []Test{
-		{src: "(decl fn(a b int) int true)", pass: false},
-		{src: "(decl fn(a b int) bool a)", pass: false},
-		{src: "(decl fn bool 24)", pass: false},
-	}
-	for i, test := range tests {
-		test_expression(t, fmt.Sprintf("example%d", i), test)
-	}
-}
-
-func TestFile(t *testing.T) {
-	tests := []Test{
-		{src: "(decl fn(a b int) int (+ a b))(decl main int (fn 2 3))",
-			pass: true},
-		{src: "(decl equal(a b int) bool (== a b))" +
-			"(decl main int (if (equal(+ 2 3) (*4 2)) int 0 1))", pass: true},
-		{src: "(decl equal(a b int) bool (== a b))" +
-			"(decl main int (equal 2 3))", pass: false},
-	}
-	for i, test := range tests {
-		test_file(t, fmt.Sprintf("file-example%d", i), test)
+		test_expression(t, fmt.Sprintf("assign%d", i), test)
 	}
 }
 
@@ -67,11 +42,61 @@ func TestBinary(t *testing.T) {
 	}
 }
 
+func TestCall(t *testing.T) {
+	tests := []Test{
+		{src: "(fn)", pass: false},
+		{src: "(decl fn (a int) int (a))", pass: false},
+	}
+	for i, test := range tests {
+		test_expression(t, fmt.Sprintf("call%d", i), test)
+	}
+}
+
+func TestConstant(t *testing.T) {
+	tests := []Test{
+		{src: "42", pass: true},
+		{src: "true", pass: true},
+	}
+	for i, test := range tests {
+		test_expression(t, fmt.Sprintf("constant%d", i), test)
+	}
+}
+
+func TestDeclaration(t *testing.T) {
+	tests := []Test{
+		{src: "(decl fn(a b int) int true)", pass: false},
+		{src: "(decl fn(a b int) bool a)", pass: false},
+		{src: "(decl fn bool 24)", pass: false},
+	}
+	for i, test := range tests {
+		test_expression(t, fmt.Sprintf("declaration%d", i), test)
+	}
+}
+
+func TestFile(t *testing.T) {
+	tests := []Test{
+		{src: "(decl fn(a b int) int (+ a b))(decl main int (fn 2 3))",
+			pass: true},
+		{src: "(decl equal(a b int) bool (== a b))" +
+			"(decl main int (if (equal(+ 2 3) (*4 2)) int 0 1))", pass: true},
+		{src: "(decl equal(a b int) bool (== a b))" +
+			"(decl main int (equal 2 3))", pass: false},
+		{src: "(decl fn int 0)(decl main int fn)", pass: false},
+		{src: "(decl fn (a int) int 0)(decl main int (fn 1 2))", pass: false},
+		{src: "(decl fn (a b int) int 0)(decl main int (fn 1))", pass: false},
+		{src: "(decl fn int 0)(decl main int ((= fn 3) 0))", pass: false},
+	}
+	for i, test := range tests {
+		test_file(t, fmt.Sprintf("file%d", i), test)
+	}
+}
+
 func TestIf(t *testing.T) {
 	tests := []Test{
 		{src: "(if (== 1 1) int 1 0)", pass: true},
 		{src: "(if (!= 1 1) int 1 true)", pass: false},
 		{src: "(if (< 1 1) int false 1)", pass: false},
+		{src: "(if 1 int 0 1)", pass: false},
 		{src: "(decl main (a b int) int (if (<= a b) int 0 1))", pass: true},
 		{src: "(decl main (a b int) int (if (> a b) int 0 1))", pass: true},
 		{src: "(decl main (a b int) int (if (>= a b) int 0 1))", pass: true},
@@ -79,7 +104,7 @@ func TestIf(t *testing.T) {
 		{src: "(decl main (a int) int (if (== a false) int 0 1))", pass: false},
 	}
 	for i, test := range tests {
-		test_expression(t, fmt.Sprintf("example%d", i), test)
+		test_expression(t, fmt.Sprintf("if%d", i), test)
 	}
 }
 
@@ -89,7 +114,7 @@ func TestUnary(t *testing.T) {
 		{src: "+(- 3 5)", pass: true},
 	}
 	for i, test := range tests {
-		test_expression(t, fmt.Sprintf("example%d", i), test)
+		test_expression(t, fmt.Sprintf("unary%d", i), test)
 	}
 }
 
@@ -105,7 +130,7 @@ func TestVar(t *testing.T) {
 		{src: "(decl main int ((var a int)(= a 42) a))", pass: true},
 	}
 	for i, test := range tests {
-		test_expression(t, fmt.Sprintf("example%d", i), test)
+		test_expression(t, fmt.Sprintf("var%d", i), test)
 	}
 }
 
