@@ -19,6 +19,7 @@ func TestAssignment(t *testing.T) {
 	tests := []Test{
 		{src: "(= a 3)", pass: false},
 		{src: "(decl fn int ((var a int)(= a true) 0))", pass: false},
+		{src: "(decl fn int ((= fn 0) 0))", pass: false},
 	}
 	for i, test := range tests {
 		test_expression(t, fmt.Sprintf("assign%d", i), test)
@@ -46,6 +47,7 @@ func TestCall(t *testing.T) {
 	tests := []Test{
 		{src: "(fn)", pass: false},
 		{src: "(decl fn (a int) int (a))", pass: false},
+		{src: "(decl fn int ((var a int) (a)))", pass: false},
 	}
 	for i, test := range tests {
 		test_expression(t, fmt.Sprintf("call%d", i), test)
