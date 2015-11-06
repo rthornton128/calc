@@ -87,6 +87,10 @@ func TestFile(t *testing.T) {
 		{src: "(decl fn (a int) int 0)(decl main int (fn 1 2))", pass: false},
 		{src: "(decl fn (a b int) int 0)(decl main int (fn 1))", pass: false},
 		{src: "(decl fn int 0)(decl main int ((= fn 3) 0))", pass: false},
+		{src: "(decl fn (i int, b bool) int 0)(decl main int (fn 42 true))",
+			pass: true},
+		{src: "(decl fn (i int, b bool) int 0)(decl main int (fn 4 2))",
+			pass: false},
 	}
 	for i, test := range tests {
 		test_file(t, fmt.Sprintf("file%d", i), test)

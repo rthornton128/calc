@@ -82,6 +82,15 @@ func (tc *typeChecker) check(o Object) {
 				" arguments but received ", len(t.Args))
 			return
 		}
+		for i, a := range t.Args {
+			tc.check(a)
+			p := o.Scope().Lookup(decl.Params[i])
+			if a.Type() != p.Type() {
+				tc.error(t.Pos(), "parameter ", i, " of function ", t.Name(),
+					" expects type ", p.Type(), " but argument ", i, " is of type ",
+					a.Type())
+			}
+		}
 		t.object.typ = decl.Type()
 	case *Declaration:
 		tc.check(t.Body)

@@ -421,34 +421,53 @@ func (p *parser) parseIfExpr(open token.Pos) *ast.IfExpr {
 }
 
 func (p *parser) parseParamList() []*ast.Ident {
-	var list []*ast.Ident
-	count, start := 0, 0
+	list := make([]*ast.Ident, 0)
+	params := make([]*ast.Ident, 0)
+
 	for p.tok != token.RPAREN {
-		ident := p.parseIdent()
-		count++
-		if p.tok == token.COMMA || p.tok == token.RPAREN {
-			for _, param := range list[start:] {
+		if p.tok == token.IDENT {
+			list = append(list, p.parseIdent())
+		}
+
+		if p.tok == token.RPAREN || p.tok == token.COMMA {
+			if p.tok == token.COMMA {
+				p.expect(token.COMMA) // consume comma
+			}
+
+			if len(list) < 2 {
+				p.addError("expected parameter name and type name but found",
+					len(list))
+			}
+
+			// strip last identifier off list and retain as type name
+			t := list[len(list)-1]
+			list = list[:len(list)-1]
+
+			// assign type name to each parameter
+			for _, param := range list {
 				o := &ast.Object{
 					Kind:    ast.VarDecl,
 					Name:    param.Name,
 					NamePos: param.Pos(),
 				}
-				param.Type = ident
 				if prev := p.curScope.Insert(o); prev != nil {
 					p.addError("duplicate parameter ", param.Name,
 						"; previously declared at ", p.file.Position(prev.Pos()))
 				}
+				param.Type = t
 			}
-			start = count
-			continue
+			params = append(params, list...)
+			list = make([]*ast.Ident, 0)
 		}
-		list = append(list, ident)
 	}
-	if len(list) < 1 {
+	if len(params) < 1 {
 		p.addError("empty param list not allowed")
 	}
+	if len(params) > 10 {
+		p.addError("too many parameters in declaration: max 10")
+	}
 	p.expect(token.RPAREN)
-	return list
+	return params
 }
 
 func (p *parser) parseUnaryExpr() *ast.UnaryExpr {
