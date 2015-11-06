@@ -38,8 +38,7 @@ func makeVariable(ve *ast.VarExpr, parent *Scope) *Variable {
 		Assign: assign,
 	}
 
-	if prev := parent.Insert(v); prev != nil {
-	}
+	parent.Insert(v)
 
 	return v
 }
