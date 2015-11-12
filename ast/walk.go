@@ -28,15 +28,15 @@ func Walk(node Node, v Visitor) {
 		for _, arg := range n.Args {
 			Walk(arg, v)
 		}
-	case *DeclExpr:
+	case *DefineStmt:
 		Walk(n.Body, v)
-	case *ExprList:
-		for _, expr := range n.List {
-			Walk(expr, v)
-		}
 	case *File:
-		for _, decl := range n.Decls {
-			Walk(decl, v)
+		for _, def := range n.Defs {
+			Walk(def, v)
+		}
+	case *FuncExpr:
+		for _, e := range n.Body {
+			Walk(e, v)
 		}
 	case *Ident: /* do nothing */
 	case *IfExpr:
@@ -52,8 +52,8 @@ func Walk(node Node, v Visitor) {
 	case *UnaryExpr:
 		Walk(n.Value, v)
 	case *VarExpr:
-		if n.Value != nil {
-			Walk(n.Value, v)
+		for _, e := range n.Body {
+			Walk(e, v)
 		}
 	}
 }

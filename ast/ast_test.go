@@ -39,16 +39,12 @@ func TestBinaryExpr(t *testing.T) {
 		Lit:    "5",
 	}
 	b := &ast.BinaryExpr{
-		Expression: ast.Expression{
-			Opening: token.Pos(1),
-			Closing: token.Pos(7),
-		},
 		Op:    token.ADD,
 		OpPos: token.Pos(2),
 		List:  []ast.Expr{x, y},
 	}
 
-	if b.Pos() != token.Pos(1) {
-		t.Fatal("BinaryExpr: Expected: 1 Got:", b.Pos())
+	if b.Pos() != token.Pos(2) {
+		t.Fatal("BinaryExpr: Expected: 2 Got:", b.Pos())
 	}
 }

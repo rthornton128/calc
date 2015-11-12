@@ -24,7 +24,7 @@ const (
 	op_start
 	LPAREN
 	RPAREN
-	COMMA
+	COLON
 
 	ADD
 	SUB
@@ -46,7 +46,8 @@ const (
 	op_end
 
 	key_start
-	DECL
+	DEFINE
+	FUNC
 	IF
 	VAR
 	key_end
@@ -62,7 +63,7 @@ var tok_strings = map[Token]string{
 	INTEGER: "Integer",
 	LPAREN:  "(",
 	RPAREN:  ")",
-	COMMA:   ",",
+	COLON:   ":",
 	ADD:     "+",
 	SUB:     "-",
 	MUL:     "*",
@@ -77,7 +78,8 @@ var tok_strings = map[Token]string{
 	GTT:     ">",
 	LTE:     "<=",
 	GTE:     ">=",
-	DECL:    "decl",
+	DEFINE:  "define",
+	FUNC:    "func",
 	IF:      "if",
 	VAR:     "var",
 }

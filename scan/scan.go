@@ -52,8 +52,8 @@ func (s *Scanner) Scan() (lit string, tok token.Token, pos token.Pos) {
 		tok = token.LPAREN
 	case ')':
 		tok = token.RPAREN
-	case ',':
-		tok = token.COMMA
+	case ':':
+		tok = token.COLON
 	case '+':
 		tok = token.ADD
 	case '-':

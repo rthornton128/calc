@@ -19,7 +19,6 @@ type Expr interface {
 }
 
 type AssignExpr struct {
-	Expression
 	Equal token.Pos
 	Name  *Ident
 	Value Expr
@@ -32,7 +31,6 @@ type BasicLit struct {
 }
 
 type BinaryExpr struct {
-	Expression
 	Op    token.Token
 	OpPos token.Pos
 	ID    int
@@ -40,32 +38,26 @@ type BinaryExpr struct {
 }
 
 type CallExpr struct {
-	Expression
 	Name *Ident
 	Args []Expr
 }
 
-type DeclExpr struct {
-	Expression
-	Decl   token.Pos
+type DefineStmt struct {
+	Define token.Pos
 	Name   *Ident
 	Type   *Ident
-	Params []*Ident
 	Body   Expr
 }
 
-type Expression struct {
-	Opening token.Pos
-	Closing token.Pos
-}
-
-type ExprList struct {
-	Expression
-	List []Expr
-}
-
 type File struct {
-	Decls []*DeclExpr
+	Defs []*DefineStmt
+}
+
+type FuncExpr struct {
+	Func   token.Pos
+	Type   *Ident
+	Params []*Param
+	Body   []Expr
 }
 
 type Ident struct {
@@ -75,7 +67,6 @@ type Ident struct {
 }
 
 type IfExpr struct {
-	Expression
 	If   token.Pos
 	Type *Ident
 	Cond Expr
@@ -93,6 +84,11 @@ type Package struct {
 	Files []*File
 }
 
+type Param struct {
+	Name *Ident
+	Type *Ident
+}
+
 type Scope struct {
 	Parent *Scope
 	Table  map[string]*Object
@@ -105,24 +101,36 @@ type UnaryExpr struct {
 }
 
 type VarExpr struct {
-	Expression
-	Var   token.Pos
-	Name  *Ident
-	Value *AssignExpr
+	Var    token.Pos
+	Type   *Ident
+	Params []*Param
+	Body   []Expr
 }
 
+func (a *AssignExpr) Pos() token.Pos { return a.Equal }
 func (b *BasicLit) Pos() token.Pos   { return b.LitPos }
-func (e *Expression) Pos() token.Pos { return e.Opening }
+func (b *BinaryExpr) Pos() token.Pos { return b.OpPos }
+func (c *CallExpr) Pos() token.Pos   { return c.Name.Pos() }
+func (d *DefineStmt) Pos() token.Pos { return d.Define }
 func (f *File) Pos() token.Pos       { return token.NoPos }
+func (f *FuncExpr) Pos() token.Pos   { return f.Func }
 func (i *Ident) Pos() token.Pos      { return i.NamePos }
+func (i *IfExpr) Pos() token.Pos     { return i.If }
 func (o *Object) Pos() token.Pos     { return o.NamePos }
 func (p *Package) Pos() token.Pos    { return token.NoPos }
+func (p *Param) Pos() token.Pos      { return p.Name.Pos() }
 func (u *UnaryExpr) Pos() token.Pos  { return u.OpPos }
+func (v *VarExpr) Pos() token.Pos    { return v.Var }
 
+func (a *AssignExpr) exprNode() {}
 func (b *BasicLit) exprNode()   {}
-func (e *Expression) exprNode() {}
+func (b *BinaryExpr) exprNode() {}
+func (c *CallExpr) exprNode()   {}
+func (f *FuncExpr) exprNode()   {}
+func (i *IfExpr) exprNode()     {}
 func (i *Ident) exprNode()      {}
 func (u *UnaryExpr) exprNode()  {}
+func (v *VarExpr) exprNode()    {}
 
 func NewScope(parent *Scope) *Scope {
 	return &Scope{Parent: parent, Table: make(map[string]*Object)}

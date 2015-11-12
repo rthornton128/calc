@@ -13,7 +13,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"reflect"
 
 	"github.com/rthornton128/calc/ast"
 	"github.com/rthornton128/calc/scan"
@@ -30,7 +29,7 @@ func ParseExpression(name, src string) (ast.Expr, error) {
 	fset := token.NewFileSet()
 	file := fset.Add(name, src)
 	p.init(file, name, string(src), nil)
-	node := p.parseGenExpr()
+	node := p.parseExpression()
 
 	if p.errors.Count() > 0 {
 		return nil, p.errors
@@ -130,20 +129,6 @@ func (p *parser) addError(args ...interface{}) {
 	p.errors.Add(p.file.Position(p.pos), args...)
 }
 
-func (p *parser) checkExpr(e ast.Expr) ast.Expr {
-	if e != nil && !reflect.ValueOf(e).IsNil() {
-		switch t := e.(type) {
-		case *ast.BasicLit, *ast.BinaryExpr, *ast.CallExpr, *ast.Ident, *ast.IfExpr,
-			*ast.UnaryExpr:
-		case *ast.ExprList:
-			p.checkExpr(t.List[len(t.List)-1])
-		default:
-			p.errors.Add(p.file.Position(e.Pos()), "expression has no side-effects")
-		}
-	}
-	return e
-}
-
 func (p *parser) expect(tok token.Token) token.Pos {
 	pos := p.pos
 	if p.tok != tok {
@@ -181,17 +166,11 @@ func (p *parser) closeScope() {
 
 /* Parsing */
 
-func (p *parser) parseAssignExpr(open token.Pos) *ast.AssignExpr {
-	pos := p.expect(token.ASSIGN)
-	nam := p.parseIdent()
-	val := p.parseGenExpr()
-	end := p.expect(token.RPAREN)
-
+func (p *parser) parseAssignExpr() *ast.AssignExpr {
 	return &ast.AssignExpr{
-		Expression: ast.Expression{Opening: open, Closing: end},
-		Equal:      pos,
-		Name:       nam,
-		Value:      p.checkExpr(val),
+		Equal: p.expect(token.ASSIGN),
+		Name:  p.parseIdent(),
+		Value: p.parseExpression(),
 	}
 }
 
@@ -201,191 +180,134 @@ func (p *parser) parseBasicLit() *ast.BasicLit {
 	return &ast.BasicLit{LitPos: pos, Kind: tok, Lit: lit}
 }
 
-func (p *parser) parseBinaryExpr(open token.Pos) *ast.BinaryExpr {
+func (p *parser) parseBinaryExpr() *ast.BinaryExpr {
 	pos := p.pos
 	op := p.tok
 	p.next()
 
-	var list []ast.Expr
-	for p.tok != token.RPAREN && p.tok != token.EOF {
-		list = append(list, p.parseGenExpr())
-	}
-	if len(list) < 2 {
-		p.addError("binary expression must have at least two operands")
-	}
-	end := p.expect(token.RPAREN)
 	return &ast.BinaryExpr{
-		Expression: ast.Expression{
-			Opening: open,
-			Closing: end,
-		},
 		Op:    op,
 		OpPos: pos,
-		List:  list,
+		List:  p.parseExprList(),
 	}
 }
 
-func (p *parser) parseCallExpr(open token.Pos) *ast.CallExpr {
-	nam := p.parseIdent()
-
-	var list []ast.Expr
-	for p.tok != token.RPAREN && p.tok != token.EOF {
-		list = append(list, p.parseGenExpr())
-	}
-	end := p.expect(token.RPAREN)
-
+func (p *parser) parseCallExpr() *ast.CallExpr {
 	return &ast.CallExpr{
-		Expression: ast.Expression{
-			Opening: open,
-			Closing: end,
-		},
-		Name: nam,
-		Args: list,
+		Name: p.parseIdent(),
+		Args: p.parseExprList(),
 	}
 }
 
-func (p *parser) parseDeclExpr(open token.Pos) *ast.DeclExpr {
-	if p.curScope != p.topScope {
-		p.addError("function declarations may only be used in top-level scope")
-		return nil
+func (p *parser) parseDefineStmt() *ast.DefineStmt {
+	p.expect(token.LPAREN)
+	defer p.expect(token.RPAREN)
+
+	return &ast.DefineStmt{
+		Define: p.expect(token.DEFINE),
+		Name:   p.parseIdent(),
+		Type:   p.parseType(),
+		Body:   p.parseExpression(),
 	}
-	pos := p.expect(token.DECL)
-	name := p.parseIdent()
-
-	p.openScope()
-
-	var list []*ast.Ident
-	if p.tok == token.LPAREN {
-		p.next()
-		list = p.parseParamList()
-	}
-
-	typ := p.parseIdent()
-
-	body := p.tryExprOrList()
-	end := p.expect(token.RPAREN)
-
-	decl := &ast.DeclExpr{
-		Expression: ast.Expression{
-			Opening: open,
-			Closing: end,
-		},
-		Decl:   pos,
-		Name:   name,
-		Type:   typ,
-		Params: list,
-		Body:   p.checkExpr(body),
-	}
-
-	p.closeScope()
-
-	prev := p.curScope.Insert(&ast.Object{
-		NamePos: name.NamePos,
-		Name:    name.Name,
-		Kind:    ast.FuncDecl,
-	})
-	if prev != nil {
-		switch prev.Kind {
-		case ast.FuncDecl:
-			p.addError(name.Name, " redeclared; declared as function at ",
-				p.file.Position(prev.NamePos))
-		case ast.VarDecl:
-			p.addError(name.Name, " redeclared; declared as variable at ",
-				p.file.Position(prev.NamePos))
-		}
-	}
-
-	return decl
 }
 
-func (p *parser) parseExpr() ast.Expr {
-	var expr ast.Expr
-	listok := p.listok
-
-	pos := p.expect(token.LPAREN)
-	if p.listok && p.tok == token.LPAREN {
-		expr = p.parseExprList(pos)
-		return expr
-	}
-	p.listok = false
+func (p *parser) parseExpression() ast.Expr {
+	var e ast.Expr
 	switch p.tok {
-	case token.ADD, token.SUB, token.MUL, token.QUO, token.REM,
-		token.EQL, token.GTE, token.GTT, token.NEQ, token.LST, token.LTE:
-		expr = p.parseBinaryExpr(pos)
-	case token.ASSIGN:
-		expr = p.parseAssignExpr(pos)
-	case token.DECL:
-		expr = p.parseDeclExpr(pos)
-	case token.IDENT:
-		expr = p.parseCallExpr(pos)
-	case token.IF:
-		expr = p.parseIfExpr(pos)
-	case token.VAR:
-		expr = p.parseVarExpr(pos)
-	default:
-		if listok {
-			p.addError("Expected expression but got '" + p.lit + "'")
-		} else {
+	case token.LPAREN:
+		p.expect(token.LPAREN)
+
+		switch p.tok {
+		case token.ADD, token.SUB, token.MUL, token.QUO, token.REM,
+			token.EQL, token.GTE, token.GTT, token.NEQ, token.LST, token.LTE:
+			e = p.parseBinaryExpr()
+		case token.ASSIGN:
+			e = p.parseAssignExpr()
+		case token.FUNC:
+			e = p.parseFuncExpr()
+		case token.IDENT:
+			e = p.parseCallExpr()
+		case token.IF:
+			e = p.parseIfExpr()
+		case token.VAR:
+			e = p.parseVarExpr()
+		default:
 			p.addError("Expected operator, keyword or identifier but got '" + p.lit +
 				"'")
 		}
-	}
 
-	return expr
-}
-
-func (p *parser) parseExprList(open token.Pos) ast.Expr {
-	p.listok = false
-	var list []ast.Expr
-	for p.tok != token.RPAREN {
-		list = append(list, p.parseGenExpr())
-	}
-	if len(list) < 1 {
-		p.addError("empty expression list not allowed")
-	}
-	end := p.expect(token.RPAREN)
-	return &ast.ExprList{
-		Expression: ast.Expression{
-			Opening: open,
-			Closing: end,
-		},
-		List: list,
-	}
-}
-
-func (p *parser) parseGenExpr() ast.Expr {
-	var expr ast.Expr
-
-	switch p.tok {
-	case token.LPAREN:
-		expr = p.parseExpr()
+		p.expect(token.RPAREN)
 	case token.IDENT:
-		expr = p.parseIdent()
+		e = p.parseIdent()
 	case token.BOOL, token.INTEGER:
-		expr = p.parseBasicLit()
+		e = p.parseBasicLit()
 	case token.ADD, token.SUB:
-		expr = p.parseUnaryExpr()
+		e = p.parseUnaryExpr()
 	default:
 		p.addError("Expected expression, got '" + p.lit + "'")
 		p.next()
 	}
-	p.listok = false
 
-	return expr
+	return e
+}
+
+func (p *parser) parseExprList() []ast.Expr {
+	list := make([]ast.Expr, 0)
+	for p.tok != token.RPAREN && p.tok != token.EOF {
+		list = append(list, p.parseExpression())
+	}
+	return list
 }
 
 func (p *parser) parseFile() *ast.File {
-	decls := make([]*ast.DeclExpr, 0, 16)
+	defs := make([]*ast.DefineStmt, 0)
 	for p.tok != token.EOF {
-		e := p.parseGenExpr()
-		if decl, ok := e.(*ast.DeclExpr); ok {
-			decls = append(decls, decl)
+		def := p.parseDefineStmt()
+
+		var kind ast.Kind
+		switch def.Body.(type) {
+		case *ast.FuncExpr:
+			kind = ast.FuncDecl
+		default:
+			kind = ast.VarDecl
 		}
+		prev := p.curScope.Insert(&ast.Object{
+			NamePos: def.Name.NamePos,
+			Name:    def.Name.Name,
+			Kind:    kind,
+		})
+		if prev != nil {
+			switch prev.Kind {
+			case ast.FuncDecl:
+				p.addError(prev.Name, " redeclared; declared as function at ",
+					p.file.Position(prev.NamePos))
+			case ast.VarDecl:
+				p.addError(prev.Name, " redeclared; declared as variable at ",
+					p.file.Position(prev.NamePos))
+			}
+			continue
+		}
+
+		defs = append(defs, def)
 	}
-	if len(decls) < 1 {
+
+	if len(defs) < 1 {
 		p.addError("reached end of file without any declarations")
 	}
-	return &ast.File{Decls: decls}
+
+	return &ast.File{Defs: defs}
+}
+
+func (p *parser) parseFuncExpr() *ast.FuncExpr {
+	p.openScope()
+	defer p.closeScope()
+
+	return &ast.FuncExpr{
+		Func:   p.expect(token.FUNC),
+		Type:   p.parseType(),
+		Params: p.parseParamList(),
+		Body:   p.parseExprList(),
+	}
 }
 
 func (p *parser) parseIdent() *ast.Ident {
@@ -393,130 +315,65 @@ func (p *parser) parseIdent() *ast.Ident {
 	return &ast.Ident{NamePos: p.expect(token.IDENT), Name: name}
 }
 
-func (p *parser) parseIfExpr(open token.Pos) *ast.IfExpr {
-	pos := p.expect(token.IF)
-	cond := p.parseGenExpr()
-	typ := p.parseIdent()
-
+func (p *parser) parseIfExpr() *ast.IfExpr {
 	p.openScope()
-	then := p.tryExprOrList()
-	var els ast.Expr
-	if p.tok != token.RPAREN {
-		els = p.tryExprOrList()
-	}
-	p.closeScope()
-	end := p.expect(token.RPAREN)
+	defer p.closeScope()
 
-	return &ast.IfExpr{
-		Expression: ast.Expression{
-			Opening: open,
-			Closing: end,
-		},
-		If:   pos,
-		Type: typ,
-		Cond: cond,
-		Then: then,
-		Else: els,
+	ie := &ast.IfExpr{
+		If:   p.expect(token.IF),
+		Type: p.parseType(),
+		Cond: p.parseExpression(),
+		Then: p.parseExpression(),
 	}
+
+	if p.tok != token.RPAREN {
+		ie.Else = p.parseExpression()
+	}
+	return ie
 }
 
-func (p *parser) parseParamList() []*ast.Ident {
-	list := make([]*ast.Ident, 0)
-	params := make([]*ast.Ident, 0)
+func (p *parser) parseParamList() []*ast.Param {
+	params := make([]*ast.Param, 0)
+	p.expect(token.LPAREN)
 
 	for p.tok != token.RPAREN {
-		if p.tok == token.IDENT {
-			list = append(list, p.parseIdent())
+		param := &ast.Param{Name: p.parseIdent(), Type: p.parseType()}
+		o := &ast.Object{
+			Kind:    ast.VarDecl,
+			Name:    param.Name.Name,
+			NamePos: param.Pos(),
 		}
-
-		if p.tok == token.RPAREN || p.tok == token.COMMA {
-			if p.tok == token.COMMA {
-				p.expect(token.COMMA) // consume comma
-			}
-
-			if len(list) < 2 {
-				p.addError("expected parameter name and type name but found",
-					len(list))
-			}
-
-			// strip last identifier off list and retain as type name
-			t := list[len(list)-1]
-			list = list[:len(list)-1]
-
-			// assign type name to each parameter
-			for _, param := range list {
-				o := &ast.Object{
-					Kind:    ast.VarDecl,
-					Name:    param.Name,
-					NamePos: param.Pos(),
-				}
-				if prev := p.curScope.Insert(o); prev != nil {
-					p.addError("duplicate parameter ", param.Name,
-						"; previously declared at ", p.file.Position(prev.Pos()))
-				}
-				param.Type = t
-			}
-			params = append(params, list...)
-			list = make([]*ast.Ident, 0)
+		if prev := p.curScope.Insert(o); prev != nil {
+			p.addError("duplicate parameter ", prev.Name,
+				"; previously declared at ", p.file.Position(prev.Pos()))
+			continue
 		}
-	}
-	if len(params) < 1 {
-		p.addError("empty param list not allowed")
-	}
-	if len(params) > 10 {
-		p.addError("too many parameters in declaration: max 10")
+		params = append(params, param)
 	}
 	p.expect(token.RPAREN)
 	return params
 }
 
+func (p *parser) parseType() *ast.Ident {
+	if p.tok != token.COLON {
+		return nil
+	}
+
+	p.expect(token.COLON)
+	return p.parseIdent()
+}
+
 func (p *parser) parseUnaryExpr() *ast.UnaryExpr {
 	pos, op := p.pos, p.lit
 	p.next()
-	exp := p.parseGenExpr()
-	return &ast.UnaryExpr{OpPos: pos, Op: op, Value: p.checkExpr(exp)}
+	return &ast.UnaryExpr{OpPos: pos, Op: op, Value: p.parseExpression()}
 }
 
-func (p *parser) parseVarExpr(open token.Pos) *ast.VarExpr {
-	varpos := p.expect(token.VAR)
-
-	var name *ast.Ident
-	var value *ast.AssignExpr
-	switch p.tok {
-	case token.IDENT:
-		name = p.parseIdent()
-	case token.LPAREN:
-		value = p.parseAssignExpr(p.expect(token.LPAREN))
-		name = value.Name
-	default:
-		p.addError("expected identifier or assignment")
-		name = &ast.Ident{NamePos: token.NoPos, Name: "NoName"}
-	}
-	if value == nil || p.tok == token.IDENT {
-		name.Type = p.parseIdent()
-	}
-	end := p.expect(token.RPAREN)
-
-	prev := p.curScope.Insert(&ast.Object{
-		NamePos: name.NamePos,
-		Name:    name.Name,
-		Kind:    ast.VarDecl,
-	})
-	if prev != nil {
-		p.addError(name.Name, " redeclared; declared as ", prev.Kind.String(),
-			" at ", p.file.Position(prev.NamePos))
-
-	}
-
+func (p *parser) parseVarExpr() *ast.VarExpr {
 	return &ast.VarExpr{
-		Expression: ast.Expression{Opening: open, Closing: end},
-		Var:        varpos,
-		Name:       name,
-		Value:      value,
+		Var:    p.expect(token.VAR),
+		Type:   p.parseType(),
+		Params: p.parseParamList(),
+		Body:   p.parseExprList(),
 	}
-}
-
-func (p *parser) tryExprOrList() ast.Expr {
-	p.listok = true
-	return p.parseGenExpr()
 }
