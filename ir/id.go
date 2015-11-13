@@ -19,19 +19,19 @@ func tag(o Object, nextID *int) {
 		setID(t, nextID)
 		tag(t.Lhs, nextID)
 		tag(t.Rhs, nextID)
-	case *Block:
-		for _, e := range t.Exprs {
-			tag(e, nextID)
-		}
 	case *Call:
 		for _, arg := range t.Args {
 			tag(arg, nextID)
 		}
-	case *Declaration:
+	case *Define:
+		tag(t.Body, nextID)
+	case *Function:
 		for _, p := range t.Params {
 			setID(t.Scope().Lookup(p).(IDer), nextID)
 		}
-		tag(t.Body, nextID)
+		for _, e := range t.Body {
+			tag(e, nextID)
+		}
 	case *If:
 		setID(t, nextID)
 		tag(t.Cond, nextID)
@@ -44,7 +44,12 @@ func tag(o Object, nextID *int) {
 	case *Unary:
 		tag(t.Rhs, nextID)
 	case *Variable:
-		setID(t.Scope().Lookup(t.Name()).(IDer), nextID)
+		for _, p := range t.Params {
+			setID(t.Scope().Lookup(p).(IDer), nextID)
+		}
+		for _, e := range t.Body {
+			tag(e, nextID)
+		}
 	}
 	return
 }

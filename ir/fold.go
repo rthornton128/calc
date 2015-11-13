@@ -20,16 +20,16 @@ func fold(o Object) Object {
 		t.Lhs = fold(t.Lhs)
 		t.Rhs = fold(t.Rhs)
 		return foldBinary(t)
-	case *Block:
-		for i, e := range t.Exprs {
-			t.Exprs[i] = fold(e)
-		}
 	case *Call:
 		for i, e := range t.Args {
 			t.Args[i] = fold(e)
 		}
-	case *Declaration:
+	case *Define:
 		t.Body = fold(t.Body)
+	case *Function:
+		for i, e := range t.Body {
+			t.Body[i] = fold(e)
+		}
 	case *If:
 		t.Cond = fold(t.Cond)
 		t.Then = fold(t.Then)
@@ -40,7 +40,9 @@ func fold(o Object) Object {
 		t.Rhs = fold(t.Rhs)
 		return foldUnary(t)
 	case *Variable:
-		t.Assign = fold(t.Assign)
+		for i, e := range t.Body {
+			t.Body[i] = fold(e)
+		}
 	}
 	return o
 }

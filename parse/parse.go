@@ -206,7 +206,7 @@ func (p *parser) parseDefineStmt() *ast.DefineStmt {
 	return &ast.DefineStmt{
 		Define: p.expect(token.DEFINE),
 		Name:   p.parseIdent(),
-		Type:   p.parseType(),
+		Type:   p.parseType(false),
 		Body:   p.parseExpression(),
 	}
 }
@@ -264,17 +264,16 @@ func (p *parser) parseFile() *ast.File {
 	for p.tok != token.EOF {
 		def := p.parseDefineStmt()
 
-		var kind ast.Kind
 		switch def.Body.(type) {
 		case *ast.FuncExpr:
-			kind = ast.FuncDecl
+			def.Kind = ast.FuncDecl
 		default:
-			kind = ast.VarDecl
+			def.Kind = ast.VarDecl
 		}
 		prev := p.curScope.Insert(&ast.Object{
 			NamePos: def.Name.NamePos,
 			Name:    def.Name.Name,
-			Kind:    kind,
+			Kind:    def.Kind,
 		})
 		if prev != nil {
 			switch prev.Kind {
@@ -304,7 +303,7 @@ func (p *parser) parseFuncExpr() *ast.FuncExpr {
 
 	return &ast.FuncExpr{
 		Func:   p.expect(token.FUNC),
-		Type:   p.parseType(),
+		Type:   p.parseType(true),
 		Params: p.parseParamList(),
 		Body:   p.parseExprList(),
 	}
@@ -321,7 +320,7 @@ func (p *parser) parseIfExpr() *ast.IfExpr {
 
 	ie := &ast.IfExpr{
 		If:   p.expect(token.IF),
-		Type: p.parseType(),
+		Type: p.parseType(true),
 		Cond: p.parseExpression(),
 		Then: p.parseExpression(),
 	}
@@ -337,7 +336,7 @@ func (p *parser) parseParamList() []*ast.Param {
 	p.expect(token.LPAREN)
 
 	for p.tok != token.RPAREN {
-		param := &ast.Param{Name: p.parseIdent(), Type: p.parseType()}
+		param := &ast.Param{Name: p.parseIdent(), Type: p.parseType(true)}
 		o := &ast.Object{
 			Kind:    ast.VarDecl,
 			Name:    param.Name.Name,
@@ -354,11 +353,10 @@ func (p *parser) parseParamList() []*ast.Param {
 	return params
 }
 
-func (p *parser) parseType() *ast.Ident {
-	if p.tok != token.COLON {
+func (p *parser) parseType(must bool) *ast.Ident {
+	if !must && p.tok != token.COLON {
 		return nil
 	}
-
 	p.expect(token.COLON)
 	return p.parseIdent()
 }
@@ -372,7 +370,7 @@ func (p *parser) parseUnaryExpr() *ast.UnaryExpr {
 func (p *parser) parseVarExpr() *ast.VarExpr {
 	return &ast.VarExpr{
 		Var:    p.expect(token.VAR),
-		Type:   p.parseType(),
+		Type:   p.parseType(true),
 		Params: p.parseParamList(),
 		Body:   p.parseExprList(),
 	}

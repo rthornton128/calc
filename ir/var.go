@@ -2,6 +2,7 @@ package ir
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/rthornton128/calc/ast"
 )
@@ -19,23 +20,15 @@ func (i *Var) String() string {
 type Variable struct {
 	object
 	id     int
-	Assign Object
+	Params []string
+	Body   []Object
 }
 
 func makeVariable(ve *ast.VarExpr, parent *Scope) *Variable {
-	var assign Object = nil
-	if ve.Value != nil {
-		assign = MakeExpr(ve.Value, parent)
-	}
-
-	var typ string
-	if ve.Name.Type != nil {
-		typ = ve.Name.Type.Name
-	}
-
 	v := &Variable{
-		object: newObject(ve.Name.Name, typ, ve.Pos(), ast.VarDecl, parent),
-		Assign: assign,
+		object: newObject("", ve.Type.Name, ve.Pos(), ast.VarDecl, parent),
+		Params: makeParamList(ve.Params, parent),
+		Body:   MakeExprList(ve.Body, parent),
 	}
 
 	parent.Insert(v)
@@ -44,10 +37,18 @@ func makeVariable(ve *ast.VarExpr, parent *Scope) *Variable {
 }
 
 func (v *Variable) String() string {
-	if v.Assign != nil {
-		return fmt.Sprintf("var %s = %s", v.Name(), v.Assign.String())
+	params := make([]string, len(v.Params))
+	for i, p := range v.Params {
+		params[i] = v.Scope().Lookup(p).String()
 	}
-	return fmt.Sprintf("var %s", v.Name())
+
+	body := make([]string, len(v.Body))
+	for i, e := range v.Body {
+		body[i] = e.String()
+	}
+
+	return fmt.Sprintf("var:%s (%s) {%s}", v.Type(), strings.Join(params, ","),
+		strings.Join(body, ","))
 }
 
 func (v *Variable) ID() int      { return v.id }

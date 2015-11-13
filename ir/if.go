@@ -16,8 +16,12 @@ type If struct {
 
 func makeIf(ie *ast.IfExpr, parent *Scope) *If {
 	scope := NewScope(parent)
+	var t string
+	if ie.Type != nil {
+		t = ie.Type.Name
+	}
 	i := &If{
-		object: newObject("if", ie.Type.Name, ie.Pos(), ast.None, scope),
+		object: newObject("if", t, ie.Pos(), ast.None, scope),
 		Cond:   MakeExpr(ie.Cond, parent),
 		Then:   MakeExpr(ie.Then, scope),
 	}
@@ -30,5 +34,6 @@ func makeIf(ie *ast.IfExpr, parent *Scope) *If {
 func (i *If) ID() int      { return i.id }
 func (i *If) SetID(id int) { i.id = id }
 func (i *If) String() string {
-	return fmt.Sprintf("{if %s then %s else %s}", i.Cond, i.Then, i.Else)
+	return fmt.Sprintf("{if:%s %s then %s else %s}", i.typ, i.Cond, i.Then,
+		i.Else)
 }

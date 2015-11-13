@@ -12,8 +12,8 @@ func MakeExpr(e ast.Expr, parent *Scope) Object {
 		return makeBinary(t, parent)
 	case *ast.CallExpr:
 		return makeCall(t, parent)
-	case *ast.ExprList:
-		return makeBlock(t, parent)
+	case *ast.FuncExpr:
+		return makeFunc(t, parent)
 	case *ast.Ident:
 		return makeVar(t, parent)
 	case *ast.IfExpr:
@@ -25,4 +25,12 @@ func MakeExpr(e ast.Expr, parent *Scope) Object {
 	default:
 		panic("unreachable")
 	}
+}
+
+func MakeExprList(el []ast.Expr, parent *Scope) []Object {
+	ol := make([]Object, 0)
+	for _, e := range el {
+		ol = append(ol, MakeExpr(e, parent))
+	}
+	return ol
 }

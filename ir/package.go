@@ -23,7 +23,7 @@ func (p *Package) String() string {
 }
 
 func MakeFile(f *ast.File, parent *Scope) {
-	for _, d := range f.Decls {
-		parent.Insert(MakeDeclaration(d, parent))
+	for _, d := range f.Defs {
+		parent.Insert(MakeDefine(d, parent))
 	}
 }

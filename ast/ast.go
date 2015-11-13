@@ -46,6 +46,7 @@ type DefineStmt struct {
 	Define token.Pos
 	Name   *Ident
 	Type   *Ident
+	Kind   Kind
 	Body   Expr
 }
 

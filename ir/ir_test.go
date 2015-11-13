@@ -18,8 +18,8 @@ type Test struct {
 func TestAssignment(t *testing.T) {
 	tests := []Test{
 		{src: "(= a 3)", pass: false},
-		{src: "(decl fn int ((var a int)(= a true) 0))", pass: false},
-		{src: "(decl fn int ((= fn 0) 0))", pass: false},
+		{src: "(func:int (a:int) (= a 0))", pass: false},
+		{src: "(var:int (a:int) (= a true) 0)", pass: false},
 	}
 	for i, test := range tests {
 		test_expression(t, fmt.Sprintf("assign%d", i), test)
@@ -31,12 +31,12 @@ func TestBinary(t *testing.T) {
 		{src: "(+ 2 3)", pass: true},
 		{src: "(* 2 3 4 5 6)", pass: true},
 		{src: "(/ (* 2 3) (% 4 5) (- 8 6))", pass: true},
-		{src: "(decl main bool (!= 2 3))", pass: true},
-		{src: "(decl main int (+ main 1))", pass: false},
-		{src: "(decl main(a b int) bool (< a b))", pass: true},
-		{src: "(decl main(a bool) bool (== a true))", pass: true},
-		{src: "(decl main(a bool) int (== a true))", pass: false},
-		{src: "(decl main int (+ main 1))", pass: false},
+		{src: "(func:bool () (!= 2 3))", pass: true},
+		{src: "(func:int () (+ main 1))", pass: false},
+		{src: "(func:bool (a:int b:int) (< a b))", pass: true},
+		{src: "(func:bool (a:bool) (== a true))", pass: true},
+		{src: "(func:int (a:bool) (== a true))", pass: false},
+		{src: "(var:int (main:bool) (+ main 1))", pass: false},
 	}
 	for i, test := range tests {
 		test_expression(t, fmt.Sprintf("example%d", i), test)
@@ -46,8 +46,8 @@ func TestBinary(t *testing.T) {
 func TestCall(t *testing.T) {
 	tests := []Test{
 		{src: "(fn)", pass: false},
-		{src: "(decl fn (a int) int (a))", pass: false},
-		{src: "(decl fn int ((var a int) (a)))", pass: false},
+		//{src: "(decl fn (a int) int (a))", pass: false},
+		//{src: "(decl fn int ((var a int) (a)))", pass: false},
 	}
 	for i, test := range tests {
 		test_expression(t, fmt.Sprintf("call%d", i), test)
@@ -64,33 +64,28 @@ func TestConstant(t *testing.T) {
 	}
 }
 
-func TestDeclaration(t *testing.T) {
-	tests := []Test{
-		{src: "(decl fn(a b int) int true)", pass: false},
-		{src: "(decl fn(a b int) bool a)", pass: false},
-		{src: "(decl fn bool 24)", pass: false},
-	}
-	for i, test := range tests {
-		test_expression(t, fmt.Sprintf("declaration%d", i), test)
-	}
-}
-
 func TestFile(t *testing.T) {
 	tests := []Test{
-		{src: "(decl fn(a b int) int (+ a b))(decl main int (fn 2 3))",
+		{src: "(define add:int (func:int (a:int b:int) (+ a b)))" +
+			"(define main:int (func:int () (add 2 3)))",
 			pass: true},
-		{src: "(decl equal(a b int) bool (== a b))" +
-			"(decl main int (if (equal(+ 2 3) (*4 2)) int 0 1))", pass: true},
-		{src: "(decl equal(a b int) bool (== a b))" +
-			"(decl main int (equal 2 3))", pass: false},
-		{src: "(decl fn int 0)(decl main int fn)", pass: false},
-		{src: "(decl fn (a int) int 0)(decl main int (fn 1 2))", pass: false},
-		{src: "(decl fn (a b int) int 0)(decl main int (fn 1))", pass: false},
-		{src: "(decl fn int 0)(decl main int ((= fn 3) 0))", pass: false},
-		{src: "(decl fn (i int, b bool) int 0)(decl main int (fn 42 true))",
+		{src: "(define equal (func:bool (a:int b:int) (== a b)))" +
+			"(define main (func:int () (if:int (equal(+ 2 3) (*4 2)) 0 1)))",
 			pass: true},
-		{src: "(decl fn (i int, b bool) int 0)(decl main int (fn 4 2))",
+		{src: "(define equal (func:bool (a:int b:int) (== a b)))" +
+			"(define main (func:int () (equal 2 3)))", pass: false},
+		{src: "(define fn (func:int () 0))(define main (func:int () fn))",
 			pass: false},
+		{src: "(define fn (func:int (a:int) 0))" +
+			"(define main (func:int () (fn 1 2)))", pass: false},
+		{src: "(define fn (func:int (a:int b:int) 0))" +
+			"(define main (func:int () (fn 1)))", pass: false},
+		{src: "(define fn (func:int () 0))" +
+			"(define main (func:int () (= fn 3) 0))", pass: false},
+		{src: "(define fn (func:int (i:int b:bool) 0))" +
+			"(define main:int (func:int () (fn 42 true)))", pass: true},
+		{src: "(define fn (func:int (i:int b:bool) 0))" +
+			"(define main (func:int () (fn 4 2)))", pass: false},
 	}
 	for i, test := range tests {
 		test_file(t, fmt.Sprintf("file%d", i), test)
@@ -99,15 +94,15 @@ func TestFile(t *testing.T) {
 
 func TestIf(t *testing.T) {
 	tests := []Test{
-		{src: "(if (== 1 1) int 1 0)", pass: true},
-		{src: "(if (!= 1 1) int 1 true)", pass: false},
-		{src: "(if (< 1 1) int false 1)", pass: false},
-		{src: "(if 1 int 0 1)", pass: false},
-		{src: "(decl main (a b int) int (if (<= a b) int 0 1))", pass: true},
-		{src: "(decl main (a b int) int (if (> a b) int 0 1))", pass: true},
-		{src: "(decl main (a b int) int (if (>= a b) int 0 1))", pass: true},
-		{src: "(decl main (a bool) int (if (== a false) int 0 1))", pass: true},
-		{src: "(decl main (a int) int (if (== a false) int 0 1))", pass: false},
+		{src: "(if:int (== 1 1) 1 0)", pass: true},
+		{src: "(if:int (!= 1 1) 1 true)", pass: false},
+		{src: "(if:int (< 1 1) false 1)", pass: false},
+		{src: "(if:int 1 0 1)", pass: false},
+		{src: "(func:int (a:int b:int) (if:int  (<= a b) 0 1))", pass: true},
+		{src: "(func:int (a:int b:int) (if:int (> a b) 0 1))", pass: true},
+		{src: "(func:int (a:int b:int) (if:int (>= a b) 0 1))", pass: true},
+		{src: "(func:int (a:bool) (if:int (== a false) 0 1))", pass: true},
+		{src: "(func:int (a:int) (if:int (== a false) 0 1))", pass: false},
 	}
 	for i, test := range tests {
 		test_expression(t, fmt.Sprintf("if%d", i), test)
@@ -126,14 +121,14 @@ func TestUnary(t *testing.T) {
 
 func TestVar(t *testing.T) {
 	tests := []Test{
-		{src: "(decl main int ((var a int) a))", pass: true},
-		{src: "(decl main int ((var a bool) a))", pass: false},
-		{src: "(decl main int ((var (= a 42)) a))", pass: true},
-		{src: "(decl main int ((var (= main 3)) a))", pass: false},
-		{src: "(decl main bool ((var (= a true)) a))", pass: true},
-		{src: "(decl main int ((var (= a true)) a))", pass: false},
-		{src: "(decl main int ((var (= a 24) bool) a))", pass: false},
-		{src: "(decl main int ((var a int)(= a 42) a))", pass: true},
+		{src: "(var:int (a:int) a)", pass: true},
+		{src: "(var:int (a:bool) a)", pass: false},
+		{src: "(var:int () (= a 42) a)", pass: false},
+		{src: "(var:bool (a:bool) (= a true) a)", pass: true},
+		{src: "(var:int (a:bool) (= a true) a)", pass: false},
+		{src: "(var:int (a:bool) (= a true) a)", pass: false},
+		{src: "(var:bool (a:int) (= a 24))", pass: false},
+		{src: "(var:int (a:int) (= a 42) a)", pass: true},
 	}
 	for i, test := range tests {
 		test_expression(t, fmt.Sprintf("var%d", i), test)
@@ -159,8 +154,8 @@ func test_file(t *testing.T, name string, test Test) {
 func test_handler(t *testing.T, test Test, name string, n ast.Node) {
 	var o ir.Object
 	switch t := n.(type) {
-	case *ast.DeclExpr:
-		o = ir.MakeDeclaration(t, ir.NewScope(nil))
+	case *ast.DefineStmt:
+		o = ir.MakeDefine(t, ir.NewScope(nil))
 	case *ast.Package:
 		o = ir.MakePackage(t, name)
 	case ast.Expr:
@@ -175,6 +170,6 @@ func test_handler(t *testing.T, test Test, name string, n ast.Node) {
 			t.Log(err)
 		}
 		t.Fail()
-	}
-	ir.Tag(o)
+	} /*
+		ir.Tag(o)*/
 }

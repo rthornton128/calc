@@ -61,11 +61,6 @@ func (tc *typeChecker) check(o Object) {
 				t.Rhs.Type())
 			return
 		}
-	case *Block:
-		for _, e := range t.Exprs {
-			tc.check(e)
-		}
-		t.object.typ = t.Exprs[len(t.Exprs)-1].Type()
 	case *Call:
 		o := t.Scope().Lookup(t.Name())
 		if o == nil {
@@ -76,30 +71,36 @@ func (tc *typeChecker) check(o Object) {
 			tc.error(t.Pos(), "call expects function got ", o.Kind())
 			return
 		}
-		decl := o.(*Declaration)
-		if len(t.Args) != len(decl.Params) {
-			tc.error(t.Pos(), "function ", decl.Name(), " expects ", len(decl.Params),
+		f := o.(*Define).Body.(*Function)
+
+		if len(t.Args) != len(f.Params) {
+			tc.error(t.Pos(), "function ", t.Name(), " expects ", len(f.Params),
 				" arguments but received ", len(t.Args))
 			return
 		}
+
 		for i, a := range t.Args {
 			tc.check(a)
-			p := o.Scope().Lookup(decl.Params[i])
+			p := f.Scope().Lookup(f.Params[i])
 			if a.Type() != p.Type() {
 				tc.error(t.Pos(), "parameter ", i, " of function ", t.Name(),
 					" expects type ", p.Type(), " but argument ", i, " is of type ",
 					a.Type())
 			}
 		}
-		t.object.typ = decl.Type()
-	case *Declaration:
+		t.object.typ = f.Type()
+	case *Define:
 		tc.check(t.Body)
-		if t.Type() != t.Body.Type() {
-			tc.error(t.Pos(), "declaration of type ", t.Type(),
-				" but body returns type ", t.Body.Type())
-
-			return
+	case *Function:
+		for _, e := range t.Body {
+			tc.check(e)
 		}
+		tail := t.Body[len(t.Body)-1]
+		if t.Type() != tail.Type() {
+			tc.error(t.Pos(), "final expression in function body is type ",
+				tail.Type(), " but function returns type ", t.Type())
+		}
+
 	case *If:
 		tc.check(t.Cond)
 		if t.Cond.Type() != Bool {
@@ -135,17 +136,14 @@ func (tc *typeChecker) check(o Object) {
 		}
 		t.object.typ = o.Type()
 	case *Variable:
-		if t.Assign != nil {
-			assign := t.Assign.(*Assignment)
-			tc.check(assign.Rhs)
-			if t.Type() == Unknown {
-				t.object.typ = assign.Rhs.Type()
-			}
-			if t.Type() != assign.Rhs.Type() {
-				tc.error(t.Pos(), "variable ", t.Name(), " expects type ", t.Type(),
-					" but initializer is of type ", assign.Rhs.Type())
-				return
-			}
+		for _, e := range t.Body {
+			tc.check(e)
+		}
+
+		tail := t.Body[len(t.Body)-1]
+		if t.Type() != tail.Type() {
+			tc.error(t.Pos(), "last expression of var is of type ", tail.Type(),
+				" but var is of type ", t.Type())
 		}
 	}
 }

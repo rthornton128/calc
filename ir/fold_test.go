@@ -48,22 +48,6 @@ func TestBinaryFolding(t *testing.T) {
 	}
 }
 
-func TestBlockFolding(t *testing.T) {
-	src := "(decl f int ((+ 2 2)(* 4 3)(/ 6 2)(% 11 3) 0))"
-	name := "block"
-	expr, err := parse.ParseExpression(name, src)
-	if err != nil {
-		panic(err)
-	}
-	o := ir.FoldConstants(ir.MakeDeclaration(expr.(*ast.DeclExpr),
-		ir.NewScope(nil)))
-	o = o.(*ir.Declaration).Body
-	validate_constant(t, name, o.(*ir.Block).Exprs[0], FoldTest{src, "4"})
-	validate_constant(t, name, o.(*ir.Block).Exprs[1], FoldTest{src, "12"})
-	validate_constant(t, name, o.(*ir.Block).Exprs[2], FoldTest{src, "3"})
-	validate_constant(t, name, o.(*ir.Block).Exprs[3], FoldTest{src, "2"})
-}
-
 func TestCallFolding(t *testing.T) {
 	src := "(fn (== 3 2) (+ 2 2))"
 	name := "call"
@@ -73,17 +57,8 @@ func TestCallFolding(t *testing.T) {
 	validate_constant(t, name, o.(*ir.Call).Args[1], FoldTest{src, "4"})
 }
 
-func TestDeclarationFolding(t *testing.T) {
-	test := FoldTest{src: "(decl fn int (+ 1 1))", expect: "2"}
-	name := "decl"
-	expr, _ := parse.ParseExpression(name, test.src)
-	o := ir.FoldConstants(ir.MakeDeclaration(expr.(*ast.DeclExpr),
-		ir.NewScope(nil)))
-	validate_constant(t, name, o.(*ir.Declaration).Body, test)
-}
-
 func TestIfFolding(t *testing.T) {
-	src := "(if (== false (!= 3 3)) int (/ 9 3) (* 1 2 3))"
+	src := "(if:int (== false (!= 3 3)) (/ 9 3) (* 1 2 3))"
 	name := "if"
 	expr, _ := parse.ParseExpression(name, src)
 	o := ir.FoldConstants(ir.MakeExpr(expr, ir.NewScope(nil)))
@@ -94,14 +69,16 @@ func TestIfFolding(t *testing.T) {
 
 func TestPackageFolding(t *testing.T) {
 	fs := token.NewFileSet()
-	f1, _ := parse.ParseFile(fs, "package", "(decl f1 int (+ 1 2))")
-	f2, _ := parse.ParseFile(fs, "package", "(decl f2 int (* 8 2))")
+	f1, _ := parse.ParseFile(fs, "package", "(define f1 (func:int () (+ 1 2)))")
+	f2, _ := parse.ParseFile(fs, "package", "(define f2 (func:int () (* 8 2)))")
 	pkg := &ast.Package{Files: []*ast.File{f1, f2}}
 	o := ir.FoldConstants(ir.MakePackage(pkg, "package"))
 	o1 := o.(*ir.Package).Scope().Lookup("f1")
 	o2 := o.(*ir.Package).Scope().Lookup("f2")
-	validate_constant(t, "package", o1.(*ir.Declaration).Body, FoldTest{"", "3"})
-	validate_constant(t, "package", o2.(*ir.Declaration).Body, FoldTest{"", "16"})
+	validate_constant(t, "package", o1.(*ir.Define).Body.(*ir.Function).Body[0],
+		FoldTest{"", "3"})
+	validate_constant(t, "package", o2.(*ir.Define).Body.(*ir.Function).Body[0],
+		FoldTest{"", "16"})
 }
 
 func TestUnaryFolding(t *testing.T) {
@@ -117,11 +94,11 @@ func TestUnaryFolding(t *testing.T) {
 }
 
 func TestVarFolding(t *testing.T) {
-	test := FoldTest{src: "(var (= a (/ 24 3)))", expect: "8"}
+	test := FoldTest{src: "(var:int (a:int) (= a (/ 24 3)))", expect: "8"}
 	name := "var"
 	expr, _ := parse.ParseExpression(name, test.src)
 	o := ir.FoldConstants(ir.MakeExpr(expr, ir.NewScope(nil)))
-	o = o.(*ir.Variable).Assign.(*ir.Assignment).Rhs
+	o = o.(*ir.Variable).Body[0].(*ir.Assignment).Rhs
 	validate_constant(t, name, o, test)
 }
 
