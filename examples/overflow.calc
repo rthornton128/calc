@@ -1,6 +1,0 @@
-; This example will produce a stack overflow due to the small, static stack
-; in Calc 2
-
-(decl infinite (n int) int (infinite n))
-
-(decl main int (infinite 1))

@@ -4,14 +4,14 @@
 ; The two largest numbers are 5 and 3. The sum of squares of these two
 ; numbers are 25 + 9 = 34
 
-(decl square (n int) int (* n n))
+(define square (func:int (n:int) (* n n)))
 
-(decl sumOfSquares (x y int) int
-	(+ (square x) (square y)))
+(define sumOfSquares (func:int (x:int y:int)
+	(+ (square x) (square y))))
 
-(decl largestTwoOfThree (x y z int) int
-	(if (>= x y) int
-		(sumOfSquares x (if (>= y z) int y z))
-		(sumOfSquares y (if (>= x z) int x z))))
+(define largestTwoOfThree (func:int (x:int y:int z:int)
+	(if:int (>= x y) 
+		(sumOfSquares x (if:int (>= y z) y z))
+		(sumOfSquares y (if:int (>= x z) x z)))))
 
-(decl main int (largestTwoOfThree 5 2 3))
+(define main (func:int () (largestTwoOfThree 5 2 3)))

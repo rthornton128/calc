@@ -158,12 +158,10 @@ func (c *compiler) compObject(o ir.Object) string {
 		str = c.compBinary(t)
 	case *ir.Call:
 		str = c.compCall(t)
-	case *ir.Declaration:
-		c.compDeclaration(t)
-	case *ir.Block:
-		for _, e := range t.Exprs {
-			str = c.compObject(e)
-		}
+	//case *ir.Define:
+	//c.compDefine(t)
+	case *ir.Function:
+		c.compFunction(t)
 	case *ir.If:
 		str = c.compIf(t)
 	case *ir.Unary:
@@ -199,9 +197,16 @@ func (c *compiler) compConstant(con *ir.Constant) string {
 	return con.String()
 }
 
-func (c *compiler) compDeclaration(d *ir.Declaration) {
+func (c *compiler) compDefine(d *ir.Define) {
 	c.emit("%s {\n", c.compSignature(d))
-	c.emit("return %s;\n}\n", c.compObject(d.Body))
+	c.compFunction(d.Body.(*ir.Function))
+}
+
+func (c *compiler) compFunction(f *ir.Function) {
+	for _, e := range f.Body[:len(f.Body)-1] {
+		c.compObject(e)
+	}
+	c.emit("return %s;\n}\n", c.compObject(f.Body[len(f.Body)-1]))
 }
 
 func (c *compiler) compIdent(i *ir.Var) string {
@@ -223,19 +228,21 @@ func (c *compiler) compIf(i *ir.If) string {
 func (c *compiler) compPackage(p *ir.Package) {
 	names := p.Scope().Names()
 	for _, name := range names {
-		d := p.Scope().Lookup(name).(*ir.Declaration)
-		c.emit("%s;\n", c.compSignature(d))
-		defer c.compDeclaration(d)
+		if d, ok := p.Scope().Lookup(name).(*ir.Define); ok {
+			c.emit("%s;\n", c.compSignature(d))
+			defer c.compDefine(d)
+		}
 	}
 }
 
-func (c *compiler) compSignature(d *ir.Declaration) string {
-	params := make([]string, len(d.Params))
-	for i, p := range d.Params {
-		param := d.Scope().Lookup(p).(*ir.Param)
+func (c *compiler) compSignature(d *ir.Define) string {
+	f := d.Body.(*ir.Function)
+	params := make([]string, len(f.Params))
+	for i, p := range f.Params {
+		param := f.Scope().Lookup(p).(*ir.Param)
 		params[i] = fmt.Sprintf("%s _v%d", cType(param.Type()), param.ID())
 	}
-	return fmt.Sprintf("%s _%s(%s)", cType(d.Type()), d.Name(),
+	return fmt.Sprintf("%s _%s(%s)", cType(f.Type()), d.Name(),
 		strings.Join(params, ","))
 }
 
@@ -247,9 +254,14 @@ func (c *compiler) compVar(v *ir.Var) string {
 	return fmt.Sprintf("_v%d", v.Scope().Lookup(v.Name()).(ir.IDer).ID())
 }
 
-func (c *compiler) compVariable(v *ir.Variable) {
-	c.emit("%s _v%d = 0;\n", cType(v.Type()), v.ID())
-	if v.Assign != nil {
-		c.compObject(v.Assign)
+func (c *compiler) compVariable(v *ir.Variable) string {
+	for _, p := range v.Params {
+		param := v.Scope().Lookup(p).(*ir.Param)
+		c.emit("%s _v%d = 0; // name: %s\n", cType(param.Type()), param.ID(),
+			param.Name())
 	}
+	for _, e := range v.Body[:len(v.Body)-1] {
+		c.compObject(e)
+	}
+	return c.compObject(v.Body[len(v.Body)-1])
 }

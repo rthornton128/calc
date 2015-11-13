@@ -1,1 +1,0 @@
-(decl main int ((var a int) a))

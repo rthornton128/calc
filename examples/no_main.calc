@@ -1,3 +1,0 @@
-; Produces an error complaining that main is missing
-
-(decl add (a b int) int (+ a b))

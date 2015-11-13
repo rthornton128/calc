@@ -1,2 +1,0 @@
-; Example of typed, functional if
-(decl main int (if 1 int 2 3))

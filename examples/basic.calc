@@ -1,2 +1,2 @@
 ; Minimal example. This is the shortest program that can be written in Calc 2
-(decl main int 1)
+(define main (func:int () 1))
