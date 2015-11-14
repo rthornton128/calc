@@ -16,7 +16,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/rthornton128/calc/comp"
+	"github.com/rthornton128/calc/cgen"
 )
 
 func cleanup(filename string) {
