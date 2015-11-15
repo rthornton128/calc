@@ -140,6 +140,7 @@ func (c *compiler) emitHeaders() {
 
 func (c *compiler) emitMain() {
 	c.emitln("int main(void) {")
+	c.emitln("init();")
 	c.emitln("printf(\"%d\\n\", _main());")
 	c.emitln("return 0;")
 	c.emitln("}")
@@ -169,7 +170,8 @@ func (c *compiler) compObject(o ir.Object) string {
 	case *ir.Var:
 		str = c.compVar(t)
 	case *ir.Variable:
-		c.compVariable(t)
+		c.emit("%s _v%d = 0;\n", cType(t.Type()), t.ID())
+		str = c.compVariable(t)
 	}
 	return str
 }
@@ -225,14 +227,31 @@ func (c *compiler) compIf(i *ir.If) string {
 	return fmt.Sprintf("_v%d", i.ID())
 }
 
+func (c *compiler) compInits(inits []*ir.Define) {
+	c.emitln("void init(void) {")
+	for _, d := range inits {
+		c.compVariable(d.Body.(*ir.Variable))
+	}
+	c.emitln("}")
+}
+
 func (c *compiler) compPackage(p *ir.Package) {
 	names := p.Scope().Names()
+	inits := make([]*ir.Define, 0)
 	for _, name := range names {
 		if d, ok := p.Scope().Lookup(name).(*ir.Define); ok {
-			c.emit("%s;\n", c.compSignature(d))
-			defer c.compDefine(d)
+			switch t := d.Body.(type) {
+			case *ir.Function:
+				c.emit("%s;\n", c.compSignature(d))
+				defer c.compDefine(d)
+			case *ir.Variable:
+				c.emit("%s _v%d = 0; // Name: %s\n", cType(t.Type()), t.ID(), d.Name())
+				inits = append(inits, d)
+			}
 		}
 	}
+
+	c.compInits(inits)
 }
 
 func (c *compiler) compSignature(d *ir.Define) string {
@@ -251,7 +270,14 @@ func (c *compiler) compUnary(u *ir.Unary) string {
 }
 
 func (c *compiler) compVar(v *ir.Var) string {
-	return fmt.Sprintf("_v%d", v.Scope().Lookup(v.Name()).(ir.IDer).ID())
+	var o ir.Object
+	switch t := v.Scope().Lookup(v.Name()).(type) {
+	case *ir.Define:
+		o = t.Body
+	case *ir.Param:
+		o = t
+	}
+	return fmt.Sprintf("_v%d", o.(ir.IDer).ID())
 }
 
 func (c *compiler) compVariable(v *ir.Variable) string {
@@ -263,5 +289,6 @@ func (c *compiler) compVariable(v *ir.Variable) string {
 	for _, e := range v.Body[:len(v.Body)-1] {
 		c.compObject(e)
 	}
-	return c.compObject(v.Body[len(v.Body)-1])
+	c.emit("_v%d = %s;\n", v.ID(), c.compObject(v.Body[len(v.Body)-1]))
+	return fmt.Sprintf("_v%d", v.ID())
 }

@@ -51,6 +51,7 @@ func tag(o Object, nextID *int) {
 	case *Unary:
 		tag(t.Rhs, nextID)
 	case *Variable:
+		setID(t, nextID)
 		for _, p := range t.Params {
 			setID(t.Scope().Lookup(p).(IDer), nextID)
 		}
