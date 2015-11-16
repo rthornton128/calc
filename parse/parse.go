@@ -203,12 +203,16 @@ func (p *parser) parseDefineStmt() *ast.DefineStmt {
 	p.expect(token.LPAREN)
 	defer p.expect(token.RPAREN)
 
-	return &ast.DefineStmt{
+	d := &ast.DefineStmt{
 		Define: p.expect(token.DEFINE),
 		Name:   p.parseIdent(),
-		Type:   p.parseType(false),
-		Body:   p.parseExpression(),
 	}
+
+	if p.tok == token.COLON {
+		d.Type = p.parseType()
+	}
+	d.Body = p.parseExpression()
+	return d
 }
 
 func (p *parser) parseExpression() ast.Expr {
@@ -270,11 +274,13 @@ func (p *parser) parseFile() *ast.File {
 		default:
 			def.Kind = ast.VarDecl
 		}
+
 		prev := p.curScope.Insert(&ast.Object{
 			NamePos: def.Name.NamePos,
 			Name:    def.Name.Name,
 			Kind:    def.Kind,
 		})
+
 		if prev != nil {
 			switch prev.Kind {
 			case ast.FuncDecl:
@@ -285,6 +291,10 @@ func (p *parser) parseFile() *ast.File {
 					p.file.Position(prev.NamePos))
 			}
 			continue
+		}
+
+		if p.errors.Count() > 0 {
+			break
 		}
 
 		defs = append(defs, def)
@@ -303,7 +313,7 @@ func (p *parser) parseFuncExpr() *ast.FuncExpr {
 
 	return &ast.FuncExpr{
 		Func:   p.expect(token.FUNC),
-		Type:   p.parseType(true),
+		Type:   p.parseType(),
 		Params: p.parseParamList(),
 		Body:   p.parseExprList(),
 	}
@@ -320,7 +330,7 @@ func (p *parser) parseIfExpr() *ast.IfExpr {
 
 	ie := &ast.IfExpr{
 		If:   p.expect(token.IF),
-		Type: p.parseType(true),
+		Type: p.parseType(),
 		Cond: p.parseExpression(),
 		Then: p.parseExpression(),
 	}
@@ -336,7 +346,7 @@ func (p *parser) parseParamList() []*ast.Param {
 	p.expect(token.LPAREN)
 
 	for p.tok != token.RPAREN {
-		param := &ast.Param{Name: p.parseIdent(), Type: p.parseType(true)}
+		param := &ast.Param{Name: p.parseIdent(), Type: p.parseType()}
 		o := &ast.Object{
 			Kind:    ast.VarDecl,
 			Name:    param.Name.Name,
@@ -353,10 +363,7 @@ func (p *parser) parseParamList() []*ast.Param {
 	return params
 }
 
-func (p *parser) parseType(must bool) *ast.Ident {
-	if !must && p.tok != token.COLON {
-		return nil
-	}
+func (p *parser) parseType() *ast.Ident {
 	p.expect(token.COLON)
 	return p.parseIdent()
 }
@@ -370,7 +377,7 @@ func (p *parser) parseUnaryExpr() *ast.UnaryExpr {
 func (p *parser) parseVarExpr() *ast.VarExpr {
 	return &ast.VarExpr{
 		Var:    p.expect(token.VAR),
-		Type:   p.parseType(true),
+		Type:   p.parseType(),
 		Params: p.parseParamList(),
 		Body:   p.parseExprList(),
 	}
