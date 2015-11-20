@@ -196,9 +196,15 @@ func (c *compiler) compConstant(con *ir.Constant) string {
 	return con.String()
 }
 
-func (c *compiler) compDefine(d *ir.Define) {
-	c.emit("%s {\n", c.compSignature(d))
-	c.compFunction(d.Body.(*ir.Function))
+func (c *compiler) compDefine(d *ir.Define) string {
+	switch t := d.Body.(type) {
+	case *ir.Function:
+		c.emit("%s {\n", c.compSignature(d.Name(), t))
+		c.compFunction(d.Body.(*ir.Function))
+		return ""
+	default:
+		return c.compObject(t)
+	}
 }
 
 func (c *compiler) compFunction(f *ir.Function) {
@@ -229,26 +235,21 @@ func (c *compiler) compPackage(p *ir.Package) {
 	for _, name := range names {
 		// later, this may need to check for import clauses
 		if d, ok := p.Scope().Lookup(name).(*ir.Define); ok {
-			switch t := d.Body.(type) {
-			case *ir.Function:
-				c.emit("%s;\n", c.compSignature(d))
+			if f, ok := d.Body.(*ir.Function); ok {
+				c.emit("%s;\n", c.compSignature(d.Name(), f))
 				defer c.compDefine(d)
-			case *ir.Variable:
-				c.emit("%s _v%d = 0; // Variable: %s\n", cType(t.Type()), t.ID(),
-					d.Name())
 			}
 		}
 	}
 }
 
-func (c *compiler) compSignature(d *ir.Define) string {
-	f := d.Body.(*ir.Function)
+func (c *compiler) compSignature(name string, f *ir.Function) string {
 	params := make([]string, len(f.Params))
 	for i, p := range f.Params {
 		param := f.Scope().Lookup(p).(*ir.Param)
 		params[i] = fmt.Sprintf("%s _v%d", cType(param.Type()), param.ID())
 	}
-	return fmt.Sprintf("%s _%s(%s)", cType(f.Type()), d.Name(),
+	return fmt.Sprintf("%s _%s(%s)", cType(f.Type()), name,
 		strings.Join(params, ","))
 }
 
@@ -257,17 +258,13 @@ func (c *compiler) compUnary(u *ir.Unary) string {
 }
 
 func (c *compiler) compVar(v *ir.Var) string {
-	var o ir.Object
 	switch t := v.Scope().Lookup(v.Name()).(type) {
 	case *ir.Define:
-		if v, ok := t.Body.(*ir.Variable); ok {
-			return c.compVariable(v)
-		}
-		o = t.Body
+		return c.compDefine(t)
 	case *ir.Param:
-		o = t
+		return fmt.Sprintf("_v%d", t.ID())
 	}
-	return fmt.Sprintf("_v%d", o.(ir.IDer).ID())
+	panic("unreachable")
 }
 
 func (c *compiler) compVariable(v *ir.Variable) string {

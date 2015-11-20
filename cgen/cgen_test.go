@@ -27,41 +27,41 @@ func init() {
 }
 
 func TestSimpleExpression(t *testing.T) {
-	test_handler(t, "(define main (func:int () 42))", "42")
+	test_handler(t, "(define main (func:int 42))", "42")
 }
 
 func TestBinary(t *testing.T) {
-	test_handler(t, "(define main (func:int () (+ 5 3)))", "8")
+	test_handler(t, "(define main (func:int (+ 5 3)))", "8")
 	test_handler(t, ";comment 1\n"+
-		"(define main (func:int () (* 5 3))); comment 2", "15")
-	test_handler(t, "(define main (func:int()"+
+		"(define main (func:int (* 5 3))); comment 2", "15")
+	test_handler(t, "(define main (func:int"+
 		"(- (* 9 (+ 2 3)) (+ (/ 20 (% 15 10)) 1))))", "40")
 }
 
 func TestFunc(t *testing.T) {
-	test_handler(t, "(define fn (func:int (a:int b:int) (+ a b)))\n"+
-		"(define main (func:int() (fn 1 2)))", "3")
+	test_handler(t, "(define fn (func (a:int b:int):int (+ a b)))\n"+
+		"(define main (func:int (fn 1 2)))", "3")
 }
 
 func TestIfThenElse(t *testing.T) {
-	test_handler(t, "(define main (func:int () (if:int true 99)))", "99")
-	test_handler(t, "(define main (func:int () (if:int false 2 3)))", "3")
-	test_handler(t, "(define main (func:int () (if:int (< 2 3) 7 3)))", "7")
-	test_handler(t, "(define main (func:int ()"+
-		"(var:int (a:int) (if:int (< a 3) 1 3))))", "1")
+	test_handler(t, "(define main (func:int (if true :int 99)))", "99")
+	test_handler(t, "(define main (func:int (if false :int 2 3)))", "3")
+	test_handler(t, "(define main (func:int (if (< 2 3):int 7 3)))", "7")
+	test_handler(t, "(define main (func:int"+
+		"(var (a:int):int (if (< a 3):int 1 3))))", "1")
 }
 
 func TestVarAndAssign(t *testing.T) {
-	test_handler(t, "(define main (func:int () (var:int (a:int) (= a 42) a)))",
+	test_handler(t, "(define main (func:int (var (a:int):int (= a 42) a)))",
 		"42")
 }
 
 func TestUnary(t *testing.T) {
-	test_handler(t, "(define main (func:int () -24))", "-24")
-	test_handler(t, "(define main (func:int ()\n"+
-		"(var:int (z:int) (= z 12) -z)))", "-12")
-	test_handler(t, "(define fn (func:int (num:int) -num))\n"+
-		"(define main (func:int () (fn -42)))", "42")
+	test_handler(t, "(define main (func:int -24))", "-24")
+	test_handler(t, "(define main (func:int\n"+
+		"(var (z:int):int (= z 12) -z)))", "-12")
+	test_handler(t, "(define fn (func (num:int):int -num))\n"+
+		"(define main (func:int (fn -42)))", "42")
 }
 
 func test_handler(t *testing.T, src, expected string) {

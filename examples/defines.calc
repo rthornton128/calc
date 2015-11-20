@@ -1,0 +1,6 @@
+(define a 0) ; bind constant 0 to a; infer type
+(define b (+ 3 4)) ; bind binary expr to b
+(define c (if true :int 1)) ; bind if expr to c
+(define d (var (n:int) :int (= n 21 ) (* n 2))) ; bind var expr to d
+(define e (func (n:int m:int) :int (+ n m))) ; bind function to e
+(define main:int (func :int (e (e d c) (e a b)))) ; lets do this!
