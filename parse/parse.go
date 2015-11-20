@@ -227,6 +227,8 @@ func (p *parser) parseExpression() ast.Expr {
 			e = p.parseBinaryExpr()
 		case token.ASSIGN:
 			e = p.parseAssignExpr()
+		case token.FOR:
+			e = p.parseFor()
 		case token.FUNC:
 			e = p.parseFuncExpr()
 		case token.IDENT:
@@ -305,6 +307,15 @@ func (p *parser) parseFile() *ast.File {
 	}
 
 	return &ast.File{Defs: defs}
+}
+
+func (p *parser) parseFor() *ast.ForExpr {
+	return &ast.ForExpr{
+		For:  p.expect(token.FOR),
+		Cond: p.parseExpression(),
+		Type: p.parseType(),
+		Body: p.parseExprList(),
+	}
 }
 
 func (p *parser) parseFuncExpr() *ast.FuncExpr {

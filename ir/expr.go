@@ -19,6 +19,8 @@ func MakeExpr(e ast.Expr, parent *Scope) Object {
 		return makeBinary(t, parent)
 	case *ast.CallExpr:
 		return makeCall(t, parent)
+	case *ast.ForExpr:
+		return makeFor(t, parent)
 	case *ast.FuncExpr:
 		return makeFunc(t, parent)
 	case *ast.Ident:

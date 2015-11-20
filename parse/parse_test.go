@@ -35,6 +35,7 @@ const (
 	CALL
 	DEFINE
 	FILE
+	FOR
 	FUNC
 	IDENT
 	IF
@@ -50,6 +51,7 @@ var typeStrings = []string{
 	CALL:    "callexpr",
 	DEFINE:  "definestmt",
 	FILE:    "file",
+	FOR:     "for",
 	FUNC:    "funcexpr",
 	IDENT:   "ident",
 	IF:      "if",
@@ -81,6 +83,8 @@ func (t *Tester) Visit(n ast.Node) bool {
 		typ = DEFINE
 	case *ast.File:
 		typ = FILE
+	case *ast.ForExpr:
+		typ = FOR
 	case *ast.FuncExpr:
 		typ = FUNC
 	case *ast.Ident:
@@ -178,6 +182,18 @@ func TestParseComment(t *testing.T) {
 		{"first-line", "; comment\na", []Type{IDENT}, true},
 		{"nested-comment", "(+ 2; comment\n3)", []Type{BINARY, BASIC, BASIC}, true},
 		{"comment-only", ";comment", []Type{}, false},
+	}
+	handleTests(t, tests)
+}
+
+func TestParseFor(t *testing.T) {
+	tests := []Test{
+		{"simple", "(for true :int 1)", []Type{FOR, BASIC, BASIC}, true},
+		{"no-cond", "(for :int 1)", []Type{}, false},
+		{"no-type", "(for true 1)", []Type{}, false},
+		{"no-body", "(for true :int)", []Type{}, false},
+		{"cond-with-2-expr-body", "(for (== n true) :int (+ 2 3) 52)",
+			[]Type{FOR, BINARY, IDENT, BASIC, BINARY, BASIC, BASIC, BASIC}, false},
 	}
 	handleTests(t, tests)
 }

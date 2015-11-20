@@ -47,6 +47,7 @@ const (
 
 	key_start
 	DEFINE
+	FOR
 	FUNC
 	IF
 	VAR
@@ -79,6 +80,7 @@ var tok_strings = map[Token]string{
 	LTE:     "<=",
 	GTE:     ">=",
 	DEFINE:  "define",
+	FOR:     "for",
 	FUNC:    "func",
 	IF:      "if",
 	VAR:     "var",

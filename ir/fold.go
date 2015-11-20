@@ -33,6 +33,11 @@ func fold(o Object) Object {
 		}
 	case *Define:
 		t.Body = fold(t.Body)
+	case *For:
+		t.Cond = fold(t.Cond)
+		for i, e := range t.Body {
+			t.Body[i] = fold(e)
+		}
 	case *Function:
 		for i, e := range t.Body {
 			t.Body[i] = fold(e)

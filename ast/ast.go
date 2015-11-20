@@ -54,6 +54,13 @@ type File struct {
 	Defs []*DefineStmt
 }
 
+type ForExpr struct {
+	For  token.Pos
+	Type *Ident
+	Cond Expr
+	Body []Expr
+}
+
 type FuncExpr struct {
 	Func   token.Pos
 	Type   *Ident
@@ -114,6 +121,7 @@ func (b *BinaryExpr) Pos() token.Pos { return b.OpPos }
 func (c *CallExpr) Pos() token.Pos   { return c.Name.Pos() }
 func (d *DefineStmt) Pos() token.Pos { return d.Define }
 func (f *File) Pos() token.Pos       { return token.NoPos }
+func (f *ForExpr) Pos() token.Pos    { return f.For }
 func (f *FuncExpr) Pos() token.Pos   { return f.Func }
 func (i *Ident) Pos() token.Pos      { return i.NamePos }
 func (i *IfExpr) Pos() token.Pos     { return i.If }
@@ -127,6 +135,7 @@ func (a *AssignExpr) exprNode() {}
 func (b *BasicLit) exprNode()   {}
 func (b *BinaryExpr) exprNode() {}
 func (c *CallExpr) exprNode()   {}
+func (f *ForExpr) exprNode()    {}
 func (f *FuncExpr) exprNode()   {}
 func (i *IfExpr) exprNode()     {}
 func (i *Ident) exprNode()      {}

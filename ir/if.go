@@ -23,16 +23,13 @@ type If struct {
 
 func makeIf(ie *ast.IfExpr, parent *Scope) *If {
 	scope := NewScope(parent)
-	var t string
-	if ie.Type != nil {
-		t = ie.Type.Name
-	}
 	i := &If{
-		object: newObject("if", t, ie.Pos(), ast.None, scope),
+		object: newObject("if-then", ie.Type.Name, ie.Pos(), ast.None, scope),
 		Cond:   MakeExpr(ie.Cond, parent),
 		Then:   MakeExpr(ie.Then, scope),
 	}
 	if ie.Else != nil {
+		i.object.name += "-else"
 		i.Else = MakeExpr(ie.Else, scope)
 	}
 	return i

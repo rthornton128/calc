@@ -34,11 +34,15 @@ func Walk(node Node, v Visitor) {
 		for _, def := range n.Defs {
 			Walk(def, v)
 		}
+	case *ForExpr:
+		Walk(n.Cond, v)
+		for _, e := range n.Body {
+			Walk(e, v)
+		}
 	case *FuncExpr:
 		for _, e := range n.Body {
 			Walk(e, v)
 		}
-	case *Ident: /* do nothing */
 	case *IfExpr:
 		Walk(n.Cond, v)
 		Walk(n.Then, v)

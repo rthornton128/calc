@@ -136,11 +136,11 @@ func (tc *typeChecker) check(o Object) {
 			tc.error(t.Pos(), "undeclared variable ", t.Name())
 			return
 		}
-		//if o.Kind() != ast.VarDecl {
-		//tc.error(t.Pos(), "may non reference non-variable ", o.Kind(), " named ",
-		//t.Name())
-		//return
-		//}
+		if o.Kind() == ast.FuncDecl {
+			tc.error(t.Pos(), "function ", t.Name(), "used as variable; must be used "+
+				"in call form (surrounded in parentheses")
+			return
+		}
 		t.object.typ = o.Type()
 	case *Variable:
 		for _, e := range t.Body {

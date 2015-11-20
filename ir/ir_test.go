@@ -99,6 +99,16 @@ func TestFile(t *testing.T) {
 	}
 }
 
+func TestFor(t *testing.T) {
+	tests := []Test{
+		{src: "(for true :int 0)", pass: true},
+		{src: "(for (!= 1 2) :bool false)", pass: true},
+	}
+	for i, test := range tests {
+		test_expression(t, fmt.Sprintf("for%d", i), test)
+	}
+}
+
 func TestIf(t *testing.T) {
 	tests := []Test{
 		{src: "(if (== 1 1):int 1 0)", pass: true},

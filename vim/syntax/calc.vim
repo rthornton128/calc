@@ -17,10 +17,12 @@ syn case match
 syn keyword calcStatement define
 syn keyword calcConditional if
 syn keyword calcExpression func var
+syn keyword calcRepeat for
 
 hi def link calcStatement Statement
 hi def link calcConditional Conditional
 hi def link calcExpression Keyword
+hi def link calcRepeat Repeat
 
 " Predeclared types
 syn keyword calcType bool int

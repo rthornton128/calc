@@ -148,34 +148,37 @@ func (c *compiler) emitMain() {
 /* Main Compiler */
 
 func (c *compiler) compObject(o ir.Object) string {
-	var str string
 	switch t := o.(type) {
 	case *ir.Assignment:
-		c.compAssignment(t)
+		return c.compAssignment(t)
 	case *ir.Constant:
-		str = c.compConstant(t)
+		return c.compConstant(t)
 	case *ir.Binary:
-		str = c.compBinary(t)
+		return c.compBinary(t)
 	case *ir.Call:
-		str = c.compCall(t)
-	case *ir.Function:
-		c.compFunction(t)
+		return c.compCall(t)
+	case *ir.For:
+		return c.compFor(t)
+	//case *ir.Function:
+	//return c.compFunction(t)
 	case *ir.If:
-		str = c.compIf(t)
+		return c.compIf(t)
 	case *ir.Unary:
-		str = c.compUnary(t)
+		return c.compUnary(t)
 	case *ir.Var:
-		str = c.compVar(t)
+		return c.compVar(t)
 	case *ir.Variable:
-		c.emit("%s _v%d = 0;\n", cType(t.Type()), t.ID())
-		str = c.compVariable(t)
+		c.emit("%s _v%d = 0; // %s\n", cType(t.Type()), t.ID(), t.Name())
+		return c.compVariable(t)
 	}
-	return str
+	return ""
 }
 
-func (c *compiler) compAssignment(a *ir.Assignment) {
+func (c *compiler) compAssignment(a *ir.Assignment) string {
 	o := a.Scope().Lookup(a.Lhs)
-	c.emit("_v%d = %s;\n", o.(ir.IDer).ID(), c.compObject(a.Rhs))
+	id := fmt.Sprintf("_v%d", o.(ir.IDer).ID())
+	c.emit("%s = %s;\n", id, c.compObject(a.Rhs))
+	return id
 }
 
 func (c *compiler) compBinary(b *ir.Binary) string {
@@ -218,8 +221,21 @@ func (c *compiler) compIdent(i *ir.Var) string {
 	return fmt.Sprintf("_v%d", i.Scope().Lookup(i.Name()).(ir.IDer).ID())
 }
 
+func (c *compiler) compFor(f *ir.For) string {
+	c.emit("%s _v%d = 0; // %s\n", cType(f.Type()), f.ID(), f.Name())
+	c.emit("goto _FC%d;\n", f.ID())
+	c.emit("_FB%d: ;\n", f.ID())
+	for _, e := range f.Body[:len(f.Body)-1] {
+		c.compObject(e)
+	}
+	c.emit("_v%d = %s;\n", f.ID(), c.compObject(f.Body[len(f.Body)-1]))
+	c.emit("_FC%d: ;\n", f.ID())
+	c.emit("if (%s) goto _FB%d;\n", c.compObject(f.Cond), f.ID())
+	return fmt.Sprintf("_v%d", f.ID())
+}
+
 func (c *compiler) compIf(i *ir.If) string {
-	c.emit("%s _v%d = 0;\n", cType(i.Type()), i.ID())
+	c.emit("%s _v%d = 0; // %s\n", cType(i.Type()), i.ID(), i.Name())
 	c.emit("if (%s) {\n", c.compObject(i.Cond))
 	c.emit("_v%d = %s;\n", i.ID(), c.compObject(i.Then))
 	if i.Else != nil {

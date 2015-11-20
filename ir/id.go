@@ -32,6 +32,12 @@ func tag(o Object, nextID *int) {
 		}
 	case *Define:
 		tag(t.Body, nextID)
+	case *For:
+		setID(t, nextID)
+		tag(t.Cond, nextID)
+		for _, e := range t.Body {
+			tag(e, nextID)
+		}
 	case *Function:
 		for _, p := range t.Params {
 			setID(t.Scope().Lookup(p).(IDer), nextID)
