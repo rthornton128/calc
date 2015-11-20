@@ -65,7 +65,7 @@ func TestCallFolding(t *testing.T) {
 }
 
 func TestIfFolding(t *testing.T) {
-	src := "(if:int (== false (!= 3 3)) (/ 9 3) (* 1 2 3))"
+	src := "(if (== false (!= 3 3)):int (/ 9 3) (* 1 2 3))"
 	name := "if"
 	expr, _ := parse.ParseExpression(name, src)
 	o := ir.FoldConstants(ir.MakeExpr(expr, ir.NewScope(nil)))
@@ -76,8 +76,8 @@ func TestIfFolding(t *testing.T) {
 
 func TestPackageFolding(t *testing.T) {
 	fs := token.NewFileSet()
-	f1, _ := parse.ParseFile(fs, "package", "(define f1 (func:int () (+ 1 2)))")
-	f2, _ := parse.ParseFile(fs, "package", "(define f2 (func:int () (* 8 2)))")
+	f1, _ := parse.ParseFile(fs, "package", "(define f1 (func:int (+ 1 2)))")
+	f2, _ := parse.ParseFile(fs, "package", "(define f2 (func:int (* 8 2)))")
 	pkg := &ast.Package{Files: []*ast.File{f1, f2}}
 	o := ir.FoldConstants(ir.MakePackage(pkg, "package"))
 	o1 := o.(*ir.Package).Scope().Lookup("f1")
@@ -101,7 +101,7 @@ func TestUnaryFolding(t *testing.T) {
 }
 
 func TestVarFolding(t *testing.T) {
-	test := FoldTest{src: "(var:int (a:int) (= a (/ 24 3)))", expect: "8"}
+	test := FoldTest{src: "(var (a:int):int (= a (/ 24 3)))", expect: "8"}
 	name := "var"
 	expr, _ := parse.ParseExpression(name, test.src)
 	o := ir.FoldConstants(ir.MakeExpr(expr, ir.NewScope(nil)))
