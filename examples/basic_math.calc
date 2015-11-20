@@ -1,4 +1,4 @@
 ; Example using straight arithmetic with nested expressions
 ; Expected Output: 12
 
-(define main (func:int () (- (+ 10 8 2) (* 1 5) (/ 9 3 ))))
+(define main (func:int (- (+ 10 8 2) (* 1 5) (/ 9 3 ))))

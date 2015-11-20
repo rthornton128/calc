@@ -1,5 +1,5 @@
 ; Absolute value example
 
-(define abs (func:int (n:int) (if:int (< n 0) -n n)))
+(define abs (func (n:int) :int (if (< n 0) :int -n n)))
 
-(define main (func:int () (abs -24)))
+(define main (func:int (abs -24)))

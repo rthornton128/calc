@@ -1,3 +1,3 @@
-(define a (var:int (b:int) (= b (if:int true 42)) b))
-(define c (func:int () (var:int (b:int) (+ a b))))
-(define main (func:int () a (c)))
+(define a (var (b:int):int (= b (if true:int 42)) b))
+(define c (func :int (var (b:int):int (+ a b))))
+(define main (func:int a (c)))

@@ -1,9 +1,9 @@
 ; Fibonacci number example using recursion
 ; Expected Output: 55
 
-(define fib (func:int (n:int)
-	(if:int (<= n 0) 0
-		(if:int (== n 1) 1
+(define fib (func (n:int):int
+	(if (<= n 0):int 0
+		(if (== n 1):int 1
 			(+ n (fib (- n 1)))))))
 
-(define main (func:int () (fib 10)))
+(define main (func:int (fib 10)))
