@@ -130,12 +130,12 @@ func (p *parser) addError(args ...interface{}) {
 }
 
 func (p *parser) expect(tok token.Token) token.Pos {
-	pos := p.pos
 	if p.tok != tok {
 		p.addError("Expected '" + tok.String() + "' got '" + p.lit + "'")
+		return p.pos
 	}
-	p.next()
-	return pos
+	defer p.next()
+	return p.pos
 }
 
 func (p *parser) init(file *token.File, fname, src string, s *ast.Scope) {
@@ -313,8 +313,8 @@ func (p *parser) parseFuncExpr() *ast.FuncExpr {
 
 	return &ast.FuncExpr{
 		Func:   p.expect(token.FUNC),
-		Type:   p.parseType(),
 		Params: p.parseParamList(),
+		Type:   p.parseType(),
 		Body:   p.parseExprList(),
 	}
 }
@@ -330,8 +330,8 @@ func (p *parser) parseIfExpr() *ast.IfExpr {
 
 	ie := &ast.IfExpr{
 		If:   p.expect(token.IF),
-		Type: p.parseType(),
 		Cond: p.parseExpression(),
+		Type: p.parseType(),
 		Then: p.parseExpression(),
 	}
 
@@ -343,9 +343,13 @@ func (p *parser) parseIfExpr() *ast.IfExpr {
 
 func (p *parser) parseParamList() []*ast.Param {
 	params := make([]*ast.Param, 0)
+	if p.tok != token.LPAREN {
+		return params
+	}
+
 	p.expect(token.LPAREN)
 
-	for p.tok != token.RPAREN {
+	for p.tok != token.RPAREN && p.tok != token.EOF {
 		param := &ast.Param{Name: p.parseIdent(), Type: p.parseType()}
 		o := &ast.Object{
 			Kind:    ast.VarDecl,
@@ -355,7 +359,7 @@ func (p *parser) parseParamList() []*ast.Param {
 		if prev := p.curScope.Insert(o); prev != nil {
 			p.addError("duplicate parameter ", prev.Name,
 				"; previously declared at ", p.file.Position(prev.Pos()))
-			continue
+			break
 		}
 		params = append(params, param)
 	}
@@ -377,8 +381,8 @@ func (p *parser) parseUnaryExpr() *ast.UnaryExpr {
 func (p *parser) parseVarExpr() *ast.VarExpr {
 	return &ast.VarExpr{
 		Var:    p.expect(token.VAR),
-		Type:   p.parseType(),
 		Params: p.parseParamList(),
+		Type:   p.parseType(),
 		Body:   p.parseExprList(),
 	}
 }
