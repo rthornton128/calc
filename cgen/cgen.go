@@ -140,7 +140,6 @@ func (c *compiler) emitHeaders() {
 
 func (c *compiler) emitMain() {
 	c.emitln("int main(void) {")
-	c.emitln("init();")
 	c.emitln("printf(\"%d\\n\", _main());")
 	c.emitln("return 0;")
 	c.emitln("}")
@@ -159,8 +158,6 @@ func (c *compiler) compObject(o ir.Object) string {
 		str = c.compBinary(t)
 	case *ir.Call:
 		str = c.compCall(t)
-	//case *ir.Define:
-	//c.compDefine(t)
 	case *ir.Function:
 		c.compFunction(t)
 	case *ir.If:
@@ -227,31 +224,21 @@ func (c *compiler) compIf(i *ir.If) string {
 	return fmt.Sprintf("_v%d", i.ID())
 }
 
-func (c *compiler) compInits(inits []*ir.Define) {
-	c.emitln("void init(void) {")
-	for _, d := range inits {
-		c.compVariable(d.Body.(*ir.Variable))
-	}
-	c.emitln("}")
-}
-
 func (c *compiler) compPackage(p *ir.Package) {
 	names := p.Scope().Names()
-	inits := make([]*ir.Define, 0)
 	for _, name := range names {
+		// later, this may need to check for import clauses
 		if d, ok := p.Scope().Lookup(name).(*ir.Define); ok {
 			switch t := d.Body.(type) {
 			case *ir.Function:
 				c.emit("%s;\n", c.compSignature(d))
 				defer c.compDefine(d)
 			case *ir.Variable:
-				c.emit("%s _v%d = 0; // Name: %s\n", cType(t.Type()), t.ID(), d.Name())
-				inits = append(inits, d)
+				c.emit("%s _v%d = 0; // Variable: %s\n", cType(t.Type()), t.ID(),
+					d.Name())
 			}
 		}
 	}
-
-	c.compInits(inits)
 }
 
 func (c *compiler) compSignature(d *ir.Define) string {
@@ -273,6 +260,9 @@ func (c *compiler) compVar(v *ir.Var) string {
 	var o ir.Object
 	switch t := v.Scope().Lookup(v.Name()).(type) {
 	case *ir.Define:
+		if v, ok := t.Body.(*ir.Variable); ok {
+			return c.compVariable(v)
+		}
 		o = t.Body
 	case *ir.Param:
 		o = t
