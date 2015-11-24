@@ -211,7 +211,7 @@ func (c *compiler) compDefine(d *ir.Define) string {
 
 func (c *compiler) compFor(f *ir.For) string {
 	c.emit("%s _v%d = 0; // %s\n", cType(f.Type()), f.ID(), f.Name())
-	c.emit("while %s {\n", c.compObject(f.Cond))
+	c.emit("while (%s) {\n", c.compObject(f.Cond))
 	for _, e := range f.Body[:len(f.Body)-1] {
 		c.compObject(e)
 	}
