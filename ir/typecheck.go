@@ -98,16 +98,15 @@ func (tc *typeChecker) check(o Object) {
 		t.object.typ = f.Type()
 	case *Define:
 		tc.check(t.Body)
+	case *For:
+		tc.check(t.Cond)
+		if t.Cond.Type() != Bool {
+			tc.error(t.Pos(), "conditional must be type bool, got ", t.Cond.Type())
+			return
+		}
+		tc.checkBody(t.Type(), t.Pos(), t.Body)
 	case *Function:
-		for _, e := range t.Body {
-			tc.check(e)
-		}
-		tail := t.Body[len(t.Body)-1]
-		if t.Type() != tail.Type() {
-			tc.error(t.Pos(), "final expression in function body is type ",
-				tail.Type(), " but function returns type ", t.Type())
-		}
-
+		tc.checkBody(t.Type(), t.Pos(), t.Body)
 	case *If:
 		tc.check(t.Cond)
 		if t.Cond.Type() != Bool {
@@ -143,15 +142,19 @@ func (tc *typeChecker) check(o Object) {
 		}
 		t.object.typ = o.Type()
 	case *Variable:
-		for _, e := range t.Body {
-			tc.check(e)
-		}
+		tc.checkBody(t.Type(), t.Pos(), t.Body)
+	}
+}
 
-		tail := t.Body[len(t.Body)-1]
-		if t.Type() != tail.Type() {
-			tc.error(t.Pos(), "last expression of var is of type ", tail.Type(),
-				" but var is of type ", t.Type())
-		}
+func (tc *typeChecker) checkBody(t Type, p token.Pos, body []Object) {
+	for _, e := range body {
+		tc.check(e)
+	}
+
+	tail := body[len(body)-1]
+	if t != tail.Type() {
+		tc.error(p, "last expression of var is of type ", tail.Type(),
+			" but var is of type ", t)
 	}
 }
 

@@ -33,7 +33,7 @@ type Variable struct {
 
 func makeVariable(ve *ast.VarExpr, parent *Scope) *Variable {
 	v := &Variable{
-		object: newObject("", ve.Type.Name, ve.Pos(), ast.VarDecl, parent),
+		object: newObject("var", ve.Type.Name, ve.Pos(), ast.VarDecl, parent),
 		Params: makeParamList(ve.Params, parent),
 		Body:   MakeExprList(ve.Body, parent),
 	}
