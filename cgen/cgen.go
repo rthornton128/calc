@@ -182,9 +182,8 @@ func (c *compiler) compAssignment(a *ir.Assignment) string {
 }
 
 func (c *compiler) compBinary(b *ir.Binary) string {
-	c.emit("%s _v%d = %s %s %s;\n", cType(b.Type()), b.ID(),
+	return fmt.Sprintf("(%s %s %s)",
 		c.compObject(b.Lhs), b.Op.String(), c.compObject(b.Rhs))
-	return fmt.Sprintf("_v%d", b.ID())
 }
 
 func (c *compiler) compCall(call *ir.Call) string {
@@ -210,6 +209,16 @@ func (c *compiler) compDefine(d *ir.Define) string {
 	}
 }
 
+func (c *compiler) compFor(f *ir.For) string {
+	c.emit("%s _v%d = 0; // %s\n", cType(f.Type()), f.ID(), f.Name())
+	c.emit("while %s {\n", c.compObject(f.Cond))
+	for _, e := range f.Body[:len(f.Body)-1] {
+		c.compObject(e)
+	}
+	c.emit("}\n_v%d = %s;\n", f.ID(), c.compObject(f.Body[len(f.Body)-1]))
+	return fmt.Sprintf("_v%d", f.ID())
+}
+
 func (c *compiler) compFunction(f *ir.Function) {
 	for _, e := range f.Body[:len(f.Body)-1] {
 		c.compObject(e)
@@ -219,19 +228,6 @@ func (c *compiler) compFunction(f *ir.Function) {
 
 func (c *compiler) compIdent(i *ir.Var) string {
 	return fmt.Sprintf("_v%d", i.Scope().Lookup(i.Name()).(ir.IDer).ID())
-}
-
-func (c *compiler) compFor(f *ir.For) string {
-	c.emit("%s _v%d = 0; // %s\n", cType(f.Type()), f.ID(), f.Name())
-	c.emit("goto _FC%d;\n", f.ID())
-	c.emit("_FB%d: ;\n", f.ID())
-	for _, e := range f.Body[:len(f.Body)-1] {
-		c.compObject(e)
-	}
-	c.emit("_v%d = %s;\n", f.ID(), c.compObject(f.Body[len(f.Body)-1]))
-	c.emit("_FC%d: ;\n", f.ID())
-	c.emit("if (%s) goto _FB%d;\n", c.compObject(f.Cond), f.ID())
-	return fmt.Sprintf("_v%d", f.ID())
 }
 
 func (c *compiler) compIf(i *ir.If) string {
