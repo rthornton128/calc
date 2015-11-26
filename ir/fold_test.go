@@ -25,7 +25,7 @@ func TestAssignmentFolding(t *testing.T) {
 	test := FoldTest{src: "(= a (* 1 1))", expect: "1"}
 	name := "assign"
 	expr, _ := parse.ParseExpression(name, test.src)
-	o := ir.FoldConstants(ir.MakeExpr(new(Package), expr))
+	o := ir.FoldConstants(ir.MakeExpr(ir.MakePackage(&ast.Package{}, name), expr))
 	validate_constant(t, name, o.(*ir.Assignment).Rhs, test)
 }
 
@@ -59,7 +59,7 @@ func TestCallFolding(t *testing.T) {
 	src := "(fn (== 3 2) (+ 2 2))"
 	name := "call"
 	expr, _ := parse.ParseExpression(name, src)
-	o := ir.FoldConstants(ir.MakeExpr(expr, ir.NewScope(nil)))
+	o := ir.FoldConstants(ir.MakeExpr(ir.MakePackage(&ast.Package{}, name), expr))
 	validate_constant(t, name, o.(*ir.Call).Args[0], FoldTest{src, "false"})
 	validate_constant(t, name, o.(*ir.Call).Args[1], FoldTest{src, "4"})
 }
@@ -68,7 +68,7 @@ func TestIfFolding(t *testing.T) {
 	src := "(if (== false (!= 3 3)):int (/ 9 3) (* 1 2 3))"
 	name := "if"
 	expr, _ := parse.ParseExpression(name, src)
-	o := ir.FoldConstants(ir.MakeExpr(expr, ir.NewScope(nil)))
+	o := ir.FoldConstants(ir.MakeExpr(ir.MakePackage(&ast.Package{}, name), expr))
 	validate_constant(t, name, o.(*ir.If).Cond, FoldTest{src, "true"})
 	validate_constant(t, name, o.(*ir.If).Then, FoldTest{src, "3"})
 	validate_constant(t, name, o.(*ir.If).Else, FoldTest{src, "6"})
@@ -104,14 +104,14 @@ func TestVarFolding(t *testing.T) {
 	test := FoldTest{src: "(var (a:int):int (= a (/ 24 3)))", expect: "8"}
 	name := "var"
 	expr, _ := parse.ParseExpression(name, test.src)
-	o := ir.FoldConstants(ir.MakeExpr(expr, ir.NewScope(nil)))
+	o := ir.FoldConstants(ir.MakeExpr(ir.MakePackage(&ast.Package{}, name), expr))
 	o = o.(*ir.Variable).Body[0].(*ir.Assignment).Rhs
 	validate_constant(t, name, o, test)
 }
 
 func test_folding(t *testing.T, name string, test FoldTest) {
 	expr, _ := parse.ParseExpression(name, test.src)
-	o := ir.FoldConstants(ir.MakeExpr(expr, ir.NewScope(nil)))
+	o := ir.FoldConstants(ir.MakeExpr(ir.MakePackage(&ast.Package{}, name), expr))
 	validate_constant(t, name, o, test)
 }
 

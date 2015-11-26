@@ -56,7 +56,7 @@ type Unary struct {
 
 func makeUnary(pkg *Package, u *ast.UnaryExpr) *Unary {
 	return &Unary{
-		object: object{pkg: pkg, pos: u.Pos(), typ: Int},
+		object: object{pkg: pkg, pos: u.Pos(), scope: pkg.scope, typ: Int},
 		Op:     u.Op,
 		Rhs:    MakeExpr(pkg, u.Value),
 	}

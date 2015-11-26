@@ -42,7 +42,7 @@ func (o object) Package() *Package { return o.pkg }
 func (o object) Pos() token.Pos    { return o.pos }
 func (o object) Scope() *Scope {
 	if o.scope == nil {
-		return o.pkg.scope
+		return o.pkg.Scope()
 	}
 	return o.scope
 }
@@ -51,5 +51,5 @@ func (o object) String() string {
 	if o.id != 0 {
 		return fmt.Sprintf("%s%d", o.name, o.id)
 	}
-	return o.name
+	return o.Name()
 }

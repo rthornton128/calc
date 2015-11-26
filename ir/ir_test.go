@@ -170,13 +170,15 @@ func test_file(t *testing.T, name string, test Test) {
 
 func test_handler(t *testing.T, test Test, name string, n ast.Node) {
 	var o ir.Object
-	switch t := n.(type) {
+	pkg := ir.MakePackage(&ast.Package{}, name)
+	switch x := n.(type) {
 	case *ast.DefineStmt:
-		o = ir.MakeDefine(t, ir.NewScope(nil))
+		o = ir.MakeDefine(pkg, x)
 	case *ast.Package:
-		o = ir.MakePackage(t, name)
+		o = ir.MakePackage(x, name)
 	case ast.Expr:
-		o = ir.MakeExpr(t, ir.NewScope(nil))
+		o = ir.MakeExpr(pkg, x)
+		t.Log("makexpr, test:", test.src)
 	}
 	t.Log(o)
 	fset := token.NewFileSet()

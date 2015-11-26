@@ -21,7 +21,7 @@ type Assignment struct {
 
 func makeAssignment(pkg *Package, a *ast.AssignExpr) *Assignment {
 	return &Assignment{
-		object: object{name: a.Name.Name, pkg: pkg, pos: a.Pos()},
+		object: object{name: "assign", pkg: pkg, pos: a.Pos(), scope: pkg.scope},
 		Lhs:    a.Name.Name,
 		Rhs:    MakeExpr(pkg, a.Value),
 	}

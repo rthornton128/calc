@@ -21,34 +21,37 @@ type Function struct {
 }
 
 func makeFunc(pkg *Package, f *ast.FuncExpr) *Function {
-	pkg.scope = NewScope(pkg.scope)
-	defer func() { pkg.scope = pkg.scope.parent }()
+	pkg.newScope()
+	defer pkg.closeScope()
 
-	return &Function{
+	fn := &Function{
 		object: object{
-			id:    pkg.getID(),
+			//id:    pkg.getID(),
+			kind:  ast.FuncDecl,
+			name:  "f",
 			pkg:   pkg,
 			pos:   f.Pos(),
-			kind:  ast.FuncDecl,
 			scope: pkg.scope,
 			typ:   typeFromString(f.Type.Name)},
 		Params: makeParamList(pkg, f.Params),
 		Body:   MakeExprList(pkg, f.Body),
 	}
+	return fn
 }
 
-func (d *Function) String() string {
-	params := make([]string, len(d.Params))
-	for i, s := range d.Params {
-		params[i] = d.scope.Lookup(s).String()
+func (f *Function) String() string {
+	params := make([]string, len(f.Params))
+	for i, s := range f.Params {
+		// TODO there is a case to be made to prevent lookup in parent scopes here
+		params[i] = f.Scope().Lookup(s).String()
 	}
 
-	exprs := make([]string, len(d.Body))
-	for i, s := range d.Body {
+	exprs := make([]string, len(f.Body))
+	for i, s := range f.Body {
 		exprs[i] = s.String()
 	}
 
-	return fmt.Sprintf("func:%s (%s) {%s}", d.typ, strings.Join(params, ","),
+	return fmt.Sprintf("func:%s (%s) {%s}", f.typ, strings.Join(params, ","),
 		strings.Join(exprs, ","))
 }
 
@@ -62,7 +65,8 @@ func makeParam(pkg *Package, p *ast.Param) *Param {
 		kind: ast.VarDecl,
 		name: p.Name.Name,
 		pos:  p.Pos(),
-		typ:  typeFromString(p.Type.Name)}}
+		typ:  typeFromString(p.Type.Name),
+	}}
 }
 
 func (p *Param) String() string {
@@ -73,7 +77,7 @@ func makeParamList(pkg *Package, pl []*ast.Param) []string {
 	params := make([]string, len(pl))
 	for i, p := range pl {
 		params[i] = p.Name.Name
-		pkg.scope.Insert(makeParam(pkg, p))
+		pkg.Insert(makeParam(pkg, p))
 	}
 	return params
 }

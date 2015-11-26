@@ -25,7 +25,7 @@ func makeCall(pkg *Package, c *ast.CallExpr) *Call {
 		args[i] = MakeExpr(pkg, a)
 	}
 	return &Call{
-		object: object{name: c.Name.Name, pkg: pkg, pos: c.Pos()},
+		object: object{name: c.Name.Name, pkg: pkg, pos: c.Pos(), scope: pkg.scope},
 		Args:   args,
 	}
 }

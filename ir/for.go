@@ -19,7 +19,7 @@ func makeFor(pkg *Package, f *ast.ForExpr) *For {
 		body[i] = MakeExpr(pkg, e)
 	}
 	return &For{
-		object: object{id: pkg.getID(), pos: f.Pos(),
+		object: object{id: pkg.getID(), pos: f.Pos(), scope: pkg.scope,
 			typ: typeFromString(f.Type.Name)},
 		Cond: MakeExpr(pkg, f.Cond),
 		Body: body,

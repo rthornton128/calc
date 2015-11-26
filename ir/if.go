@@ -21,20 +21,16 @@ type If struct {
 }
 
 func makeIf(pkg *Package, ie *ast.IfExpr) *If {
-	cond := MakeExpr(pkg, ie.Cond)
-
-	pkg.scope = NewScope(pkg.scope)
-	defer func() { pkg.scope = pkg.scope.parent }()
-
 	i := &If{
 		object: object{
-			id:   pkg.getID(),
-			name: "if-then",
-			pkg:  pkg,
-			pos:  ie.Pos(),
-			typ:  typeFromString(ie.Type.Name),
+			id:    pkg.getID(),
+			name:  "if-then",
+			pkg:   pkg,
+			pos:   ie.Pos(),
+			scope: pkg.scope,
+			typ:   typeFromString(ie.Type.Name),
 		},
-		Cond: cond,
+		Cond: MakeExpr(pkg, ie.Cond),
 		Then: MakeExpr(pkg, ie.Then),
 	}
 	if ie.Else != nil {
