@@ -33,7 +33,7 @@ func (i *Var) String() string {
 
 type Variable struct {
 	object
-	Params []string
+	Params []*Param
 	Body   []Object
 }
 
@@ -60,7 +60,7 @@ func makeVariable(pkg *Package, ve *ast.VarExpr) *Variable {
 func (v *Variable) String() string {
 	params := make([]string, len(v.Params))
 	for i, p := range v.Params {
-		params[i] = v.Scope().Lookup(p).String()
+		params[i] = v.Scope().Lookup(p.Name()).String()
 	}
 
 	body := make([]string, len(v.Body))

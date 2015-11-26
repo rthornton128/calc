@@ -91,7 +91,7 @@ func (tc *typeChecker) check(o Object) {
 
 		for i, a := range t.Args {
 			tc.check(a)
-			p := f.Scope().Lookup(f.Params[i])
+			p := f.Scope().Lookup(f.Params[i].Name())
 			if a.Type() != p.Type() {
 				tc.error(t.Pos(), "parameter %d of function '%s' expects type '%s' "+
 					"but argument %d is of type '%s'", i, t.Name(), p.Type(), i, a.Type())

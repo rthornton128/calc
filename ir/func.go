@@ -16,8 +16,8 @@ import (
 
 type Function struct {
 	object
+	Params []*Param
 	Body   []Object
-	Params []string
 }
 
 func makeFunc(pkg *Package, f *ast.FuncExpr) *Function {
@@ -26,24 +26,27 @@ func makeFunc(pkg *Package, f *ast.FuncExpr) *Function {
 
 	fn := &Function{
 		object: object{
-			//id:    pkg.getID(),
+			id:    pkg.getID(),
 			kind:  ast.FuncDecl,
-			name:  "f",
 			pkg:   pkg,
 			pos:   f.Pos(),
 			scope: pkg.scope,
-			typ:   typeFromString(f.Type.Name)},
+			typ:   typeFromString(f.Type.Name),
+			// TODO typ: SignatureType{},
+		},
 		Params: makeParamList(pkg, f.Params),
 		Body:   MakeExprList(pkg, f.Body),
 	}
+
+	pkg.InsertTop(fn)
+
 	return fn
 }
 
 func (f *Function) String() string {
 	params := make([]string, len(f.Params))
-	for i, s := range f.Params {
-		// TODO there is a case to be made to prevent lookup in parent scopes here
-		params[i] = f.Scope().Lookup(s).String()
+	for i, p := range f.Params {
+		params[i] = f.Scope().Lookup(p.Name()).String()
 	}
 
 	exprs := make([]string, len(f.Body))
@@ -73,11 +76,11 @@ func (p *Param) String() string {
 	return fmt.Sprintf("%s[%s]", p.name, p.typ)
 }
 
-func makeParamList(pkg *Package, pl []*ast.Param) []string {
-	params := make([]string, len(pl))
+func makeParamList(pkg *Package, pl []*ast.Param) []*Param {
+	params := make([]*Param, len(pl))
 	for i, p := range pl {
-		params[i] = p.Name.Name
-		pkg.Insert(makeParam(pkg, p))
+		params[i] = makeParam(pkg, p)
+		pkg.Insert(params[i])
 	}
 	return params
 }
