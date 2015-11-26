@@ -40,8 +40,13 @@ func (o object) Kind() ast.Kind    { return o.kind }
 func (o object) Name() string      { return o.name }
 func (o object) Package() *Package { return o.pkg }
 func (o object) Pos() token.Pos    { return o.pos }
-func (o object) Scope() *Scope     { return o.scope }
-func (o object) Type() Type        { return o.typ }
+func (o object) Scope() *Scope {
+	if o.scope == nil {
+		return o.pkg.scope
+	}
+	return o.scope
+}
+func (o object) Type() Type { return o.typ }
 func (o object) String() string {
 	if o.id != 0 {
 		return fmt.Sprintf("%s%d", o.name, o.id)
