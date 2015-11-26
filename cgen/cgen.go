@@ -47,7 +47,7 @@ func CompileFile(path string, opt bool) error {
 	if opt {
 		pkg = ir.FoldConstants(pkg).(*ir.Package)
 	}
-	ir.Tag(pkg)
+	//ir.Tag(pkg)
 
 	path = path[:len(path)-len(filepath.Ext(path))]
 	fp, err := os.Create(path + ".c")
@@ -85,7 +85,7 @@ func CompileDir(path string, opt bool) error {
 	if opt {
 		pkg = ir.FoldConstants(pkg).(*ir.Package)
 	}
-	ir.Tag(pkg)
+	//ir.Tag(pkg)
 
 	fp, err := os.Create(filepath.Join(path, filepath.Base(path)) + ".c")
 	if err != nil {
@@ -176,7 +176,7 @@ func (c *compiler) compObject(o ir.Object) string {
 
 func (c *compiler) compAssignment(a *ir.Assignment) string {
 	o := a.Scope().Lookup(a.Lhs)
-	id := fmt.Sprintf("_v%d", o.(ir.IDer).ID())
+	id := fmt.Sprintf("_v%d", o.ID())
 	c.emit("%s = %s;\n", id, c.compObject(a.Rhs))
 	return id
 }
@@ -227,7 +227,7 @@ func (c *compiler) compFunction(f *ir.Function) {
 }
 
 func (c *compiler) compIdent(i *ir.Var) string {
-	return fmt.Sprintf("_v%d", i.Scope().Lookup(i.Name()).(ir.IDer).ID())
+	return fmt.Sprintf("_v%d", i.Scope().Lookup(i.Name()).ID())
 }
 
 func (c *compiler) compIf(i *ir.If) string {
