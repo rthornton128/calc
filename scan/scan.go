@@ -9,6 +9,8 @@
 package scan
 
 import (
+	"bufio"
+	"io"
 	"unicode"
 
 	"github.com/rthornton128/calc/token"
@@ -19,16 +21,16 @@ type Scanner struct {
 	ch      rune
 	offset  int
 	roffset int
-	src     string
+	src     *bufio.Reader
 	file    *token.File
 }
 
 // Init initializes Scanner and makes the source code ready to Scan
-func (s *Scanner) Init(file *token.File, src string) {
+func (s *Scanner) Init(file *token.File, src io.Reader) {
 	s.file = file
 	s.offset, s.roffset = 0, 0
-	s.src = src
-	s.file.AddLine(s.offset)
+	s.src = bufio.NewReader(src)
+	s.file.AddLine(s.offset) // TODO no sir, don't like it
 
 	s.next()
 }
@@ -48,6 +50,8 @@ func (s *Scanner) Scan() (lit string, tok token.Token, pos token.Pos) {
 	lit, pos = string(s.ch), s.file.Pos(s.offset)
 	s.next()
 	switch ch {
+	case 0:
+		tok = token.EOF
 	case '(':
 		tok = token.LPAREN
 	case ')':
@@ -81,53 +85,45 @@ func (s *Scanner) Scan() (lit string, tok token.Token, pos token.Pos) {
 		s.next()
 		return s.Scan()
 	default:
-		if s.offset >= len(s.src)-1 {
-			tok = token.EOF
-		} else {
-			tok = token.ILLEGAL
-		}
+		tok = token.ILLEGAL
 	}
 
 	return
 }
 
 func (s *Scanner) next() {
-	s.ch = rune(0)
-	if s.roffset < len(s.src) {
-		s.offset = s.roffset
-		s.ch = rune(s.src[s.offset])
-		if s.ch == '\n' {
-			s.file.AddLine(s.offset)
-		}
-		s.roffset++
+	r, w, err := s.src.ReadRune()
+	s.offset = s.roffset
+	s.roffset += w
+	if r == '\n' {
+		s.file.AddLine(s.offset)
+	}
+	s.ch = r
+	if err != nil {
+		s.ch = 0
 	}
 }
 
 func (s *Scanner) scanIdentifier() (string, token.Token, token.Pos) {
 	start := s.offset
+	var str string
 
 	for unicode.IsLetter(s.ch) || unicode.IsDigit(s.ch) {
+		str += string(s.ch)
 		s.next()
 	}
-	offset := s.offset
-	if s.ch == rune(0) {
-		offset++
-	}
-	lit := s.src[start:offset]
-	return lit, token.Lookup(lit), s.file.Pos(start)
+	return str, token.Lookup(str), s.file.Pos(start)
 }
 
 func (s *Scanner) scanNumber() (string, token.Token, token.Pos) {
 	start := s.offset
+	var str string
 
 	for unicode.IsDigit(s.ch) {
+		str += string(s.ch)
 		s.next()
 	}
-	offset := s.offset
-	if s.ch == rune(0) {
-		offset++
-	}
-	return s.src[start:offset], token.INTEGER, s.file.Pos(start)
+	return str, token.INTEGER, s.file.Pos(start)
 }
 
 func (s *Scanner) selectToken(r rune, a, b token.Token) token.Token {
@@ -139,7 +135,7 @@ func (s *Scanner) selectToken(r rune, a, b token.Token) token.Token {
 }
 
 func (s *Scanner) skipComment() {
-	for s.ch != '\n' && s.offset < len(s.src)-1 {
+	for s.ch != '\n' && s.ch != 0 {
 		s.next()
 	}
 }

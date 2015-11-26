@@ -8,11 +8,24 @@
 // Package parse implements the parser for the Calc programming language
 package parse
 
+// TODO a single Parse function that takes an io.Reader as an argument
+// would actually be preferable and would eliminate much of the duplicate
+// work and cruft
+//
+// A flag could then be used to separate which inner parse function to
+// call (expression, file or package). A unified ast.Package would or
+// generic ast.Node would need to be returned and let the caller handle
+// the details
+//
+// Alternatively, keep the separate interfaces but use a unified handler
+// internally
+
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/rthornton128/calc/ast"
 	"github.com/rthornton128/calc/scan"
@@ -27,8 +40,8 @@ func ParseExpression(name, src string) (ast.Expr, error) {
 	var p parser
 
 	fset := token.NewFileSet()
-	file := fset.Add(name, src)
-	p.init(file, name, string(src), nil)
+	file := fset.Add(name, len(src))
+	p.init(file, name, strings.NewReader(src), nil)
 	node := p.parseExpression()
 
 	if p.errors.Count() > 0 {
@@ -42,24 +55,35 @@ func ParseExpression(name, src string) (ast.Expr, error) {
 // have the .calc file extension.
 // The returned AST object ast.File is nil if there is an error.
 func ParseFile(fset *token.FileSet, filename, src string) (*ast.File, error) {
+	var r io.Reader
+	var sz int64
 	if src == "" {
-		fi, err := os.Stat(filename)
+		f, err := os.Open(filename)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+
+		fi, err := f.Stat()
 		if err != nil {
 			return nil, err
 		}
 
 		if ext := filepath.Ext(fi.Name()); ext != ".calc" {
-			return nil, fmt.Errorf("unknown file extension, must be .calc")
+			return nil, fmt.Errorf("invalid file extension %s, must be .calc", ext)
 		}
-		b, err := ioutil.ReadFile(filename)
-		if err != nil {
-			return nil, err
-		}
-		src = string(b)
+		r = f
+		sz = fi.Size()
+		fmt.Printf("%s:%d\n", fi.Name(), sz)
+	} else {
+		sr := strings.NewReader(src)
+		r = io.Reader(sr)
+		sz = sr.Size()
 	}
-	file := fset.Add(filepath.Base(filename), string(src))
+
+	file := fset.Add(filepath.Base(filename), int(sz))
 	var p parser
-	p.init(file, filename, string(src), ast.NewScope(nil))
+	p.init(file, filename, r, ast.NewScope(nil))
 	f := p.parseFile()
 
 	if p.errors.Count() > 0 {
@@ -113,7 +137,6 @@ type parser struct {
 	file    *token.File
 	errors  token.ErrorList
 	scanner scan.Scanner
-	listok  bool
 
 	curScope *ast.Scope
 	topScope *ast.Scope
@@ -138,13 +161,12 @@ func (p *parser) expect(tok token.Token) token.Pos {
 	return p.pos
 }
 
-func (p *parser) init(file *token.File, fname, src string, s *ast.Scope) {
+func (p *parser) init(f *token.File, name string, src io.Reader, s *ast.Scope) {
 	if s == nil {
 		s = ast.NewScope(nil)
 	}
-	p.file = file
+	p.file = f
 	p.scanner.Init(p.file, src)
-	p.listok = false
 	p.curScope = s
 	p.topScope = s
 	p.next()

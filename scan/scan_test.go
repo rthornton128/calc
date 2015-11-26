@@ -8,6 +8,7 @@
 package scan_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/rthornton128/calc/scan"
@@ -16,7 +17,7 @@ import (
 
 func test_handler(t *testing.T, src string, expected []token.Token) {
 	var s scan.Scanner
-	s.Init(token.NewFile("", 1, len(src)), src)
+	s.Init(token.NewFile("", 1, len(src)), strings.NewReader(src))
 	lit, tok, pos := s.Scan()
 	for i := 0; tok != token.EOF; i++ {
 		if tok != expected[i] {

@@ -19,10 +19,10 @@ func NewFileSet() *FileSet {
 }
 
 // Add appends a new file to the fileset
-func (fs *FileSet) Add(name, src string) *File {
-	f := NewFile(name, fs.base, len(src))
+func (fs *FileSet) Add(name string, sz int) *File {
+	f := NewFile(name, fs.base, sz)
 	fs.files = append(fs.files, f)
-	fs.base += len(src)
+	fs.base += sz
 	return f
 }
 

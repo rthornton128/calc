@@ -43,7 +43,7 @@ func (f *File) Base() int {
 // Pos generates a Pos based on the offset. The position is the file's
 // base+offset
 func (f *File) Pos(offset int) Pos {
-	if offset < 0 || offset >= f.size {
+	if offset < 0 || offset > f.size {
 		panic("illegal file offset")
 	}
 	return Pos(f.base + offset)

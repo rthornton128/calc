@@ -25,7 +25,7 @@ type Test struct {
 func TestAssignment(t *testing.T) {
 	tests := []Test{
 		{src: "(= a 3)", pass: false},
-		{src: "(func(a:int):int (= a 0))", pass: false},
+		{src: "(func(a:int):int (= a 0))", pass: true},
 		{src: "(var (a:int):int (= a true) 0)", pass: false},
 	}
 	for i, test := range tests {
@@ -180,7 +180,7 @@ func test_handler(t *testing.T, test Test, name string, n ast.Node) {
 	}
 	t.Log(o)
 	fset := token.NewFileSet()
-	fset.Add(name, test.src)
+	fset.Add(name, len(test.src))
 	if err := ir.TypeCheck(o, fset); (err == nil) != test.pass {
 		t.Logf("expected %v got %v", test.pass, err == nil)
 		if err != nil {
