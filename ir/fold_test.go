@@ -25,7 +25,7 @@ func TestAssignmentFolding(t *testing.T) {
 	test := FoldTest{src: "(= a (* 1 1))", expect: "1"}
 	name := "assign"
 	expr, _ := parse.ParseExpression(name, test.src)
-	o := ir.FoldConstants(ir.MakeExpr(expr, ir.NewScope(nil)))
+	o := ir.FoldConstants(ir.MakeExpr(new(Package), expr))
 	validate_constant(t, name, o.(*ir.Assignment).Rhs, test)
 }
 

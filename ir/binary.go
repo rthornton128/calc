@@ -16,21 +16,17 @@ import (
 
 type Binary struct {
 	object
-	id  int
 	Op  token.Token
 	Lhs Object
 	Rhs Object
 }
 
-func makeBinary(b *ast.BinaryExpr, parent *Scope) *Binary {
-	o := newObject("binary", "", b.Pos(), ast.None, parent)
-	o.typ = binaryType(b.Op)
-
-	lhs := MakeExpr(b.List[0], parent)
+func makeBinary(pkg *Package, b *ast.BinaryExpr) *Binary {
+	lhs := MakeExpr(pkg, b.List[0])
 	for _, e := range b.List[1:] {
-		rhs := MakeExpr(e, parent)
+		rhs := MakeExpr(pkg, e)
 		lhs = Object(&Binary{
-			object: o,
+			object: object{pkg: pkg, pos: b.Pos(), typ: binaryType(b.Op)},
 			Op:     b.Op,
 			Lhs:    lhs,
 			Rhs:    rhs,
@@ -48,8 +44,6 @@ func binaryType(t token.Token) Type {
 	}
 }
 
-func (b *Binary) ID() int      { return b.id }
-func (b *Binary) SetID(id int) { b.id = id }
 func (b *Binary) String() string {
 	return fmt.Sprintf("(%s %s %s)", b.Lhs.String(), b.Op, b.Rhs.String())
 }
@@ -60,14 +54,11 @@ type Unary struct {
 	Rhs Object
 }
 
-func makeUnary(u *ast.UnaryExpr, parent *Scope) *Unary {
-	o := newObject("unary", "", u.Pos(), ast.None, parent)
-	o.typ = Int
-
+func makeUnary(pkg *Package, u *ast.UnaryExpr) *Unary {
 	return &Unary{
-		object: o,
+		object: object{pkg: pkg, pos: u.Pos(), typ: Int},
 		Op:     u.Op,
-		Rhs:    MakeExpr(u.Value, parent),
+		Rhs:    MakeExpr(pkg, u.Value),
 	}
 }
 

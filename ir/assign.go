@@ -19,11 +19,11 @@ type Assignment struct {
 	Rhs Object
 }
 
-func makeAssignment(a *ast.AssignExpr, parent *Scope) *Assignment {
+func makeAssignment(pkg *Package, a *ast.AssignExpr) *Assignment {
 	return &Assignment{
-		object: newObject(a.Name.Name, "", a.Pos(), ast.None, parent),
+		object: object{name: a.Name.Name, pkg: pkg, pos: a.Pos()},
 		Lhs:    a.Name.Name,
-		Rhs:    MakeExpr(a.Value, parent),
+		Rhs:    MakeExpr(pkg, a.Value),
 	}
 }
 

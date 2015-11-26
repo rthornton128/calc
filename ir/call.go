@@ -19,13 +19,13 @@ type Call struct {
 	Args []Object
 }
 
-func makeCall(c *ast.CallExpr, parent *Scope) *Call {
+func makeCall(pkg *Package, c *ast.CallExpr) *Call {
 	args := make([]Object, len(c.Args))
 	for i, a := range c.Args {
-		args[i] = MakeExpr(a, parent)
+		args[i] = MakeExpr(pkg, a)
 	}
 	return &Call{
-		object: newObject(c.Name.Name, "", c.Pos(), ast.None, parent),
+		object: object{name: c.Name.Name, pkg: pkg, pos: c.Pos()},
 		Args:   args,
 	}
 }

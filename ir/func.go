@@ -20,13 +20,20 @@ type Function struct {
 	Params []string
 }
 
-func makeFunc(f *ast.FuncExpr, parent *Scope) *Function {
-	scope := NewScope(parent)
+func makeFunc(pkg *Package, f *ast.FuncExpr) *Function {
+	pkg.scope = NewScope(pkg.scope)
+	defer func() { pkg.scope = pkg.scope.parent }()
 
 	return &Function{
-		object: newObject("", f.Type.Name, f.Pos(), ast.FuncDecl, scope),
-		Params: makeParamList(f.Params, scope),
-		Body:   MakeExprList(f.Body, scope),
+		object: object{
+			id:    pkg.getID(),
+			pkg:   pkg,
+			pos:   f.Pos(),
+			kind:  ast.FuncDecl,
+			scope: pkg.scope,
+			typ:   typeFromString(f.Type.Name)},
+		Params: makeParamList(pkg, f.Params),
+		Body:   MakeExprList(pkg, f.Body),
 	}
 }
 
@@ -47,25 +54,26 @@ func (d *Function) String() string {
 
 type Param struct {
 	object
-	id int
 }
 
-func makeParam(p *ast.Param, parent *Scope) *Param {
-	return &Param{object: newObject(p.Name.Name, p.Type.Name, p.Pos(),
-		ast.VarDecl, parent)}
+func makeParam(pkg *Package, p *ast.Param) *Param {
+	return &Param{object{
+		id:   pkg.getID(),
+		kind: ast.VarDecl,
+		name: p.Name.Name,
+		pos:  p.Pos(),
+		typ:  typeFromString(p.Type.Name)}}
 }
 
-func (p *Param) ID() int      { return p.id }
-func (p *Param) SetID(id int) { p.id = id }
 func (p *Param) String() string {
-	return fmt.Sprintf("%s:%s", p.name, p.typ)
+	return fmt.Sprintf("%s[%s]", p.name, p.typ)
 }
 
-func makeParamList(pl []*ast.Param, parent *Scope) []string {
+func makeParamList(pkg *Package, pl []*ast.Param) []string {
 	params := make([]string, len(pl))
 	for i, p := range pl {
 		params[i] = p.Name.Name
-		parent.Insert(makeParam(p, parent))
+		pkg.scope.Insert(makeParam(pkg, p))
 	}
 	return params
 }

@@ -30,7 +30,7 @@ type Constant struct {
 	value Value
 }
 
-func makeConstant(b *ast.BasicLit, parent *Scope) *Constant {
+func makeConstant(b *ast.BasicLit) *Constant {
 	var v Value
 	switch b.Kind {
 	case token.BOOL:
@@ -39,7 +39,7 @@ func makeConstant(b *ast.BasicLit, parent *Scope) *Constant {
 		v, _ = makeInt(b.Lit) // TODO handle error
 	}
 	return &Constant{
-		object: newObject(v.String(), v.Type().String(), b.Pos(), ast.None, parent),
+		object: object{name: v.String(), pos: b.Pos(), typ: v.Type()},
 		value:  v,
 	}
 }

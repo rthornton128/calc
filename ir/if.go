@@ -15,29 +15,36 @@ import (
 
 type If struct {
 	object
-	id   int
 	Cond Object
 	Then Object
 	Else Object
 }
 
-func makeIf(ie *ast.IfExpr, parent *Scope) *If {
-	scope := NewScope(parent)
+func makeIf(pkg *Package, ie *ast.IfExpr) *If {
+	cond := MakeExpr(pkg, ie.Cond)
+
+	pkg.scope = NewScope(pkg.scope)
+	defer func() { pkg.scope = pkg.scope.parent }()
+
 	i := &If{
-		object: newObject("if-then", ie.Type.Name, ie.Pos(), ast.None, scope),
-		Cond:   MakeExpr(ie.Cond, parent),
-		Then:   MakeExpr(ie.Then, scope),
+		object: object{
+			id:   pkg.getID(),
+			name: "if-then",
+			pkg:  pkg,
+			pos:  ie.Pos(),
+			typ:  typeFromString(ie.Type.Name),
+		},
+		Cond: cond,
+		Then: MakeExpr(pkg, ie.Then),
 	}
 	if ie.Else != nil {
 		i.object.name += "-else"
-		i.Else = MakeExpr(ie.Else, scope)
+		i.Else = MakeExpr(pkg, ie.Else)
 	}
 	return i
 }
 
-func (i *If) ID() int      { return i.id }
-func (i *If) SetID(id int) { i.id = id }
 func (i *If) String() string {
-	return fmt.Sprintf("{if:%s %s then %s else %s}", i.typ, i.Cond, i.Then,
+	return fmt.Sprintf("{if[%s] %s then %s else %s}", i.typ, i.Cond, i.Then,
 		i.Else)
 }

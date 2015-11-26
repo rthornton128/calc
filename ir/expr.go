@@ -9,37 +9,37 @@ package ir
 
 import "github.com/rthornton128/calc/ast"
 
-func MakeExpr(e ast.Expr, parent *Scope) Object {
+func MakeExpr(pkg *Package, e ast.Expr) Object {
 	switch t := e.(type) {
 	case *ast.AssignExpr:
-		return makeAssignment(t, parent)
+		return makeAssignment(pkg, t)
 	case *ast.BasicLit:
-		return makeConstant(t, parent)
+		return makeConstant(t)
 	case *ast.BinaryExpr:
-		return makeBinary(t, parent)
+		return makeBinary(pkg, t)
 	case *ast.CallExpr:
-		return makeCall(t, parent)
+		return makeCall(pkg, t)
 	case *ast.ForExpr:
-		return makeFor(t, parent)
+		return makeFor(pkg, t)
 	case *ast.FuncExpr:
-		return makeFunc(t, parent)
+		return makeFunc(pkg, t)
 	case *ast.Ident:
-		return makeVar(t, parent)
+		return makeVar(pkg, t)
 	case *ast.IfExpr:
-		return makeIf(t, parent)
+		return makeIf(pkg, t)
 	case *ast.UnaryExpr:
-		return makeUnary(t, parent)
+		return makeUnary(pkg, t)
 	case *ast.VarExpr:
-		return makeVariable(t, parent)
+		return makeVariable(pkg, t)
 	default:
 		panic("unreachable")
 	}
 }
 
-func MakeExprList(el []ast.Expr, parent *Scope) []Object {
+func MakeExprList(pkg *Package, el []ast.Expr) []Object {
 	ol := make([]Object, 0)
 	for _, e := range el {
-		ol = append(ol, MakeExpr(e, parent))
+		ol = append(ol, MakeExpr(pkg, e))
 	}
 	return ol
 }

@@ -16,8 +16,10 @@ import (
 
 type Var struct{ object }
 
-func makeVar(i *ast.Ident, parent *Scope) *Var {
-	return &Var{object: newObject(i.Name, "", i.Pos(), ast.VarDecl, parent)}
+func makeVar(pkg *Package, i *ast.Ident) *Var {
+	return &Var{
+		object: object{kind: ast.VarDecl, name: i.Name, pos: i.Pos()},
+	}
 }
 
 func (i *Var) String() string {
@@ -26,19 +28,22 @@ func (i *Var) String() string {
 
 type Variable struct {
 	object
-	id     int
 	Params []string
 	Body   []Object
 }
 
-func makeVariable(ve *ast.VarExpr, parent *Scope) *Variable {
+func makeVariable(pkg *Package, ve *ast.VarExpr) *Variable {
 	v := &Variable{
-		object: newObject("var", ve.Type.Name, ve.Pos(), ast.VarDecl, parent),
-		Params: makeParamList(ve.Params, parent),
-		Body:   MakeExprList(ve.Body, parent),
+		object: object{
+			id:   pkg.getID(),
+			kind: ast.VarDecl,
+			name: "var",
+			pos:  ve.Pos(),
+			typ:  typeFromString(ve.Type.Name),
+		},
+		Params: makeParamList(pkg, ve.Params),
+		Body:   MakeExprList(pkg, ve.Body),
 	}
-
-	parent.Insert(v)
 
 	return v
 }
@@ -57,6 +62,3 @@ func (v *Variable) String() string {
 	return fmt.Sprintf("var:%s (%s) {%s}", v.Type(), strings.Join(params, ","),
 		strings.Join(body, ","))
 }
-
-func (v *Variable) ID() int      { return v.id }
-func (v *Variable) SetID(id int) { v.id = id }

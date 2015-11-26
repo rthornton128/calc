@@ -18,20 +18,25 @@ type Define struct {
 	Body Object
 }
 
-func MakeDefine(d *ast.DefineStmt, parent *Scope) *Define {
-	scope := NewScope(parent)
-	body := MakeExpr(d.Body, scope)
-	t := body.Type().String()
+func MakeDefine(pkg *Package, d *ast.DefineStmt) *Define {
+	body := MakeExpr(pkg, d.Body)
+	t := body.Type()
 	if d.Type != nil {
-		t = d.Type.Name
+		t = typeFromString(d.Type.Name)
 	}
 
 	return &Define{
-		object: newObject(d.Name.Name, t, d.Pos(), body.Kind(), scope),
-		Body:   body,
+		object: object{
+			kind: body.Kind(),
+			pkg:  pkg,
+			name: d.Name.Name,
+			pos:  d.Pos(),
+			typ:  t,
+		},
+		Body: body,
 	}
 }
 
 func (d *Define) String() string {
-	return fmt.Sprintf("define{%s:%s = %s}", d.Name(), d.Type(), d.Body)
+	return fmt.Sprintf("define %s[%s] {%s}", d.Name(), d.Type(), d.Body)
 }

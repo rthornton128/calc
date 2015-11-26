@@ -15,22 +15,32 @@ import (
 
 type Package struct {
 	object
+	top *Scope
 }
 
 func MakePackage(pkg *ast.Package, name string) *Package {
-	p := &Package{object: newObject(name, "", pkg.Pos(), ast.None, NewScope(nil))}
+	scope := NewScope(nil)
+	p := &Package{
+		object: object{name: name, pos: pkg.Pos(), scope: scope},
+		top:    scope,
+	}
 	for _, f := range pkg.Files {
-		MakeFile(f, p.Scope())
+		MakeFile(p, f)
 	}
 	return p
 }
 
-func (p *Package) String() string {
-	return fmt.Sprintf("package: %s {%s}", p.name, p.scope)
+func (p *Package) getID() int {
+	p.id++
+	return p.id
 }
 
-func MakeFile(f *ast.File, parent *Scope) {
+func (p *Package) String() string {
+	return fmt.Sprintf("package %s {%s}", p.name, p.scope)
+}
+
+func MakeFile(pkg *Package, f *ast.File) {
 	for _, d := range f.Defs {
-		parent.Insert(MakeDefine(d, parent))
+		pkg.scope.Insert(MakeDefine(pkg, d))
 	}
 }
