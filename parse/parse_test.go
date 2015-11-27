@@ -215,16 +215,21 @@ func TestParseFunc(t *testing.T) {
 	handleTests(t, tests)
 }
 
-func TestParseDeclFile(t *testing.T) {
+func TestParseFileDefines(t *testing.T) {
 	tests := []Test{
 		{"simple", "(define main (func:int 0))",
 			[]Type{FILE, DEFINE, FUNC, BASIC}, true},
 		{"no-source-no-file", "", []Type{}, false},
 		{"no-decls", "42", []Type{}, false},
-		{"duplicate-decl", "(define fn (func:int 1))(define fn (func:int 1))",
+		{"duplicate-decl",
+			"(define fn (func:int 1))(define fn (func:int 1))",
 			[]Type{FILE, DEFINE, FUNC, BINARY, DEFINE, FUNC, BASIC}, false},
 		{"redeclared-var-decl", "(define a:int 0)(define a (func:int 1))",
 			[]Type{FILE, DEFINE, BASIC, DEFINE, FUNC, BASIC}, false},
+		{"func-type",
+			"(define even:func(int)bool (func (n:int) bool (== (% n 2) 0))",
+			[]Type{FILE, DEFINE, FUNC, BINARY, BINARY, VAR, BASIC, BASIC},
+			false},
 	}
 	handleFileTests(t, tests)
 }
@@ -265,6 +270,10 @@ func TestParseVar(t *testing.T) {
 			[]Type{VAR, ASSIGN, BASIC}, true},
 		{"no-type", "(var (a):int)", []Type{}, false},
 		{"redeclare", "(var (a:int a:bool) :int)", []Type{}, false},
+		{"func-type", "(var (a:func(int bool int)func(bool)int):int a)",
+			[]Type{VAR, IDENT}, true},
+		{"type-err", "(var (a:func(int + int)bool):int a)", []Type{},
+			false},
 	}
 	handleTests(t, tests)
 }

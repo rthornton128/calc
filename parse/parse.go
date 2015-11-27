@@ -74,7 +74,6 @@ func ParseFile(fset *token.FileSet, filename, src string) (*ast.File, error) {
 		}
 		r = f
 		sz = fi.Size()
-		fmt.Printf("%s:%d\n", fi.Name(), sz)
 	} else {
 		sr := strings.NewReader(src)
 		r = io.Reader(sr)
@@ -352,6 +351,14 @@ func (p *parser) parseFuncExpr() *ast.FuncExpr {
 	}
 }
 
+func (p *parser) parseFuncType() *ast.FuncType {
+	return &ast.FuncType{
+		Func:   p.expect(token.FUNC),
+		Params: p.parseTypeList(),
+		Type:   p.parseTypeNoColon(),
+	}
+}
+
 func (p *parser) parseIdent() *ast.Ident {
 	name := p.lit
 	return &ast.Ident{NamePos: p.expect(token.IDENT), Name: name}
@@ -400,9 +407,33 @@ func (p *parser) parseParamList() []*ast.Param {
 	return params
 }
 
-func (p *parser) parseType() *ast.Ident {
+func (p *parser) parseType() ast.Expr {
 	p.expect(token.COLON)
-	return p.parseIdent()
+	return p.parseTypeNoColon()
+}
+
+func (p *parser) parseTypeNoColon() ast.Expr {
+	switch p.tok {
+	case token.IDENT:
+		return p.parseIdent()
+	case token.FUNC:
+		return p.parseFuncType()
+	default:
+		p.addError("expected type name but got", p.tok)
+		return nil
+	}
+}
+
+func (p *parser) parseTypeList() []ast.Expr {
+	types := make([]ast.Expr, 0)
+	if p.tok == token.LPAREN {
+		p.expect(token.LPAREN)
+		for p.tok == token.IDENT || p.tok == token.FUNC {
+			types = append(types, p.parseTypeNoColon())
+		}
+		p.expect(token.RPAREN)
+	}
+	return types
 }
 
 func (p *parser) parseUnaryExpr() *ast.UnaryExpr {

@@ -45,7 +45,7 @@ type CallExpr struct {
 type DefineStmt struct {
 	Define token.Pos
 	Name   *Ident
-	Type   *Ident
+	Type   Expr
 	Kind   Kind
 	Body   Expr
 }
@@ -56,16 +56,22 @@ type File struct {
 
 type ForExpr struct {
 	For  token.Pos
-	Type *Ident
+	Type Expr
 	Cond Expr
 	Body []Expr
 }
 
 type FuncExpr struct {
 	Func   token.Pos
-	Type   *Ident
+	Type   Expr
 	Params []*Param
 	Body   []Expr
+}
+
+type FuncType struct {
+	Func   token.Pos
+	Params []Expr
+	Type   Expr
 }
 
 type Ident struct {
@@ -76,7 +82,7 @@ type Ident struct {
 
 type IfExpr struct {
 	If   token.Pos
-	Type *Ident
+	Type Expr
 	Cond Expr
 	Then Expr
 	Else Expr
@@ -94,7 +100,7 @@ type Package struct {
 
 type Param struct {
 	Name *Ident
-	Type *Ident
+	Type Expr
 }
 
 type Scope struct {
@@ -110,7 +116,7 @@ type UnaryExpr struct {
 
 type VarExpr struct {
 	Var    token.Pos
-	Type   *Ident
+	Type   Expr
 	Params []*Param
 	Body   []Expr
 }
@@ -123,6 +129,7 @@ func (d *DefineStmt) Pos() token.Pos { return d.Define }
 func (f *File) Pos() token.Pos       { return token.NoPos }
 func (f *ForExpr) Pos() token.Pos    { return f.For }
 func (f *FuncExpr) Pos() token.Pos   { return f.Func }
+func (f *FuncType) Pos() token.Pos   { return f.Func }
 func (i *Ident) Pos() token.Pos      { return i.NamePos }
 func (i *IfExpr) Pos() token.Pos     { return i.If }
 func (o *Object) Pos() token.Pos     { return o.NamePos }
@@ -137,6 +144,7 @@ func (b *BinaryExpr) exprNode() {}
 func (c *CallExpr) exprNode()   {}
 func (f *ForExpr) exprNode()    {}
 func (f *FuncExpr) exprNode()   {}
+func (f *FuncType) exprNode()   {}
 func (i *IfExpr) exprNode()     {}
 func (i *Ident) exprNode()      {}
 func (u *UnaryExpr) exprNode()  {}
