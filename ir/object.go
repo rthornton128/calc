@@ -10,13 +10,11 @@ package ir
 import (
 	"fmt"
 
-	"github.com/rthornton128/calc/ast"
 	"github.com/rthornton128/calc/token"
 )
 
 type Object interface {
 	ID() int
-	Kind() ast.Kind
 	Name() string
 	Package() *Package
 	Pos() token.Pos
@@ -27,7 +25,6 @@ type Object interface {
 
 type object struct {
 	id    int
-	kind  ast.Kind
 	name  string
 	pkg   *Package
 	pos   token.Pos
@@ -36,7 +33,6 @@ type object struct {
 }
 
 func (o object) ID() int           { return o.id }
-func (o object) Kind() ast.Kind    { return o.kind }
 func (o object) Name() string      { return o.name }
 func (o object) Package() *Package { return o.pkg }
 func (o object) Pos() token.Pos    { return o.pos }

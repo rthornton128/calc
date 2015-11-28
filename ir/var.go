@@ -19,7 +19,6 @@ type Var struct{ object }
 func makeVar(pkg *Package, i *ast.Ident) *Var {
 	return &Var{
 		object: object{
-			kind:  ast.VarDecl,
 			name:  i.Name,
 			pos:   i.Pos(),
 			scope: pkg.scope,
@@ -41,20 +40,17 @@ func makeVariable(pkg *Package, ve *ast.VarExpr) *Variable {
 	pkg.newScope()
 	defer pkg.closeScope()
 
-	v := &Variable{
+	return &Variable{
 		object: object{
 			id:    pkg.getID(),
-			kind:  ast.VarDecl,
 			name:  "var",
 			pos:   ve.Pos(),
 			scope: pkg.scope,
-			typ:   typeFromString(ve.Type.Name),
+			typ:   GetType(ve.Type),
 		},
 		Params: makeParamList(pkg, ve.Params),
 		Body:   MakeExprList(pkg, ve.Body),
 	}
-
-	return v
 }
 
 func (v *Variable) String() string {

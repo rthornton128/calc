@@ -62,15 +62,13 @@ type ForExpr struct {
 }
 
 type FuncExpr struct {
-	Func   token.Pos
-	Type   Expr
-	Params []*Param
-	Body   []Expr
+	Func *FuncType
+	Body []Expr
 }
 
 type FuncType struct {
 	Func   token.Pos
-	Params []Expr
+	Params []*Param
 	Type   Expr
 }
 
@@ -128,7 +126,7 @@ func (c *CallExpr) Pos() token.Pos   { return c.Name.Pos() }
 func (d *DefineStmt) Pos() token.Pos { return d.Define }
 func (f *File) Pos() token.Pos       { return token.NoPos }
 func (f *ForExpr) Pos() token.Pos    { return f.For }
-func (f *FuncExpr) Pos() token.Pos   { return f.Func }
+func (f *FuncExpr) Pos() token.Pos   { return f.Func.Pos() }
 func (f *FuncType) Pos() token.Pos   { return f.Func }
 func (i *Ident) Pos() token.Pos      { return i.NamePos }
 func (i *IfExpr) Pos() token.Pos     { return i.If }

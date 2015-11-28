@@ -64,7 +64,7 @@ func foldBinary(b *Binary) Object {
 	rhs, rhsOk := b.Rhs.(*Constant)
 
 	if lhsOk && rhsOk {
-		switch b.Type() {
+		switch b.Type().Base().Kind() {
 		case Int:
 			l, r := int64(lhs.value.(intValue)), int64(rhs.value.(intValue))
 			switch b.Op {
@@ -82,7 +82,7 @@ func foldBinary(b *Binary) Object {
 			}
 			return lhs
 		case Bool:
-			switch lhs.Type() {
+			switch lhs.Type().Base().Kind() {
 			case Bool:
 				l, r := bool(lhs.value.(boolValue)), bool(rhs.value.(boolValue))
 				switch b.Op {

@@ -28,7 +28,7 @@ func makeIf(pkg *Package, ie *ast.IfExpr) *If {
 			pkg:   pkg,
 			pos:   ie.Pos(),
 			scope: pkg.scope,
-			typ:   typeFromString(ie.Type.Name),
+			typ:   GetType(ie.Type),
 		},
 		Cond: MakeExpr(pkg, ie.Cond),
 		Then: MakeExpr(pkg, ie.Then),

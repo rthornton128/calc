@@ -10,7 +10,6 @@ package ir
 import (
 	"fmt"
 
-	"github.com/rthornton128/calc/ast"
 	"github.com/rthornton128/calc/token"
 )
 
@@ -42,34 +41,36 @@ func (tc *typeChecker) check(o Object) {
 			tc.error(t.Pos(), "undeclared variable '%s'", t.Lhs)
 			return
 		}
-		if o.Kind() != ast.VarDecl {
-			tc.error(t.Pos(), "may only assign to variables but '%s' is %s",
-				o.Name(), o.Kind())
-			return
-		}
 		tc.check(t.Rhs)
-		if o.Type() != t.Rhs.Type() {
-			tc.error(t.Pos(), "variable '%s' is of type '%s' but assignment of "+
-				"type '%s'", t.Name(), t.Type(), t.Rhs.Type())
-			return
+
+		if !typeMatch(o.Type(), t.Rhs.Type()) {
+			tc.error(t.Pos(), "type mismatch; '%s' is of type '%s' but expression "+
+				"is of type '%s'", o.Name(), o.Type(), t.Rhs.Type())
 		}
+
 		t.object.typ = o.Type()
 	case *Binary:
 		tc.check(t.Lhs)
 		tc.check(t.Rhs)
-		typ := Int
-		if (t.Op == token.EQL || t.Op == token.NEQ) && t.Lhs.Type() == Bool {
-			typ = Bool
-		}
-		if t.Lhs.Type() != typ {
-			tc.error(t.Pos(), "binary expected type '%s' but lhs is type '%s'",
-				typ, t.Lhs.Type())
-			return
-		}
-		if t.Rhs.Type() != typ {
-			tc.error(t.Pos(), "binary expected type '%s' but rhs is type '%s'",
-				typ, t.Rhs.Type())
-			return
+		switch t.Op {
+		case token.GTT, token.GTE, token.LST, token.LTE:
+			if t.Lhs.Type().Base().Kind() == Bool ||
+				t.Rhs.Type().Base().Kind() == Bool {
+				tc.error(t.Pos(), "boolean expressions can only tested for equality")
+			}
+			fallthrough
+		case token.EQL, token.NEQ:
+			if !typeMatch(t.Lhs.Type(), t.Rhs.Type()) {
+				tc.error(t.Pos(), "can not compare expression of type '%s' with "+
+					"expression of type '%s'", t.Lhs.Type(), t.Rhs.Type())
+			}
+			t.typ = TypeList[Bool]
+		default: // arithmetic
+			if !typeMatch(t.Lhs.Type(), t.Rhs.Type()) {
+				tc.error(t.Pos(), "can not compare expression of type '%s' with "+
+					"expression of type '%s'", t.Lhs.Type(), t.Rhs.Type())
+			}
+			t.typ = TypeList[Int]
 		}
 	case *Call:
 		o := t.Scope().Lookup(t.Name())
@@ -77,11 +78,11 @@ func (tc *typeChecker) check(o Object) {
 			tc.error(t.Pos(), "calling undeclared function '%s'", t.Name())
 			return
 		}
-		if o.Kind() != ast.FuncDecl {
-			tc.error(t.Pos(), "call expects function got '%s'", o.Kind())
+		f, ok := o.Type().(FuncType)
+		if !ok {
+			tc.error(t.Pos(), "call expects function got '%s'", o.Type())
 			return
 		}
-		f := o.(*Define).Body.(*Function)
 
 		if len(t.Args) != len(f.Params) {
 			tc.error(t.Pos(), "function '%s' expects '%d' arguments but received %d",
@@ -91,34 +92,40 @@ func (tc *typeChecker) check(o Object) {
 
 		for i, a := range t.Args {
 			tc.check(a)
-			p := f.Scope().Lookup(f.Params[i].Name())
-			if a.Type() != p.Type() {
+			//p := f.Scope().Lookup(f.Params[i].Name())
+			if !typeMatch(a.Type(), f.Params[i]) {
 				tc.error(t.Pos(), "parameter %d of function '%s' expects type '%s' "+
-					"but argument %d is of type '%s'", i, t.Name(), p.Type(), i, a.Type())
+					"but argument is of type '%s'", i, t.Name(), f.Params[i], a.Type())
 			}
 		}
-		t.object.typ = f.Type()
+		t.object.typ = f.Return
 	case *Define:
 		tc.check(t.Body)
+		o := t.Scope().Lookup(t.Name())
+		if !typeMatch(o.Type(), t.Body.Type()) {
+			tc.error(t.Pos(), "type mismatch; '%s' expects type '%s' but got '%s'",
+				o.Name(), o.Type(), t.Body.Type())
+		}
 	case *For:
 		tc.check(t.Cond)
-		if t.Cond.Type() != Bool {
+		if t.Cond.Type().Base().Kind() != Bool {
 			tc.error(t.Pos(), "conditional must be type 'bool', got '%s'",
 				t.Cond.Type())
 			return
 		}
 		tc.checkBody(t, t.Body)
 	case *Function:
+		//fmt.Println("function type:", t.Type())
 		tc.checkBody(t, t.Body)
 	case *If:
 		tc.check(t.Cond)
-		if t.Cond.Type() != Bool {
+		if t.Cond.Type().Base().Kind() != Bool {
 			tc.error(t.Pos(), "conditional must be type 'bool', got '%s'",
 				t.Cond.Type())
 			return
 		}
 		tc.check(t.Then)
-		if t.Type() != t.Then.Type() {
+		if !typeMatch(t.Type(), t.Then.Type()) {
 			tc.error(t.Pos(), "if expects type '%s' but then clause is type '%s'",
 				t.Type(), t.Then.Type())
 
@@ -126,7 +133,7 @@ func (tc *typeChecker) check(o Object) {
 		}
 		if t.Else != nil {
 			tc.check(t.Else)
-			if t.Type() != t.Else.Type() {
+			if !typeMatch(t.Type(), t.Else.Type()) {
 				tc.error(t.Pos(), "if expects type '%s' but else clause is type '%s'",
 					t.Type(), t.Else.Type())
 
@@ -139,7 +146,7 @@ func (tc *typeChecker) check(o Object) {
 			tc.error(t.Pos(), "undeclared variable '%s'", t.Name())
 			return
 		}
-		if o.Kind() == ast.FuncDecl {
+		if _, ok := o.Type().(FuncType); ok {
 			tc.error(t.Pos(), "function '%s' used as variable; must be used "+
 				"in call form (surrounded in parentheses)", t.Name())
 			return
@@ -150,13 +157,40 @@ func (tc *typeChecker) check(o Object) {
 	}
 }
 
+func typeMatch(a Type, b Type) bool {
+	switch ta := a.(type) {
+	case BasicType:
+		if tb, ok := b.(BasicType); ok {
+			return ta == tb
+		}
+		return false
+	case FuncType:
+		if tb, ok := b.(FuncType); ok {
+			if len(ta.Params) != len(tb.Params) {
+				return false
+			}
+			if typeMatch(ta.Return, tb.Return) == false {
+				return false
+			}
+			for i := range ta.Params {
+				if !typeMatch(ta.Params[i], tb.Params[i]) {
+					return false
+				}
+			}
+			return true
+		}
+
+	}
+	return false
+}
+
 func (tc *typeChecker) checkBody(o Object, body []Object) {
 	for _, e := range body {
 		tc.check(e)
 	}
 
 	tail := body[len(body)-1]
-	if o.Type() != tail.Type() {
+	if !typeMatch(o.Type().Base(), tail.Type()) {
 		tc.error(o.Pos(), "last expression of %s is of type '%s' but expects "+
 			"type '%s'", o.Name(), tail.Type(), o.Type())
 	}

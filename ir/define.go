@@ -19,19 +19,18 @@ type Define struct {
 }
 
 func MakeDefine(pkg *Package, d *ast.DefineStmt) *Define {
+	// type may be unknown, in which case it will be inferred later
 	body := MakeExpr(pkg, d.Body)
-	t := body.Type()
+	typ := body.Type()
 	if d.Type != nil {
-		t = typeFromString(d.Type.Name)
+		typ = GetType(d.Type)
 	}
-
 	return &Define{
 		object: object{
-			kind: body.Kind(),
 			pkg:  pkg,
 			name: d.Name.Name,
 			pos:  d.Pos(),
-			typ:  t,
+			typ:  typ,
 		},
 		Body: body,
 	}

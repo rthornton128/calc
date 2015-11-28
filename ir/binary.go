@@ -26,22 +26,13 @@ func makeBinary(pkg *Package, b *ast.BinaryExpr) *Binary {
 	for _, e := range b.List[1:] {
 		rhs := MakeExpr(pkg, e)
 		lhs = Object(&Binary{
-			object: object{pkg: pkg, pos: b.Pos(), typ: binaryType(b.Op)},
+			object: object{pkg: pkg, pos: b.Pos(), scope: pkg.scope},
 			Op:     b.Op,
 			Lhs:    lhs,
 			Rhs:    rhs,
 		})
 	}
 	return lhs.(*Binary)
-}
-
-func binaryType(t token.Token) Type {
-	switch t {
-	case token.ADD, token.MUL, token.QUO, token.REM, token.SUB:
-		return Int
-	default:
-		return Bool
-	}
 }
 
 func (b *Binary) String() string {
@@ -56,7 +47,7 @@ type Unary struct {
 
 func makeUnary(pkg *Package, u *ast.UnaryExpr) *Unary {
 	return &Unary{
-		object: object{pkg: pkg, pos: u.Pos(), scope: pkg.scope, typ: Int},
+		object: object{pkg: pkg, pos: u.Pos(), scope: pkg.scope},
 		Op:     u.Op,
 		Rhs:    MakeExpr(pkg, u.Value),
 	}

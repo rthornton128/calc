@@ -54,7 +54,7 @@ func makeBool(lit string) (Value, error) {
 }
 
 func (v boolValue) String() string { return fmt.Sprintf("%v", bool(v)) }
-func (v boolValue) Type() Type     { return Bool }
+func (v boolValue) Type() Type     { return TypeList[Bool] }
 
 func makeInt(lit string) (Value, error) {
 	i, err := strconv.ParseInt(lit, 0, 64)
@@ -62,4 +62,4 @@ func makeInt(lit string) (Value, error) {
 }
 
 func (v intValue) String() string { return strconv.FormatInt(int64(v), 10) }
-func (v intValue) Type() Type     { return Int }
+func (v intValue) Type() Type     { return TypeList[Int] }

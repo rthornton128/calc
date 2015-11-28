@@ -27,14 +27,12 @@ func makeFunc(pkg *Package, f *ast.FuncExpr) *Function {
 	fn := &Function{
 		object: object{
 			id:    pkg.getID(),
-			kind:  ast.FuncDecl,
 			pkg:   pkg,
 			pos:   f.Pos(),
 			scope: pkg.scope,
-			typ:   typeFromString(f.Type.Name),
-			// TODO typ: SignatureType{},
+			typ:   GetType(f.Func),
 		},
-		Params: makeParamList(pkg, f.Params),
+		Params: makeParamList(pkg, f.Func.Params),
 		Body:   MakeExprList(pkg, f.Body),
 	}
 
@@ -54,7 +52,7 @@ func (f *Function) String() string {
 		exprs[i] = s.String()
 	}
 
-	return fmt.Sprintf("func:%s (%s) {%s}", f.typ, strings.Join(params, ","),
+	return fmt.Sprintf("func:%s (%s) {%s}", f.Type(), strings.Join(params, ","),
 		strings.Join(exprs, ","))
 }
 
@@ -65,15 +63,14 @@ type Param struct {
 func makeParam(pkg *Package, p *ast.Param) *Param {
 	return &Param{object{
 		id:   pkg.getID(),
-		kind: ast.VarDecl,
 		name: p.Name.Name,
 		pos:  p.Pos(),
-		typ:  typeFromString(p.Type.Name),
+		typ:  GetType(p.Type),
 	}}
 }
 
 func (p *Param) String() string {
-	return fmt.Sprintf("%s[%s]", p.name, p.typ)
+	return fmt.Sprintf("%s[%s]", p.Name(), p.Type())
 }
 
 func makeParamList(pkg *Package, pl []*ast.Param) []*Param {

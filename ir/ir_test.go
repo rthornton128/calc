@@ -73,8 +73,8 @@ func TestConstant(t *testing.T) {
 
 func TestFile(t *testing.T) {
 	tests := []Test{
-		{src: "(define add:int (func (a:int b:int):int (+ a b)))" +
-			"(define main:int (func:int (add 2 3)))",
+		{src: "(define add:func(int int)int (func (a:int b:int):int (+ a b)))" +
+			"(define main:func()int (func:int (add 2 3)))",
 			pass: true},
 		{src: "(define equal (func (a:int b:int):bool (== a b)))" +
 			"(define main (func:int (if (equal (+ 2 3) (*4 2)):int 0 1)))",
@@ -90,7 +90,7 @@ func TestFile(t *testing.T) {
 		{src: "(define fn (func:int 0))" +
 			"(define main (func:int (= fn 3) 0))", pass: false},
 		{src: "(define fn (func (i:int b:bool):int 0))" +
-			"(define main:int (func:int (fn 42 true)))", pass: true},
+			"(define main (func:int (fn 42 true)))", pass: true},
 		{src: "(define fn (func (i:int b:bool):int 0))" +
 			"(define main (func:int (fn 4 2)))", pass: false},
 	}
@@ -180,15 +180,15 @@ func test_handler(t *testing.T, test Test, name string, n ast.Node) {
 		o = ir.MakeExpr(pkg, x)
 		t.Log("makexpr, test:", test.src)
 	}
-	t.Log(o)
 	fset := token.NewFileSet()
 	fset.Add(name, len(test.src))
-	if err := ir.TypeCheck(o, fset); (err == nil) != test.pass {
+	err := ir.TypeCheck(o, fset)
+	t.Log(o)
+	if (err == nil) != test.pass {
 		t.Logf("expected %v got %v", test.pass, err == nil)
 		if err != nil {
 			t.Log(err)
 		}
 		t.Fail()
-	} /*
-		ir.Tag(o)*/
+	}
 }

@@ -105,19 +105,6 @@ func CompileDir(path string, opt bool) error {
 	return nil
 }
 
-/* Utility */
-
-func cType(t ir.Type) string {
-	switch t {
-	case ir.Int:
-		return "int32_t"
-	case ir.Bool:
-		return "bool"
-	default:
-		return "int"
-	}
-}
-
 // Error adds an error to the compiler at the given position. The remaining
 // arguments are used to generate the error message.
 func (c *compiler) Error(pos token.Pos, args ...interface{}) {
@@ -168,7 +155,7 @@ func (c *compiler) compObject(o ir.Object) string {
 	case *ir.Var:
 		return c.compVar(t)
 	case *ir.Variable:
-		c.emit("%s %s%d = 0;\n", cType(t.Type()), t.Name(), t.ID())
+		c.emit("%s %s%d = 0;\n", t.Type().Base().CType(), t.Name(), t.ID())
 		return c.compVariable(t)
 	}
 	return ""

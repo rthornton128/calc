@@ -344,10 +344,12 @@ func (p *parser) parseFuncExpr() *ast.FuncExpr {
 	defer p.closeScope()
 
 	return &ast.FuncExpr{
-		Func:   p.expect(token.FUNC),
-		Params: p.parseParamList(),
-		Type:   p.parseType(),
-		Body:   p.parseExprList(),
+		Func: &ast.FuncType{
+			Func:   p.expect(token.FUNC),
+			Params: p.parseParamList(),
+			Type:   p.parseType(),
+		},
+		Body: p.parseExprList(),
 	}
 }
 
@@ -424,12 +426,12 @@ func (p *parser) parseTypeNoColon() ast.Expr {
 	}
 }
 
-func (p *parser) parseTypeList() []ast.Expr {
-	types := make([]ast.Expr, 0)
+func (p *parser) parseTypeList() []*ast.Param {
+	types := make([]*ast.Param, 0)
 	if p.tok == token.LPAREN {
 		p.expect(token.LPAREN)
 		for p.tok == token.IDENT || p.tok == token.FUNC {
-			types = append(types, p.parseTypeNoColon())
+			types = append(types, &ast.Param{Type: p.parseTypeNoColon()})
 		}
 		p.expect(token.RPAREN)
 	}
