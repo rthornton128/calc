@@ -74,7 +74,7 @@ func ParseFile(fset *token.FileSet, filename, src string) (*ast.File, error) {
 		}
 		r = f
 		sz = fi.Size()
-		fmt.Printf("%s:%d\n", fi.Name(), sz)
+		//	fmt.Printf("%s:%d\n", fi.Name(), sz)
 	} else {
 		sr := strings.NewReader(src)
 		r = io.Reader(sr)

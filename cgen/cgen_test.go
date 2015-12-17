@@ -5,7 +5,7 @@
 // or, if one is not included, you may also find a copy at
 // http://opensource.org/licenses/BSD-2-Clause
 
-package comp_test
+package cgen_test
 
 import (
 	"io/ioutil"
@@ -71,7 +71,7 @@ func test_handler(t *testing.T, src, expected string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = comp.CompileFile("test.calc", false)
+	err = cgen.CompileFile("test.calc", false)
 	if err != nil {
 		t.Log(src)
 		t.Fatal(err)
