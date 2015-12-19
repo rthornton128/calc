@@ -30,7 +30,7 @@ type compiler struct {
 // CompileFile generates a C source file for the corresponding file
 // specified by path. The .calc extension for the filename in path is
 // replaced with .c for the C source output.
-func CompileFile(path string, opt bool) error {
+func CompileFile(path string, backend string, opt bool) error {
 	fset := token.NewFileSet()
 	f, err := parse.ParseFile(fset, path, "")
 	if err != nil {
@@ -50,7 +50,17 @@ func CompileFile(path string, opt bool) error {
 
 	c := compiler{}
 	path = path[:len(path)-len(filepath.Ext(path))]
-	switch {
+	switch backend {
+	case "x86":
+		var err error
+		c.writer, err = os.Create(path + ".s")
+		if err != nil {
+			return err
+		}
+		defer c.writer.Close()
+
+		cc := &x86{c}
+		cc.genPackage(pkg)
 	default:
 		var err error
 		c.writer, err = os.Create(path + ".c")
