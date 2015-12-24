@@ -38,12 +38,17 @@ func TestBinary(t *testing.T) {
 		"(- (* 9 (+ 2 3)) (+ (/ 20 (% 15 10)) 1))))", "40")
 }
 
+func TestFor(t *testing.T) {
+	test_handler(t, "(define main (func:int (var (i:int) :int"+
+		"(= i 0) (for (< i 5) :int (= i (+ i 2))))))", "6")
+}
+
 /*
 func TestFunc(t *testing.T) {
 	test_handler(t, "(define fn (func (a:int b:int):int (+ a b)))\n"+
 		"(define main (func:int (fn 1 2)))", "3")
 }
-*/
+
 func TestIfThenElse(t *testing.T) {
 	test_handler(t, "(define main (func:int (if true :int 99)))", "99")
 	test_handler(t, "(define main (func:int (if false :int 2 3)))", "3")
@@ -60,10 +65,10 @@ func TestVarAndAssign(t *testing.T) {
 
 func TestUnary(t *testing.T) {
 	test_handler(t, "(define main (func:int -24))", "-24")
-	test_handler(t, "(define main (func:int\n"+
-		"(var (z:int):int (= z 12) -z)))", "-12")
-	test_handler(t, "(define fn (func (num:int):int -num))\n"+
-		"(define main (func:int (fn -42)))", "42")
+	//test_handler(t, "(define main (func:int\n"+
+	//"(var (z:int):int (= z 12) -z)))", "-12")
+	//test_handler(t, "(define fn (func (num:int):int -num))\n"+
+	//"(define main (func:int (fn -42)))", "42")
 }
 */
 func test_handler(t *testing.T, src, expected string) {

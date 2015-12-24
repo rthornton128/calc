@@ -14,6 +14,8 @@ import (
 
 // This is a redimentary, unoptimized x86 assembly code generator. It is
 // highly unstable and a work in progress
+// BUG functions don't create a stack frame
+// BUG calls don't follow cdecl convension
 
 type x86 struct{ compiler }
 
@@ -21,10 +23,10 @@ func (c *x86) genObject(o ir.Object) {
 	switch t := o.(type) {
 	case *ir.Binary:
 		c.genObject(t.Lhs)
-		c.emitln("push %eax")
+		c.emitln("pushl %eax")
 		c.genObject(t.Rhs)
 		c.emitln("movl %eax, %ecx")
-		c.emitln("pop %eax")
+		c.emitln("popl %eax")
 		switch t.Op {
 		case token.ADD:
 			c.emitln("addl %ecx, %eax")
@@ -33,47 +35,78 @@ func (c *x86) genObject(o ir.Object) {
 		case token.MUL:
 			c.emitln("mull %ecx") // signed only right now
 		case token.QUO:
-			c.emitln("mov $0, %edx") // avoid sigfpe
+			c.emitln("movl $0, %edx") // avoid sigfpe
 			c.emitln("divl %ecx")
 		case token.REM:
-			c.emitln("mov $0, %edx") // avoid sigfpe
+			c.emitln("movl $0, %edx") // avoid sigfpe
 			c.emitln("divl %ecx")
 			c.emitln("movl %edx, %eax")
 		case token.EQL:
 			c.emitln("cmpl %ecx, %eax")
-			c.emitln("je %ebx")
+			c.emitln("sete %al")
+			c.emitln("movzbl %al, %eax")
 		case token.NEQ:
 			c.emitln("cmpl %ecx, %eax")
-			c.emitln("jz %ebx")
+			c.emitln("setne %al")
+			c.emitln("movzbl %al, %eax")
 		case token.LST:
 			c.emitln("cmpl %ecx, %eax")
-			c.emitln("jl %ebx")
+			c.emitln("setl %al")
+			c.emitln("movzbl %al, %eax")
 		case token.LTE:
 			c.emitln("cmpl %ecx, %eax")
-			c.emitln("jle %ebx")
+			c.emitln("setle %al")
+			c.emitln("movzbl %al, %eax")
 		case token.GTT:
 			c.emitln("cmpl %ecx, %eax")
-			c.emitln("jg %ebx")
+			c.emitln("setg %al")
+			c.emitln("movzbl %al, %eax")
 		case token.GTE:
 			c.emitln("cmpl %ecx, %eax")
-			c.emitln("jge %ebx")
+			c.emitln("setge %al")
+			c.emitln("movzbl %al, %eax")
 		}
 	case *ir.Call:
+		// BUG this is not proper calling convension for 386, must be pushed in
+		// reverse order
 		for _, e := range t.Args {
 			c.genObject(e)
-			c.emitln("push %eax") // would prefer to place into specific offset
+			c.emitln("pushl %eax")
 		}
 		c.emit("call %s\n", t.Name())
 	case *ir.Constant:
-		c.emit("movl $%s, %%eax\n", t.String())
-	case *ir.If:
-		c.emit("movl then%d, %%ebx\n", t.ID())
-		c.genObject(t.Cond)
-		if t.Else != nil {
-			c.genObject(t.Else)
+		switch t.String() {
+		case "true":
+			c.emitln("movl $1, %eax")
+		case "false":
+			c.emitln("movl $0, %eax")
+		default:
+			c.emit("movl $%s, %%eax\n", t.String())
 		}
-		c.emit("then%d:\n", t.ID())
-		c.genObject(t.Then)
+	case *ir.For:
+		c.emit("jmp L%d\n", t.ID())
+		c.emit("L%db:\n", t.ID())
+		for _, e := range t.Body {
+			c.genObject(e)
+		}
+		c.emit("L%d:\n", t.ID())
+		c.genObject(t.Cond)
+		c.emitln("andl $1, %eax")
+		c.emit("jnz L%db\n", t.ID())
+	case *ir.If:
+		c.genObject(t.Cond)
+		c.emitln("andl $1, %eax")
+		if t.Else != nil {
+			c.emit("jz L%de\n", t.ID())
+			c.genObject(t.Then)
+			c.emit("jmp L%d\n", t.ID())
+			c.emit("L%de:\n", t.ID())
+			c.genObject(t.Else)
+		} else {
+			c.emit("jz L%d\n", t.ID())
+			c.genObject(t.Then)
+		}
+		c.emit("L%d:\n", t.ID())
 	case *ir.Function:
 		for _, e := range t.Body {
 			c.genObject(e)
@@ -83,6 +116,13 @@ func (c *x86) genObject(o ir.Object) {
 		c.genObject(t.Rhs)
 		c.emitln("neg %eax")
 	case *ir.Var:
+	case *ir.Variable:
+		//for _, p := range t.Args {
+
+		//}
+		for _, e := range t.Body {
+			c.genObject(e)
+		}
 	}
 }
 
@@ -105,13 +145,13 @@ func (c *x86) genPackage(pkg *ir.Package) {
 	c.emitln()
 	c.emitln(".text")
 	c.emitln("_main:")
-	c.emitln("push %ebp")
-	c.emitln("movl %esp, %ebp")
-	c.emitln("subl $16, %esp")
+	c.emitln("push %rbp")
+	c.emitln("movl %rsp, %rbp")
+	c.emitln("subl $32, %rsp")
 	c.emitln("call main")
 	c.emitln("movl %eax, 4(%esp)")
-	c.emitln("movl $fmt, (%esp)")
-	c.emitln("call _printf")
+	c.emitln("movl $fmt, 0(%esp)")
+	c.emitln("call printf")
 	c.emitln("movl $0, %eax")
 	c.emitln("leave")
 	c.emitln("ret")
