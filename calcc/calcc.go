@@ -19,9 +19,13 @@ import (
 	"github.com/rthornton128/calc/cgen"
 )
 
+var binExt = ""    // binary extension
+var cgenExt = ".c" // code generation extension; C is the default backend
+var objExt = ".o"  // object extension
+
 func cleanup(filename string) {
-	os.Remove(filename + ".c")
-	os.Remove(filename + ".o")
+	os.Remove(filename + cgenExt)
+	os.Remove(filename + objExt)
 }
 
 func fatal(args ...interface{}) {
@@ -47,9 +51,8 @@ func printVersion() {
 }
 
 func main() {
-	ext := ""
 	if runtime.GOOS == "windows" {
-		ext = ".exe"
+		binExt = ".exe"
 	}
 	flag.Usage = func() {
 		printVersion()
@@ -58,8 +61,9 @@ func main() {
 		flag.PrintDefaults()
 	}
 	var (
-		asm  = flag.Bool("s", false, "generate C code but do not compile")
-		cc   = flag.String("cc", "gcc", "C compiler to use")
+		asm  = flag.Bool("s", false, "output intermediate code only")
+		be   = flag.String("cgen", "c", "code generator: c, x86")
+		cc   = flag.String("cc", "gcc", "C compiler to use (C backend only)")
 		cfl  = flag.String("cflags", "-c -g -std=gnu99", "C compiler flags")
 		cout = flag.String("cout", "--output=", "C compiler output flag")
 		ld   = flag.String("ld", "gcc", "linker")
@@ -86,27 +90,42 @@ func main() {
 
 	fi, err := os.Stat(path)
 	if err != nil {
-		fmt.Println(err)
+		fatal(err)
+	}
+
+	opath := path[:len(path)-len(filepath.Ext(path))]
+	w, err := os.Create(opath + cgenExt) // BUG cgenExt not changed yet...
+	if err != nil {
+		fatal(err)
+	}
+	var c cgen.CodeGenerator
+	switch *be {
+	case "c":
+		c = &cgen.StdC{w}
+	case "x86":
+		c = &cgen.X86{w}
+		cgenExt = ".s"
+	default:
+		fmt.Println("invalid code generator backend selected")
 		os.Exit(1)
 	}
 	if fi.IsDir() {
-		err = comp.CompileDir(path, *opt)
+		err = cgen.CompileDir(c, path, *opt)
 		path = filepath.Join(path, filepath.Base(path))
 	} else {
-		err = comp.CompileFile(path, *opt)
+		err = cgen.CompileFile(c, path, *opt)
 	}
 
-	path = path[:len(path)-len(filepath.Ext(path))]
+	path = opath
 	if err != nil {
-		fmt.Println(err)
 		cleanup(path)
-		os.Exit(1)
+		fatal(err)
 	}
 	if !*asm {
 		/* compile to object code */
 		var out []byte
-		args := make_args(*cfl, *cout+path+".o", path+".c")
-		out, err := exec.Command(*cc+ext,
+		args := make_args(*cfl, *cout+path+objExt, path+cgenExt)
+		out, err := exec.Command(*cc+binExt,
 			strings.Split(args, " ")...).CombinedOutput()
 		if err != nil {
 			cleanup(path)
@@ -114,8 +133,8 @@ func main() {
 		}
 
 		/* link to executable */
-		args = make_args(*ldf, *cout+path+ext, path+".o")
-		out, err = exec.Command(*ld+ext,
+		args = make_args(*ldf, *cout+path+binExt, path+objExt)
+		out, err = exec.Command(*ld+binExt,
 			strings.Split(args, " ")...).CombinedOutput()
 		if err != nil {
 			cleanup(path)

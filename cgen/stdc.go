@@ -2,12 +2,13 @@ package cgen
 
 import (
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/rthornton128/calc/ir"
 )
 
-type cCompiler struct{ compiler }
+type StdC struct{ io.Writer }
 
 /* Utility */
 
@@ -22,13 +23,21 @@ func cType(t ir.Type) string {
 	}
 }
 
-func (c *cCompiler) emitHeaders() {
+func (cc *StdC) emit(f string, args ...interface{}) {
+	fmt.Fprintf(cc.Writer, f, args...)
+}
+
+func (cc *StdC) emitln(args ...interface{}) {
+	fmt.Fprintln(cc.Writer, args...)
+}
+
+func (c *StdC) emitHeaders() {
 	c.emitln("#include <stdio.h>")
 	c.emitln("#include <stdint.h>")
 	c.emitln("#include <stdbool.h>")
 }
 
-func (c *cCompiler) emitMain() {
+func (c *StdC) emitMain() {
 	c.emitln("int main(void) {")
 	c.emitln("printf(\"%d\\n\", _main());")
 	c.emitln("return 0;")
@@ -37,7 +46,7 @@ func (c *cCompiler) emitMain() {
 
 /* Main Compiler */
 
-func (c *cCompiler) compObject(o ir.Object) string {
+func (c *StdC) compObject(o ir.Object) string {
 	switch t := o.(type) {
 	case *ir.Assignment:
 		return c.compAssignment(t)
@@ -64,18 +73,18 @@ func (c *cCompiler) compObject(o ir.Object) string {
 	return ""
 }
 
-func (c *cCompiler) compAssignment(a *ir.Assignment) string {
+func (c *StdC) compAssignment(a *ir.Assignment) string {
 	c.emit("%s%d = %s;\n", a.Lhs, a.Scope().Lookup(a.Lhs).ID(),
 		c.compObject(a.Rhs))
 	return a.Lhs
 }
 
-func (c *cCompiler) compBinary(b *ir.Binary) string {
+func (c *StdC) compBinary(b *ir.Binary) string {
 	return fmt.Sprintf("(%s %s %s)",
 		c.compObject(b.Lhs), b.Op.String(), c.compObject(b.Rhs))
 }
 
-func (c *cCompiler) compCall(call *ir.Call) string {
+func (c *StdC) compCall(call *ir.Call) string {
 	args := make([]string, len(call.Args))
 	for i, a := range call.Args {
 		args[i] = fmt.Sprintf("%s", c.compObject(a))
@@ -83,11 +92,11 @@ func (c *cCompiler) compCall(call *ir.Call) string {
 	return fmt.Sprintf("_%s(%s)", call.Name(), strings.Join(args, ","))
 }
 
-func (c *cCompiler) compConstant(con *ir.Constant) string {
+func (c *StdC) compConstant(con *ir.Constant) string {
 	return con.String()
 }
 
-func (c *cCompiler) compDefine(d *ir.Define) string {
+func (c *StdC) compDefine(d *ir.Define) string {
 	switch t := d.Body.(type) {
 	case *ir.Function:
 		c.emit("%s {\n", c.compSignature(t))
@@ -98,7 +107,7 @@ func (c *cCompiler) compDefine(d *ir.Define) string {
 	}
 }
 
-func (c *cCompiler) compFor(f *ir.For) string {
+func (c *StdC) compFor(f *ir.For) string {
 	c.emit("%s %s%d = 0;\n", cType(f.Type()), f.Name(), f.ID())
 	c.emit("while (%s) {\n", c.compObject(f.Cond))
 	for _, e := range f.Body[:len(f.Body)-1] {
@@ -109,18 +118,18 @@ func (c *cCompiler) compFor(f *ir.For) string {
 	return fmt.Sprintf("%s%d", f.Name(), f.ID())
 }
 
-func (c *cCompiler) compFunction(f *ir.Function) {
+func (c *StdC) compFunction(f *ir.Function) {
 	for _, e := range f.Body[:len(f.Body)-1] {
 		c.compObject(e)
 	}
 	c.emit("return %s;\n}\n", c.compObject(f.Body[len(f.Body)-1]))
 }
 
-func (c *cCompiler) compIdent(i *ir.Var) string {
+func (c *StdC) compIdent(i *ir.Var) string {
 	return fmt.Sprintf("%s%d", i.Name(), i.Scope().Lookup(i.Name()).ID())
 }
 
-func (c *cCompiler) compIf(i *ir.If) string {
+func (c *StdC) compIf(i *ir.If) string {
 	c.emit("%s if%d = 0; /* %s */\n", cType(i.Type()), i.ID(), i.Name())
 	c.emit("if (%s) {\n", c.compObject(i.Cond))
 	c.emit("if%d = %s;\n", i.ID(), c.compObject(i.Then))
@@ -132,7 +141,7 @@ func (c *cCompiler) compIf(i *ir.If) string {
 	return fmt.Sprintf("if%d", i.ID())
 }
 
-func (c *cCompiler) compPackage(p *ir.Package) {
+func (c *StdC) CGen(p *ir.Package) {
 	c.emitHeaders()
 	names := p.Scope().Names()
 	for _, name := range names {
@@ -153,7 +162,7 @@ func (c *cCompiler) compPackage(p *ir.Package) {
 	c.emitMain()
 }
 
-func (c *cCompiler) compSignature(f *ir.Function) string {
+func (c *StdC) compSignature(f *ir.Function) string {
 	params := make([]string, len(f.Params))
 	for i, p := range f.Params {
 		param := f.Scope().Lookup(p.Name()).(*ir.Param)
@@ -164,11 +173,11 @@ func (c *cCompiler) compSignature(f *ir.Function) string {
 		strings.Join(params, ","))
 }
 
-func (c *cCompiler) compUnary(u *ir.Unary) string {
+func (c *StdC) compUnary(u *ir.Unary) string {
 	return fmt.Sprintf("%s%s", u.Op, c.compObject(u.Rhs))
 }
 
-func (c *cCompiler) compVar(v *ir.Var) string {
+func (c *StdC) compVar(v *ir.Var) string {
 	switch t := v.Scope().Lookup(v.Name()).(type) {
 	case *ir.Define:
 		return c.compDefine(t)
@@ -178,7 +187,7 @@ func (c *cCompiler) compVar(v *ir.Var) string {
 	panic("unreachable")
 }
 
-func (c *cCompiler) compVariable(v *ir.Variable) string {
+func (c *StdC) compVariable(v *ir.Variable) string {
 	for _, p := range v.Params {
 		param := v.Scope().Lookup(p.Name()).(*ir.Param)
 		c.emit("%s %s%d = 0;\n", cType(param.Type()), param.Name(), param.ID())

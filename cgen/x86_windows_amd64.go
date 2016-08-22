@@ -9,7 +9,7 @@
 
 package cgen
 
-func (c *x86) emitMain() {
+func (c *X86) emitMain() {
 	c.emitln(".text")
 	c.emitln("main:")
 	c.emitln("push %rbp")

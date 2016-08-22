@@ -8,18 +8,29 @@
 package cgen
 
 import (
+	"fmt"
+	"io"
+
 	"github.com/rthornton128/calc/ir"
 	"github.com/rthornton128/calc/token"
 )
 
-// This is a redimentary, unoptimized x86 assembly code generator. It is
+// This is a rudimentary, unoptimized x86 assembly code generator. It is
 // highly unstable and a work in progress
 // BUG functions don't create a stack frame
 // BUG calls don't follow cdecl convension
 
-type x86 struct{ compiler }
+type X86 struct{ io.Writer }
 
-func (c *x86) genObject(o ir.Object) {
+func (c *X86) emit(f string, args ...interface{}) {
+	fmt.Fprintf(c.Writer, f, args...)
+}
+
+func (c *X86) emitln(args ...interface{}) {
+	fmt.Fprintln(c.Writer, args...)
+}
+
+func (c *X86) genObject(o ir.Object) {
 	switch t := o.(type) {
 	case *ir.Binary:
 		c.genObject(t.Lhs)
@@ -126,7 +137,7 @@ func (c *x86) genObject(o ir.Object) {
 	}
 }
 
-func (c *x86) genPackage(pkg *ir.Package) {
+func (c *X86) CGen(p *ir.Package) {
 	//c.emit(".file %s\n", "xxx.calc")
 	c.emitln(".global _main")
 	for _, name := range pkg.Scope().Names() {
