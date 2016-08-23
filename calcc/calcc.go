@@ -14,18 +14,19 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
 
 	"github.com/rthornton128/calc/cgen"
 )
 
 var binExt = ""    // binary extension
 var cgenExt = ".c" // code generation extension; C is the default backend
-var objExt = ".o"  // object extension
+var cflags = []string{"-c", "-g", "-std=gnu99"}
+var lflags = []string{}
 
 func cleanup(filename string) {
+	fmt.Println("remove:", filename+cgenExt)
 	os.Remove(filename + cgenExt)
-	os.Remove(filename + objExt)
+	os.Remove(filename + ".o")
 }
 
 func fatal(args ...interface{}) {
@@ -33,21 +34,8 @@ func fatal(args ...interface{}) {
 	os.Exit(1)
 }
 
-func make_args(options ...string) string {
-	var args string
-	for i, opt := range options {
-		if len(opt) > 0 {
-			args += opt
-			if i < len(options)-1 {
-				args += " "
-			}
-		}
-	}
-	return args
-}
-
-func printVersion() {
-	fmt.Fprintln(os.Stderr, "Calc Compiler Tool Version 2.1")
+func stripExt(path string) string {
+	return path[:len(path)-len(filepath.Ext(path))]
 }
 
 func main() {
@@ -55,28 +43,20 @@ func main() {
 		binExt = ".exe"
 	}
 	flag.Usage = func() {
-		printVersion()
+		fmt.Fprintln(os.Stderr, "Calc Compiler Tool Version 2.1")
 		fmt.Fprintln(os.Stderr, "\nUsage of:", os.Args[0])
 		fmt.Fprintln(os.Stderr, os.Args[0], "[flags] <filename>")
 		flag.PrintDefaults()
 	}
+
 	var (
-		asm  = flag.Bool("s", false, "output intermediate code only")
-		be   = flag.String("cgen", "c", "code generator: c, x86")
-		cc   = flag.String("cc", "gcc", "C compiler to use (C backend only)")
-		cfl  = flag.String("cflags", "-c -g -std=gnu99", "C compiler flags")
-		cout = flag.String("cout", "--output=", "C compiler output flag")
-		ld   = flag.String("ld", "gcc", "linker")
-		ldf  = flag.String("ldflags", "", "linker flags")
-		opt  = flag.Bool("o", true, "run optimization pass")
-		ver  = flag.Bool("v", false, "Print version number and exit")
+		interOnly   = flag.Bool("s", false, "output intermediate code only")
+		backEnd     = flag.String("g", "c", "code generator: c, x86")
+		compileOnly = flag.Bool("c", false, "compile to object only")
+		optimize    = flag.Bool("opt", true, "run optimization pass")
 	)
 	flag.Parse()
 
-	if *ver {
-		printVersion()
-		os.Exit(1)
-	}
 	var path string
 	switch flag.NArg() {
 	case 0:
@@ -87,59 +67,64 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
+	// path is either file with .calc ext or directory name
 
-	fi, err := os.Stat(path)
-	if err != nil {
-		fatal(err)
-	}
-
-	opath := path[:len(path)-len(filepath.Ext(path))]
-	w, err := os.Create(opath + cgenExt) // BUG cgenExt not changed yet...
-	if err != nil {
-		fatal(err)
-	}
 	var c cgen.CodeGenerator
-	switch *be {
+	switch *backEnd {
 	case "c":
-		c = &cgen.StdC{w}
+		c = &cgen.StdC{}
 	case "x86":
-		c = &cgen.X86{w}
+		c = &cgen.X86{}
 		cgenExt = ".s"
 	default:
 		fmt.Println("invalid code generator backend selected")
 		os.Exit(1)
 	}
-	if fi.IsDir() {
-		err = cgen.CompileDir(c, path, *opt)
-		path = filepath.Join(path, filepath.Base(path))
-	} else {
-		err = cgen.CompileFile(c, path, *opt)
-	}
 
-	path = opath
+	// writer should output .c or .s file
+	w, err := os.Create(stripExt(path) + cgenExt)
 	if err != nil {
-		cleanup(path)
 		fatal(err)
 	}
-	if !*asm {
-		/* compile to object code */
-		var out []byte
-		args := make_args(*cfl, *cout+path+objExt, path+cgenExt)
-		out, err := exec.Command(*cc+binExt,
-			strings.Split(args, " ")...).CombinedOutput()
-		if err != nil {
-			cleanup(path)
-			fatal(string(out), err)
-		}
-
-		/* link to executable */
-		args = make_args(*ldf, *cout+path+binExt, path+objExt)
-		out, err = exec.Command(*ld+binExt,
-			strings.Split(args, " ")...).CombinedOutput()
-		if err != nil {
-			cleanup(path)
-			fatal(string(out), err)
-		}
-		cleanup(path)
+	fi, err := os.Stat(path) // needs raw path
+	if err != nil {
+		fatal(err)
 	}
+	if fi.IsDir() {
+		err = cgen.CompileDir(w, c, path, *optimize)
+		path = filepath.Join(path, filepath.Base(path))
+	} else {
+		err = cgen.CompileFile(w, c, path, *optimize)
+	}
+	if err != nil {
+		cleanup(stripExt(path))
+		fatal(err)
+	}
+
+	// stop processessing if only producing intermediate code
+	if *interOnly {
+		os.Exit(0)
+	}
+
+	path = stripExt(path)
+	cflags = append(cflags, fmt.Sprintf("--output=%s%s", path, ".o"))
+	cflags = append(cflags, stripExt(path)+cgenExt)
+	out, err := exec.Command("gcc", cflags...).CombinedOutput()
+	if err != nil {
+		cleanup(path)
+		fatal(string(out), err)
+	}
+
+	if *compileOnly {
+		os.Exit(0)
+	}
+
+	lflags = append(lflags, fmt.Sprintf("--output=%s%s", path, binExt))
+	lflags = append(lflags, stripExt(path)+".o")
+	out, err = exec.Command("gcc", lflags...).CombinedOutput()
+	if err != nil {
+		cleanup(path)
+		fatal(string(out), err)
+	}
+	cleanup(path)
 }

@@ -7,7 +7,11 @@
 
 package cgen
 
-import "github.com/rthornton128/calc/ir"
+import (
+	"io"
+
+	"github.com/rthornton128/calc/ir"
+)
 
 // This is a rudimentary, unoptimized x86 assembly code generator. It is
 // highly unstable and a work in progress
@@ -33,7 +37,8 @@ const (
 	SUB   = "subl"
 )
 
-func (c *X86) CGen(p *ir.Package) {
+func (c *X86) CGen(w io.Writer, p *ir.Package) {
+	x.Writer = w
 	//c.emit(".file %s\n", "xxx.calc")
 	c.emitln(".global _main")
 	for _, name := range pkg.Scope().Names() {

@@ -10,6 +10,7 @@
 package cgen
 
 import (
+	"io"
 	"path/filepath"
 
 	"github.com/rthornton128/calc/ast"
@@ -19,13 +20,13 @@ import (
 )
 
 type CodeGenerator interface {
-	CGen(pkg *ir.Package)
+	CGen(w io.Writer, pkg *ir.Package)
 }
 
 // CompileFile generates a C source file for the corresponding file
 // specified by path. The .calc extension for the filename in path is
 // replaced with .c for the C source output.
-func CompileFile(c CodeGenerator, path string, opt bool) error {
+func CompileFile(w io.Writer, c CodeGenerator, path string, opt bool) error {
 	fset := token.NewFileSet()
 	f, err := parse.ParseFile(fset, path, "")
 	if err != nil {
@@ -43,7 +44,7 @@ func CompileFile(c CodeGenerator, path string, opt bool) error {
 		pkg = ir.FoldConstants(pkg).(*ir.Package)
 	}
 
-	c.CGen(pkg)
+	c.CGen(w, pkg)
 
 	return nil
 }
@@ -51,7 +52,7 @@ func CompileFile(c CodeGenerator, path string, opt bool) error {
 // CompileDir generates C source code for the Calc sources found in the
 // directory specified by path. The C source file uses the same name as
 // directory rather than any individual file.
-func CompileDir(c CodeGenerator, path string, opt bool) error {
+func CompileDir(w io.Writer, c CodeGenerator, path string, opt bool) error {
 	fset := token.NewFileSet()
 	p, err := parse.ParseDir(fset, path)
 	if err != nil {
@@ -66,7 +67,7 @@ func CompileDir(c CodeGenerator, path string, opt bool) error {
 		pkg = ir.FoldConstants(pkg).(*ir.Package)
 	}
 
-	c.CGen(pkg)
+	c.CGen(w, pkg)
 
 	return nil
 }

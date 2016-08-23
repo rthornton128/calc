@@ -7,7 +7,11 @@
 
 package cgen
 
-import "github.com/rthornton128/calc/ir"
+import (
+	"io"
+
+	"github.com/rthornton128/calc/ir"
+)
 
 // Registers and instructions specific to AMD64
 const (
@@ -30,7 +34,8 @@ const (
 	SUB   = "subq"
 )
 
-func (c *X86) CGen(pkg *ir.Package) {
+func (c *X86) CGen(w io.Writer, pkg *ir.Package) {
+	c.Writer = w
 	//c.emit(".file %s\n", "xxx.calc")
 	c.emit(".global main")
 	for _, name := range pkg.Scope().Names() {

@@ -141,7 +141,8 @@ func (c *StdC) compIf(i *ir.If) string {
 	return fmt.Sprintf("if%d", i.ID())
 }
 
-func (c *StdC) CGen(p *ir.Package) {
+func (c *StdC) CGen(w io.Writer, p *ir.Package) {
+	c.Writer = w
 	c.emitHeaders()
 	names := p.Scope().Names()
 	for _, name := range names {
