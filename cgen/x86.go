@@ -15,177 +15,158 @@ import (
 	"github.com/rthornton128/calc/token"
 )
 
-// Registers and instructions shared across 386 and AMD64
-const (
-	// registers
-	AL  = "al"
-	EAX = "eax"
-	RAX = "rax"
-	ECX = "ecx"
-	RCX = "rcx"
-	EDX = "edx"
-	RDX = "rdx"
-	EDI = "edi"
-	RDI = "rdi"
-	ESI = "esi"
-	RSI = "rsi"
-	EBP = "ebp"
-	RBP = "rbp"
-	ESP = "esp"
-	RSP = "rsp"
-
-	// jump instructions
-	CALL  = "call"
-	JMP   = "jmp"
-	JZ    = "jz"
-	JNZ   = "jnz"
-	LEAVE = "leave"
-	RET   = "ret"
-
-	// inversion
-	NEG = "neg"
-
-	// set instructions
-	SETE  = "sete"
-	SETNE = "setne"
-	SETL  = "setl"
-	SETLE = "setle"
-	SETG  = "setg"
-	SETGE = "setge"
-)
-
 // This is a rudimentary, unoptimized x86 assembly code generator. It is
 // highly unstable and a work in progress
-// BUG functions don't create a stack frame
-// BUG calls don't follow cdecl convension
 
-type X86 struct{ io.Writer }
-
-func (c *X86) emitimm(op, imm, reg0 string) {
-	fmt.Fprintf(c.Writer, "%s $%s, %%%s\n", op, imm, reg0)
+type X86 struct {
+	io.Writer
 }
 
-func (c *X86) emit1reg(op, reg0 string) {
-	fmt.Fprintf(c.Writer, "%s %%%s\n", op, reg0)
+func (c *X86) emit(args ...interface{}) {
+	fmt.Fprintln(c.Writer, args...)
 }
 
-func (c *X86) emit2reg(op, reg0, reg1 string) {
-	fmt.Fprintf(c.Writer, "%s %%%s, %%%s\n", op, reg0, reg1)
-}
-
-func (c *X86) emitlbl(f string, arg interface{}) {
-	fmt.Fprintf(c.Writer, f+":\n", arg)
-}
-
-func (c *X86) emitjmp(f, op string, arg interface{}) {
-	fmt.Fprintf(c.Writer, "%s "+f+"\n", op, arg)
-}
-
-func (c *X86) emit(f string, args ...interface{}) {
+func (c *X86) emitf(f string, args ...interface{}) {
 	fmt.Fprintf(c.Writer, f+"\n", args...)
 }
 
-func (c *X86) genObject(o ir.Object) {
+func (c *X86) genObject(o ir.Object, dest string) {
 	switch t := o.(type) {
 	case *ir.Binary:
-		c.genObject(t.Lhs)
-		c.emit1reg(PUSH, A)
-		c.genObject(t.Rhs)
-		c.emit2reg(MOV, A, C)
-		c.emit1reg(POP, A)
-		switch t.Op {
-		case token.ADD:
-			c.emit2reg(ADD, C, A)
-		case token.SUB:
-			c.emit2reg(SUB, C, A)
-		case token.MUL:
-			c.emit1reg(MUL, C) // signed only right now
-		case token.QUO:
-			c.emitimm(MOV, "0", D) // avoid sigfpe
-			c.emit1reg(DIV, C)
-		case token.REM:
-			c.emitimm(MOV, "0", D) // avoid sigfpe
-			c.emit1reg(DIV, C)
-			c.emit2reg(MOV, D, A)
-		case token.EQL:
-			c.emit2reg(CMP, C, A)
-			c.emit(SETE, AL)
-			c.emit2reg(MOVZB, AL, A)
-		case token.NEQ:
-			c.emit2reg(CMP, C, A)
-			c.emit1reg(SETNE, AL)
-			c.emit2reg(MOVZB, AL, A)
-		case token.LST:
-			c.emit2reg(CMP, C, A)
-			c.emit1reg(SETL, AL)
-			c.emit2reg(MOVZB, AL, A)
-		case token.LTE:
-			c.emit2reg(CMP, C, A)
-			c.emit1reg(SETLE, AL)
-			c.emit2reg(MOVZB, AL, A)
-		case token.GTT:
-			c.emit2reg(CMP, C, A)
-			c.emit1reg(SETG, AL)
-			c.emit2reg(MOVZB, AL, A)
-		case token.GTE:
-			c.emit2reg(CMP, C, A)
-			c.emit1reg(SETGE, AL)
-			c.emit2reg(MOVZB, AL, A)
-		}
+		c.genBinary(t, "")
 	case *ir.Call:
-		for _, e := range t.Args {
-			c.genObject(e)
-			c.emit1reg(PUSH, A)
+		var offset int // TODO nope, bad, use pre-gen offsets
+		for _, arg := range t.Args {
+			c.genObject(arg, fmt.Sprintf("%d(%%esp)", offset))
+			offset += 4
 		}
-		c.emitjmp("%s", CALL, t.Name())
+		c.emitf("call _%s")
 	case *ir.Constant:
+		var val string
 		switch t.String() {
 		case "true":
-			c.emitimm(MOV, "1", A)
+			val = "1"
 		case "false":
-			c.emitimm(MOV, "0", A)
+			val = "0"
 		default:
-			c.emitimm(MOV, t.String(), A)
+			val = t.String()
 		}
+		c.emitf("movl $%s, %s", val, dest)
 	case *ir.For:
-		c.emitjmp("L%d", JMP, t.ID())
-		c.emitlbl("L%db", t.ID())
-		for _, e := range t.Body {
-			c.genObject(e)
-		}
-		c.emitlbl("L%d", t.ID())
-		c.genObject(t.Cond)
-		c.emit2reg(AND, "1", A)
-		c.emitjmp("L%db", JNZ, t.ID())
 	case *ir.If:
-		c.genObject(t.Cond)
-		c.emitimm(AND, "1", A)
-		if t.Else != nil {
-			c.emitjmp("L%de", JZ, t.ID())
-			c.genObject(t.Then)
-			c.emitjmp("L%d", JMP, t.ID())
-			c.emitlbl("L%de", t.ID())
-			c.genObject(t.Else)
-		} else {
-			c.emitjmp("L%d", JZ, t.ID())
-			c.genObject(t.Then)
-		}
-		c.emitlbl("L%d", t.ID())
+		c.genIf(t)
 	case *ir.Function:
+		// enter
+		c.emit("push %ebp")
+		c.emit("movl %esp, %ebp")
+		c.emit("subl $16, %esp") // TODO: fix from constant
 		for _, e := range t.Body {
-			c.genObject(e)
+			c.genObject(e, "%eax")
 		}
-		c.emit(RET)
+		c.emit("movl %ebp, %esp")
+		c.emit("pop %ebp")
+		c.emit("ret")
 	case *ir.Unary:
-		c.genObject(t.Rhs)
-		c.emit1reg(NEG, A)
+		c.genObject(t.Rhs, "%eax")
+		c.emit("neg %eax")
 	case *ir.Var:
 	case *ir.Variable:
-		//for _, p := range t.Args {
+	}
+}
 
-		//}
-		for _, e := range t.Body {
-			c.genObject(e)
+func (c *X86) genBinary(b *ir.Binary, jump string) {
+	c.genObject(b.Lhs, "%eax")
+	switch b.Rhs.(type) {
+	case *ir.Constant, *ir.Var:
+		if b.Op == token.QUO || b.Op == token.REM {
+			c.genObject(b.Rhs, "%ecx")
+		} else {
+			c.genObject(b.Rhs, "%edx")
+		}
+	default:
+		c.emit("push %eax")
+		c.genObject(b.Rhs, "%eax")
+		if b.Op == token.QUO || b.Op == token.REM {
+			c.emit("movl %eax, %ecx")
+		} else {
+			c.emit("movl %eax, %edx")
+		}
+		c.emit("pop %eax")
+	}
+	switch b.Op {
+	case token.ADD:
+		c.emit("addl %edx, %eax")
+	case token.SUB:
+		c.emit("subl %edx, %eax")
+	case token.MUL:
+		c.emit("imul %edx, %eax")
+	case token.QUO:
+		c.emit("cdq")
+		c.emit("idiv %ecx")
+	case token.REM:
+		c.emit("cdq")
+		c.emit("idiv %ecx, %eax")
+		c.emit("movl %edx, %eax")
+	default:
+		c.emit("cmpl %edx, %eax")
+		switch b.Op {
+		case token.EQL:
+			if len(jump) > 0 {
+				c.emitf("jne %s", jump)
+				return
+			}
+			c.emit("sete %al")
+			c.emit("movzbl %al, %eax")
+		case token.NEQ:
+			if len(jump) > 0 {
+				c.emitf("je %s", jump)
+			}
+			c.emit("setne %al")
+			c.emit("movzbl %al, %eax")
+		case token.LST:
+			if len(jump) > 0 {
+				c.emitf("jge %s", jump)
+				return
+			}
+			c.emit("setl %al")
+			c.emit("movzbl %al, %eax")
+		case token.LTE:
+			if len(jump) > 0 {
+				c.emitf("jg %s", jump)
+				return
+			}
+			c.emit("setle %al")
+			c.emit("movzbl %al, %eax")
+		case token.GTT:
+			if len(jump) > 0 {
+				c.emitf("jle %s", jump)
+				return
+			}
+			c.emit("setg %al")
+			c.emit("movzbl %al, %eax")
+		case token.GTE:
+			if len(jump) > 0 {
+				c.emitf("jl %s", jump)
+				return
+			}
+			c.emit("setge %al")
+			c.emit("movzbl %al, %eax")
 		}
 	}
+}
+
+func (c *X86) genIf(i *ir.If) {
+	switch t := i.Cond.(type) {
+	case *ir.Binary:
+		c.genBinary(t, fmt.Sprintf("L%dl", i.ID()))
+	default:
+		c.genObject(t, "%eax") // s/b genConstant() or genBoolean()
+		c.emit("cmpl $0, %eax")
+		c.emitf("jz L%dl", i.ID())
+	}
+	c.genObject(i.Then, "%eax")
+	c.emitf("jmp L%de", i.ID())
+	c.emitf("L%d:", i.ID())
+	c.genObject(i.Else, "%eax")
+	c.emitf("L%d:")
 }

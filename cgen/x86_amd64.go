@@ -14,26 +14,6 @@ import (
 )
 
 // Registers and instructions specific to AMD64
-const (
-	A     = RAX
-	BP    = RBP
-	C     = RCX
-	D     = RDX
-	DI    = RDI
-	SI    = RSI
-	SP    = RSP
-	ADD   = "addq"
-	AND   = "andq"
-	CMP   = "cmpq"
-	DIV   = "divq"
-	POP   = "popq"
-	PUSH  = "pushq"
-	MOV   = "movq"
-	MOVZB = "movzbq"
-	MUL   = "mulq"
-	SUB   = "subq"
-)
-
 func (c *X86) CGen(w io.Writer, pkg *ir.Package) {
 	c.Writer = w
 	//c.emit(".file %s\n", "xxx.calc")
@@ -41,17 +21,16 @@ func (c *X86) CGen(w io.Writer, pkg *ir.Package) {
 	for _, name := range pkg.Scope().Names() {
 		if d, ok := pkg.Scope().Lookup(name).(*ir.Define); ok {
 			if f, ok := d.Body.(*ir.Function); ok {
-				c.emit(".global _%s\n", name)
+				c.emitf(".global _%s\n", name)
 				defer func(name string) {
-					c.emit("") // add a space for clarity
-					c.emit("_%s:", name)
-					c.genObject(f)
+					c.emitf("_%s:", name)
+					c.genObject(f, "%eax")
 				}(name)
 			}
 		}
 	}
 	c.emit(".data")
-	c.emit("fmt: .asciz \"%%d\\12\"")
+	c.emitf("fmt: .asciz \"%%d\\12\"")
 	c.emit("")
 	c.emit(".text")
 	c.emitMain()
