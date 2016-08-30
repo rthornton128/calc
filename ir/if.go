@@ -15,9 +15,11 @@ import (
 
 type If struct {
 	object
-	Cond Object
-	Then Object
-	Else Object
+	Cond      Object
+	Then      Object
+	Else      Object
+	ElseLabel string
+	EndLabel  string
 }
 
 func makeIf(pkg *Package, ie *ast.IfExpr) *If {
@@ -37,6 +39,8 @@ func makeIf(pkg *Package, ie *ast.IfExpr) *If {
 		i.object.name += "-else"
 		i.Else = MakeExpr(pkg, ie.Else)
 	}
+	i.ElseLabel = fmt.Sprintf("L%d", pkg.getID())
+	i.EndLabel = fmt.Sprintf("L%d", i.ID())
 	return i
 }
 

@@ -18,6 +18,7 @@ type Object interface {
 	ID() int
 	Kind() ast.Kind
 	Name() string
+	Offset() int
 	Package() *Package
 	Pos() token.Pos
 	Scope() *Scope
@@ -29,6 +30,7 @@ type object struct {
 	id    int
 	kind  ast.Kind
 	name  string
+	off   int
 	pkg   *Package
 	pos   token.Pos
 	scope *Scope
@@ -38,6 +40,7 @@ type object struct {
 func (o object) ID() int           { return o.id }
 func (o object) Kind() ast.Kind    { return o.kind }
 func (o object) Name() string      { return o.name }
+func (o object) Offset() int       { return o.off }
 func (o object) Package() *Package { return o.pkg }
 func (o object) Pos() token.Pos    { return o.pos }
 func (o object) Scope() *Scope {

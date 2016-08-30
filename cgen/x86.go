@@ -40,7 +40,7 @@ func (c *X86) genObject(o ir.Object, dest string) {
 			c.genObject(arg, fmt.Sprintf("%d(%%esp)", offset))
 			offset += 4
 		}
-		c.emitf("call _%s")
+		c.emitf("call _%s", t.Name())
 	case *ir.Constant:
 		var val string
 		switch t.String() {
@@ -158,15 +158,15 @@ func (c *X86) genBinary(b *ir.Binary, jump string) {
 func (c *X86) genIf(i *ir.If) {
 	switch t := i.Cond.(type) {
 	case *ir.Binary:
-		c.genBinary(t, fmt.Sprintf("L%dl", i.ID()))
+		c.genBinary(t, i.ElseLabel)
 	default:
 		c.genObject(t, "%eax") // s/b genConstant() or genBoolean()
 		c.emit("cmpl $0, %eax")
-		c.emitf("jz L%dl", i.ID())
+		c.emitf("jz %s", i.ElseLabel)
 	}
 	c.genObject(i.Then, "%eax")
-	c.emitf("jmp L%de", i.ID())
-	c.emitf("L%d:", i.ID())
+	c.emitf("jmp %s", i.EndLabel)
+	c.emitf("%s:", i.ElseLabel)
 	c.genObject(i.Else, "%eax")
-	c.emitf("L%d:")
+	c.emitf("%s:", i.EndLabel)
 }
