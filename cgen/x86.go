@@ -32,6 +32,9 @@ func (c *X86) emitf(f string, args ...interface{}) {
 
 func (c *X86) genObject(o ir.Object, dest string) {
 	switch t := o.(type) {
+	case *ir.Assignment:
+		c.genObject(t.Rhs, "%eax")
+		c.emitf("movl %%eax, %d(%esp)", t.Offset())
 	case *ir.Binary:
 		c.genBinary(t, "")
 	case *ir.Call:
@@ -70,7 +73,11 @@ func (c *X86) genObject(o ir.Object, dest string) {
 		c.genObject(t.Rhs, "%eax")
 		c.emit("neg %eax")
 	case *ir.Var:
+		c.emitf("mov %d(%%esp), %s", t.Offset(), dest)
 	case *ir.Variable:
+		for _, e := range t.Body {
+			c.genObject(e, "%eax")
+		}
 	}
 }
 
