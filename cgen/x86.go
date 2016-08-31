@@ -38,10 +38,14 @@ func (c *X86) genObject(o ir.Object, dest string) {
 	case *ir.Binary:
 		c.genBinary(t, "")
 	case *ir.Call:
-		var offset int // TODO nope, bad, use pre-gen offsets
-		for _, arg := range t.Args {
-			c.genObject(arg, fmt.Sprintf("%d(%%esp)", offset))
-			offset += 4
+		n := len(t.Args) * 8
+		for i, arg := range t.Args {
+			c.genObject(arg, "%eax")
+			if off := n - ((i + 1) * 8); off == 0 {
+				c.emit("movl %eax, (%esp)")
+			} else {
+				c.emitf("movl %%eax, %d(%%esp)", off)
+			}
 		}
 		c.emitf("call _%s", t.Name())
 	case *ir.Constant:
@@ -62,7 +66,7 @@ func (c *X86) genObject(o ir.Object, dest string) {
 		// enter
 		c.emit("push %ebp")
 		c.emit("movl %esp, %ebp")
-		c.emit("subl $16, %esp") // TODO: fix from constant
+		c.emitf("subl $%d, %%esp", t.Offset())
 		for _, e := range t.Body {
 			c.genObject(e, "%eax")
 		}
@@ -73,7 +77,8 @@ func (c *X86) genObject(o ir.Object, dest string) {
 		c.genObject(t.Rhs, "%eax")
 		c.emit("neg %eax")
 	case *ir.Var:
-		c.emitf("mov %d(%%esp), %s", t.Offset(), dest)
+		o := t.Scope().Lookup(t.Name())
+		c.emitf("mov %d(%s), %s", o.Offset(), o.Register(), dest)
 	case *ir.Variable:
 		for _, e := range t.Body {
 			c.genObject(e, "%eax")
@@ -91,14 +96,14 @@ func (c *X86) genBinary(b *ir.Binary, jump string) {
 			c.genObject(b.Rhs, "%edx")
 		}
 	default:
-		c.emit("push %eax")
+		c.emitf("movl %%eax, %d(%%esp)", b.Offset())
 		c.genObject(b.Rhs, "%eax")
 		if b.Op == token.QUO || b.Op == token.REM {
 			c.emit("movl %eax, %ecx")
 		} else {
 			c.emit("movl %eax, %edx")
 		}
-		c.emit("pop %eax")
+		c.emitf("movl %d(%%esp), %%eax", b.Offset())
 	}
 	switch b.Op {
 	case token.ADD:

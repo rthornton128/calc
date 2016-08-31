@@ -20,6 +20,7 @@ type Object interface {
 	Name() string
 	Offset() int
 	Package() *Package
+	Register() string
 	Pos() token.Pos
 	Scope() *Scope
 	String() string
@@ -33,6 +34,7 @@ type object struct {
 	off   int
 	pkg   *Package
 	pos   token.Pos
+	reg   string
 	scope *Scope
 	typ   Type
 }
@@ -43,6 +45,7 @@ func (o object) Name() string      { return o.name }
 func (o object) Offset() int       { return o.off }
 func (o object) Package() *Package { return o.pkg }
 func (o object) Pos() token.Pos    { return o.pos }
+func (o object) Register() string  { return o.reg }
 func (o object) Scope() *Scope {
 	if o.scope == nil {
 		return o.pkg.Scope()

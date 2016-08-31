@@ -21,7 +21,7 @@ func (c *X86) CGen(w io.Writer, pkg *ir.Package) {
 	for _, name := range pkg.Scope().Names() {
 		if d, ok := pkg.Scope().Lookup(name).(*ir.Define); ok {
 			if f, ok := d.Body.(*ir.Function); ok {
-				c.emitf(".global _%s\n", name)
+				c.emitf(".global _%s", name)
 				defer func(name string) {
 					c.emitf("_%s:", name)
 					c.genObject(f, "%eax")

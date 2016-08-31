@@ -15,21 +15,8 @@ func RegAlloc(pkg *Package) {
 
 	// assign offsets to parameters of all functions first
 	for _, f := range pkg.Scope().Names() {
-		offset := 0
-
-		switch t := pkg.Lookup(f).(type) {
-		case *Function:
-			for _, p := range t.Params {
-				p.off = offset
-				offset += 4
-			}
-			defer a.walk(t)
-		case *Variable:
-			for _, p := range t.Params {
-				p.off = offset
-				offset += 4
-			}
-			defer a.walk(t)
+		if t, ok := pkg.Lookup(f).(*Define); ok {
+			a.process(t.Body)
 		}
 	}
 }
@@ -41,9 +28,30 @@ type allocator struct {
 	sz  int
 }
 
+func (a *allocator) process(o Object) {
+	offset := 0
+
+	switch t := o.(type) {
+	case *Function:
+		for _, p := range t.Params {
+			p.reg = "%ebp"
+			p.off = offset
+			offset += 8
+		}
+		defer a.walk(t)
+	case *Variable:
+		for _, p := range t.Params {
+			p.reg = "%esp"
+			p.off = offset
+			offset += 8
+		}
+		defer a.walk(t)
+	}
+}
+
 func (a *allocator) nextOffset() int {
 	o := a.off
-	a.off += 4
+	a.off += 8
 	return o
 }
 
@@ -52,17 +60,36 @@ func (a *allocator) walk(o Object) {
 	case *Assignment:
 		a.walk(t.Rhs)
 	case *Binary:
+		// TODO: requests more stack space than is necessary since only
+		// rhs expressions would potentially be placed on the stack
 		a.walk(t.Lhs)
 		a.walk(t.Rhs)
+		t.off = a.nextOffset()
+		a.sz += 8
+	case *Call:
+		a.sz += len(t.Args) * 8
+		for _, arg := range t.Args {
+			a.walk(arg)
+		}
 	case *Function:
 		for _, o := range t.Body {
 			a.walk(o)
 		}
-	case *Var:
-		if t.off == 0 {
-			t.off = a.nextOffset()
+		t.off = a.sz
+		a.sz = 0
+	case *If:
+		a.walk(t.Cond)
+		a.walk(t.Then)
+		if t.Else != nil {
+			a.walk(t.Else)
 		}
+	case *Var:
 	case *Variable:
+		for _, p := range t.Params {
+			p.off = a.nextOffset()
+			p.reg = "%esp"
+		}
+		a.sz += len(t.Params) * 8
 		for _, o := range t.Body {
 			a.walk(o)
 		}
