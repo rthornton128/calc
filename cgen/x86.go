@@ -29,22 +29,43 @@ func (c *X86) emit(args ...interface{}) {
 func (c *X86) emitf(f string, args ...interface{}) {
 	fmt.Fprintf(c.Writer, f+"\n", args...)
 }
+func (c *X86) CGen(w io.Writer, pkg *ir.Package) {
+	c.Writer = w
+	//c.emit(".file %s\n", "xxx.calc")
+	c.emit(".global main")
+	for _, name := range pkg.Scope().Names() {
+		if d, ok := pkg.Scope().Lookup(name).(*ir.Define); ok {
+			if f, ok := d.Body.(*ir.Function); ok {
+				c.emitf(".global _%s", name)
+				defer func(name string) {
+					c.emitf("_%s:", name)
+					c.genObject(f, "%eax")
+				}(name)
+			}
+		}
+	}
+	c.emit(".data")
+	c.emitf("fmt: .asciz \"%%d\\12\"")
+	c.emit("")
+	c.emit(".text")
+	c.emitMain()
+}
 
 func (c *X86) genObject(o ir.Object, dest string) {
 	switch t := o.(type) {
 	case *ir.Assignment:
 		c.genObject(t.Rhs, "%eax")
-		c.emitf("movl %%eax, %d(%esp)", t.Offset())
+		c.emitf("movl %%eax, %d(%s)", t.Offset(), SP)
 	case *ir.Binary:
 		c.genBinary(t, "")
 	case *ir.Call:
-		n := len(t.Args) * 8
+		n := len(t.Args) * 4
 		for i, arg := range t.Args {
 			c.genObject(arg, "%eax")
-			if off := n - ((i + 1) * 8); off == 0 {
-				c.emit("movl %eax, (%esp)")
+			if off := n - ((i + 1) * 4); off == 0 {
+				c.emitf("movl %%eax, (%s)", SP)
 			} else {
-				c.emitf("movl %%eax, %d(%%esp)", off)
+				c.emitf("movl %%eax, %d(%s)", off, SP)
 			}
 		}
 		c.emitf("call _%s", t.Name())
@@ -64,14 +85,11 @@ func (c *X86) genObject(o ir.Object, dest string) {
 		c.genIf(t)
 	case *ir.Function:
 		// enter
-		c.emit("push %ebp")
-		c.emit("movl %esp, %ebp")
-		c.emitf("subl $%d, %%esp", t.Offset())
+		c.genEnter(t.Offset())
 		for _, e := range t.Body {
 			c.genObject(e, "%eax")
 		}
-		c.emit("movl %ebp, %esp")
-		c.emit("pop %ebp")
+		c.genLeave()
 		c.emit("ret")
 	case *ir.Unary:
 		c.genObject(t.Rhs, "%eax")
@@ -96,14 +114,14 @@ func (c *X86) genBinary(b *ir.Binary, jump string) {
 			c.genObject(b.Rhs, "%edx")
 		}
 	default:
-		c.emitf("movl %%eax, %d(%%esp)", b.Offset())
+		c.emitf("movl %%eax, %d(%s)", b.Offset(), SP)
 		c.genObject(b.Rhs, "%eax")
 		if b.Op == token.QUO || b.Op == token.REM {
 			c.emit("movl %eax, %ecx")
 		} else {
 			c.emit("movl %eax, %edx")
 		}
-		c.emitf("movl %d(%%esp), %%eax", b.Offset())
+		c.emitf("movl %d(%s), %%eax", b.Offset(), SP)
 	}
 	switch b.Op {
 	case token.ADD:

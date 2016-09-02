@@ -7,31 +7,20 @@
 
 package cgen
 
-import (
-	"io"
+var byteOffset = 8
 
-	"github.com/rthornton128/calc/ir"
+const (
+	BP string = "%rbp"
+	SP        = "%rsp"
 )
 
-// Registers and instructions specific to AMD64
-func (c *X86) CGen(w io.Writer, pkg *ir.Package) {
-	c.Writer = w
-	//c.emit(".file %s\n", "xxx.calc")
-	c.emit(".global main")
-	for _, name := range pkg.Scope().Names() {
-		if d, ok := pkg.Scope().Lookup(name).(*ir.Define); ok {
-			if f, ok := d.Body.(*ir.Function); ok {
-				c.emitf(".global _%s", name)
-				defer func(name string) {
-					c.emitf("_%s:", name)
-					c.genObject(f, "%eax")
-				}(name)
-			}
-		}
-	}
-	c.emit(".data")
-	c.emitf("fmt: .asciz \"%%d\\12\"")
-	c.emit("")
-	c.emit(".text")
-	c.emitMain()
+func (c *X86) genEnter(sz int) {
+	c.emit("pushq %rbp")
+	c.emit("movq %rsp, %rbp")
+	c.emitf("subq $%d, %%rsp", sz+8)
+}
+
+func (c *X86) genLeave() {
+	c.emit("movq %rbp, %rsp")
+	c.emit("popq %rbp")
 }

@@ -33,17 +33,18 @@ func (a *allocator) process(o Object) {
 
 	switch t := o.(type) {
 	case *Function:
+		offset = byteOffset
 		for _, p := range t.Params {
-			p.reg = "%ebp"
+			p.reg = BP
 			p.off = offset
-			offset += 8
+			offset += 4
 		}
 		defer a.walk(t)
 	case *Variable:
 		for _, p := range t.Params {
-			p.reg = "%esp"
+			p.reg = SP
 			p.off = offset
-			offset += 8
+			offset += 4
 		}
 		defer a.walk(t)
 	}
@@ -51,7 +52,7 @@ func (a *allocator) process(o Object) {
 
 func (a *allocator) nextOffset() int {
 	o := a.off
-	a.off += 8
+	a.off += 4
 	return o
 }
 
@@ -65,9 +66,9 @@ func (a *allocator) walk(o Object) {
 		a.walk(t.Lhs)
 		a.walk(t.Rhs)
 		t.off = a.nextOffset()
-		a.sz += 8
+		a.sz += 4
 	case *Call:
-		a.sz += len(t.Args) * 8
+		a.sz += len(t.Args) * 4
 		for _, arg := range t.Args {
 			a.walk(arg)
 		}
@@ -87,9 +88,9 @@ func (a *allocator) walk(o Object) {
 	case *Variable:
 		for _, p := range t.Params {
 			p.off = a.nextOffset()
-			p.reg = "%esp"
+			p.reg = SP
 		}
-		a.sz += len(t.Params) * 8
+		a.sz += len(t.Params) * 4
 		for _, o := range t.Body {
 			a.walk(o)
 		}

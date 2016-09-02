@@ -7,64 +7,35 @@
 
 package cgen
 
-import (
-	"io"
+// 386 only code
 
-	"github.com/rthornton128/calc/ir"
-)
+var byteOffset = 4
 
-// This is a rudimentary, unoptimized x86 assembly code generator. It is
-// highly unstable and a work in progress
-// BUG functions don't create a stack frame
-// BUG calls don't follow cdecl convension
-
-// Registers and instructions specific to AMD64
 const (
-	A     = EAX
-	BP    = EBP
-	C     = ECX
-	D     = EBP
-	SP    = ESP
-	ADD   = "addl"
-	AND   = "andl"
-	CMP   = "cmpl"
-	DIV   = "divl"
-	POP   = "popl"
-	PUSH  = "pushl"
-	MOV   = "movl"
-	MOVZB = "movzbl"
-	MUL   = "mull"
-	SUB   = "subl"
+	BP string = "%ebp"
+	SP        = "%esp"
 )
 
-func (c *X86) CGen(w io.Writer, p *ir.Package) {
-	x.Writer = w
-	//c.emit(".file %s\n", "xxx.calc")
-	c.emitln(".global _main")
-	for _, name := range pkg.Scope().Names() {
-		if d, ok := pkg.Scope().Lookup(name).(*ir.Define); ok {
-			if f, ok := d.Body.(*ir.Function); ok {
-				c.emit(".global %s\n", name)
-				defer func(name string) {
-					c.emit("%s:\n", name)
-					c.genObject(f)
-				}(name)
-			}
-		}
-	}
-	c.emit(".data")
-	c.emit("fmt: .asciz \"%%d\\12\"")
-	c.emit()
-	c.emit(".text")
-	c.emit("_main:")
-	c.emit("push %ebp")
+func (c *X86) genEnter(sz int) {
+	c.emit("pushl %ebp")
 	c.emit("movl %esp, %ebp")
-	c.emit("subl $32, %esp")
+	c.emit("andl $-16, %esp")
+	c.emitf("subl $%d, %%esp", sz+4)
+}
+
+func (c *X86) genLeave() {
+	c.emit("movl %ebp, %esp")
+	c.emit("popl %ebp")
+}
+
+func (c *X86) emitMain() {
+	c.emit("_main:")
+	c.genEnter(16)
 	c.emit("call main")
 	c.emit("movl %eax, 4(%esp)")
 	c.emit("movl $fmt, 0(%esp)")
 	c.emit("call printf")
 	c.emit("movl $0, %eax")
-	c.emit("leave")
+	c.genLeave()
 	c.emit("ret")
 }

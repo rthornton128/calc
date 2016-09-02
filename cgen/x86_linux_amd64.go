@@ -12,15 +12,13 @@ package cgen
 func (c *X86) emitMain() {
 	c.emit(".text")
 	c.emit("main:")
-	c.emit1reg(PUSH, BP)
-	c.emit2reg(MOV, SP, BP)
-	c.emitimm(SUB, "32", SP)
-	c.emitjmp(CALL, "_main")
-	c.emit2reg(MOV, A, SI)
-	c.emitimm(MOV, "fmt", DI)
-	c.emitjmp(CALL, "printf")
-	c.emit(MOV, "0", A)
-	c.emit(ADD, "32", SP)
-	c.emit(POP, BP)
+	c.genEnter(24)
+	c.emit("call _main")
+	c.emit("cltq") // promote %eax to %rax
+	c.emit("movq %rax, %rsi")
+	c.emit("movq $fmt, %rdi")
+	c.emit("call _printf")
+	c.emit("movq $0, %rax")
+	c.genLeave()
 	c.emit("ret")
 }

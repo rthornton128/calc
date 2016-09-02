@@ -11,15 +11,13 @@ package cgen
 
 func (c *X86) emitMain() {
 	c.emit("main:")
-	c.emit("push %ebp")
-	c.emit("movl %esp, %ebp")
-	c.emit("subl $32, %esp")
+	c.genEnter(24)
 	c.emit("call _main")
-	c.emit("movl %eax, %edx")
-	c.emit("movl $fmt, %ecx")
-	c.emit("call _printf")
-	c.emit("mov $0, %eax")
-	c.emit("movl %ebp, %esp")
-	c.emit("pop %ebp")
+	c.emit("cltq") // promite %eax to %rax
+	c.emit("movq %rax, %rdx")
+	c.emit("movq $fmt, %rcx")
+	c.emit("call printf")
+	c.emit("movq $0, %rax")
+	c.genLeave()
 	c.emit("ret")
 }
