@@ -9,15 +9,14 @@
 
 package cgen
 
-func (c *X86) emitMain() {
+func (c *Amd64) emitMain() {
 	c.emit("main:")
-	c.genEnter(24)
 	c.emit("call _main")
-	c.emit("cltq") // promite %eax to %rax
+	c.emit("cltq") // promote %eax to %rax
 	c.emit("movq %rax, %rdx")
 	c.emit("movq $fmt, %rcx")
-	c.emit("call printf")
-	c.emit("movq $0, %rax")
-	c.genLeave()
-	c.emit("ret")
+	c.emit("callq printf")
+	c.emit("xorq %rcx, %rcx")
+	c.emit("callq ExitProcess")
+	c.emit()
 }

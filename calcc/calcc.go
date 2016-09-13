@@ -20,11 +20,10 @@ import (
 
 var binExt = ""    // binary extension
 var cgenExt = ".c" // code generation extension; C is the default backend
-var cflags = []string{"-c", "-g", "-std=gnu99"}
+var cflags = []string{"-c", "-g"}
 var lflags = []string{}
 
 func cleanup(filename string) {
-	fmt.Println("remove:", filename+cgenExt)
 	os.Remove(filename + cgenExt)
 	os.Remove(filename + ".o")
 }
@@ -50,9 +49,9 @@ func main() {
 	}
 
 	var (
-		interOnly   = flag.Bool("s", false, "output intermediate code only")
-		backEnd     = flag.String("g", "c", "code generator: c, x86")
-		compileOnly = flag.Bool("c", false, "compile to object only")
+		interOnly   = flag.Bool("s", false, "compile intermediate code")
+		backEnd     = flag.String("t", "c", "target: amd64, c, x86")
+		compileOnly = flag.Bool("c", false, "compile to object code, no linking")
 		optimize    = flag.Bool("opt", true, "run optimization pass")
 	)
 	flag.Parse()
@@ -71,7 +70,11 @@ func main() {
 
 	var c cgen.CodeGenerator
 	switch *backEnd {
+	case "amd64":
+		c = &cgen.Amd64{}
+		cgenExt = ".s"
 	case "c":
+		cflags = append(cflags, "-std=gnu99")
 		c = &cgen.StdC{}
 	case "x86":
 		c = &cgen.X86{}

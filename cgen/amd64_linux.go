@@ -9,16 +9,16 @@
 
 package cgen
 
-func (c *X86) emitMain() {
+func (c *Amd64) emitMain() {
 	c.emit(".text")
-	c.emit("main:")
-	c.genEnter(24)
+	c.emit("_start:")
 	c.emit("call _main")
 	c.emit("cltq") // promote %eax to %rax
 	c.emit("movq %rax, %rsi")
 	c.emit("movq $fmt, %rdi")
 	c.emit("call _printf")
-	c.emit("movq $0, %rax")
-	c.genLeave()
-	c.emit("ret")
+	c.emit("movq $60, %rax")  // exit system call
+	c.emit("xorq %rdi, %rdi") // exit status
+	c.emit("syscall")         // syscall: exit(0)
+	c.emit()
 }

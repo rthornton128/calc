@@ -15,87 +15,73 @@ import (
 	"github.com/rthornton128/calc/token"
 )
 
-// This is a rudimentary, unoptimized x86 assembly code generator. It is
-// highly unstable and a work in progress
-
-type X86 struct {
+type Amd64 struct {
 	io.Writer
 	offsets map[string]int
 }
 
-func (c *X86) emitMain() {
-	c.emit("_start:")
-	c.emit("pushl %ebp")
-	c.emit("movl %esp, %ebp")
-	c.emit("andl $-16, %esp") // align to 16 bytes
-	c.emitf("subl $32, %%esp")
-	c.emit("call main")
-	c.emit("movl %eax, 4(%esp)")
-	c.emit("movl $fmt, (%esp)")
-	c.emit("call printf")
-	c.emit("movl %ebp, %esp")
-	c.emit("popl %ebp")
-	c.emit("movl $1, %eax") // exit system call
-	c.emit("movl $0, %ebx") // exit code
-	c.emit("int $0x80")     // syscall: exit(0)
+func (c *Amd64) genEnter(sz int) {
 }
-
-func (c *X86) emit(args ...interface{}) {
+func (c *Amd64) emit(args ...interface{}) {
 	fmt.Fprintln(c.Writer, args...)
 }
 
-func (c *X86) emitf(f string, args ...interface{}) {
+func (c *Amd64) emitf(f string, args ...interface{}) {
 	fmt.Fprintf(c.Writer, f+"\n", args...)
 }
-func (c *X86) CGen(w io.Writer, pkg *ir.Package) {
+func (c *Amd64) CGen(w io.Writer, pkg *ir.Package) {
 	c.Writer = w
 
 	// set stack offsets and function stack sizes
-	StackAlloc(pkg, 4)
+	StackAlloc(pkg, 8)
 
 	//c.emit(".file %s\n", "xxx.calc")
+	c.emit(".data")
+	c.emitf("fmt: .asciz \"%%d\\12\"")
+	c.emit("")
+	c.emit(".text")
 	c.emit(".global main")
 	for _, name := range pkg.Scope().Names() {
 		if d, ok := pkg.Scope().Lookup(name).(*ir.Define); ok {
 			if f, ok := d.Body.(*ir.Function); ok {
 				c.emitf(".global _%s", name)
 				defer func(name string) {
+					// label
 					c.emitf("_%s:", name)
-					c.emit("pushl %ebp")
-					c.emit("movl %esp, %ebp")
-					c.emit("andl $-16, %esp")
-					c.emitf("subl $%d, %%esp", fnStackAllocs[name].stackSz)
 
+					// pre
+					c.emit("pushq %rbp")
+					c.emit("movq %rsp, %rbp")
+					c.emitf("subq $%d, %%rsp", fnStackAllocs[name].stackSz)
+
+					// body
 					c.offsets = fnStackAllocs[name].offsets
 					c.genObject(f, "%eax")
 
-					c.emit("movl %ebp, %esp")
-					c.emit("popl %ebp")
+					// post
+					c.emit("movq %rbp, %rsp")
+					c.emit("popq %rbp")
 					c.emit("ret")
 					c.emit()
 				}(name)
 			}
 		}
 	}
-	c.emit(".data")
-	c.emitf("fmt: .asciz \"%%d\\12\"")
-	c.emit("")
-	c.emit(".text")
 	c.emitMain()
 }
 
-func (c *X86) genObject(o ir.Object, dest string) {
+func (c *Amd64) genObject(o ir.Object, dest string) {
 	switch t := o.(type) {
 	case *ir.Assignment:
 		c.genObject(t.Rhs, "%eax")
-		c.emitf("movl %%eax, %d(%%ebp)", c.offsets[t.Name()])
+		c.emitf("movl %%eax, %d(%%rbp)", c.offsets[t.Name()])
 	case *ir.Binary:
 		c.genBinary(t, "")
 	case *ir.Call:
-		sz := 4 * len(t.Args)
+		sz := 8 * len(t.Args)
 		for i, arg := range t.Args {
-			c.genObject(arg, "%eax") // TODO eliminate extra move
-			c.emitf("movl %%eax, %d(%%esp)", sz-(i*4))
+			c.genObject(arg, "%eax")
+			c.emitf("movl %%eax, %d(%%rsp)", sz-(i*8))
 		}
 		c.emitf("call _%s", t.Name())
 	case *ir.Constant:
@@ -113,6 +99,7 @@ func (c *X86) genObject(o ir.Object, dest string) {
 	case *ir.If:
 		c.genIf(t)
 	case *ir.Function:
+		// enter
 		for _, e := range t.Body {
 			c.genObject(e, "%eax")
 		}
@@ -121,7 +108,8 @@ func (c *X86) genObject(o ir.Object, dest string) {
 		c.emit("neg %eax")
 	case *ir.Var:
 		//o := t.Scope().Lookup(t.Name())
-		c.emitf("mov %d(%%ebp), %s", c.offsets[t.Name()], dest)
+
+		c.emitf("movl %d(%%rbp), %s", c.offsets[t.Name()], dest)
 	case *ir.Variable:
 		for _, e := range t.Body {
 			c.genObject(e, "%eax")
@@ -129,8 +117,10 @@ func (c *X86) genObject(o ir.Object, dest string) {
 	}
 }
 
-func (c *X86) genBinary(b *ir.Binary, jump string) {
+func (c *Amd64) genBinary(b *ir.Binary, jump string) {
 	c.genObject(b.Lhs, "%eax")
+	// TODO an improvement (optimization) is to reduce
+	// the Rhs move and instead
 	switch b.Rhs.(type) {
 	case *ir.Constant, *ir.Var:
 		if b.Op == token.QUO || b.Op == token.REM {
@@ -139,14 +129,14 @@ func (c *X86) genBinary(b *ir.Binary, jump string) {
 			c.genObject(b.Rhs, "%edx")
 		}
 	default:
-		c.emitf("movl %%eax, %d(%%esp)", c.offsets[b.Name()])
+		c.emitf("movl %%eax, %d(%%rsp)", c.offsets[b.Name()])
 		c.genObject(b.Rhs, "%eax")
 		if b.Op == token.QUO || b.Op == token.REM {
 			c.emit("movl %eax, %ecx")
 		} else {
 			c.emit("movl %eax, %edx")
 		}
-		c.emitf("movl %d(%%esp), %%eax", c.offsets[b.Name()])
+		c.emitf("movl %d(%%rsp), %%eax", c.offsets[b.Name()])
 	}
 	switch b.Op {
 	case token.ADD:
@@ -210,7 +200,7 @@ func (c *X86) genBinary(b *ir.Binary, jump string) {
 	}
 }
 
-func (c *X86) genIf(i *ir.If) {
+func (c *Amd64) genIf(i *ir.If) {
 	switch t := i.Cond.(type) {
 	case *ir.Binary:
 		c.genBinary(t, i.ElseLabel)

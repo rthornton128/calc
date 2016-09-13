@@ -26,10 +26,14 @@ func makeBinary(pkg *Package, b *ast.BinaryExpr) *Binary {
 	for _, e := range b.List[1:] {
 		rhs := MakeExpr(pkg, e)
 		lhs = Object(&Binary{
-			object: object{pkg: pkg, pos: b.Pos(), typ: binaryType(b.Op)},
-			Op:     b.Op,
-			Lhs:    lhs,
-			Rhs:    rhs,
+			object: object{
+				id:  pkg.getID(),
+				pkg: pkg,
+				pos: b.Pos(),
+				typ: binaryType(b.Op)},
+			Op:  b.Op,
+			Lhs: lhs,
+			Rhs: rhs,
 		})
 	}
 	return lhs.(*Binary)

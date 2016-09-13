@@ -44,7 +44,6 @@ func CompileFile(w io.Writer, c CodeGenerator, path string, opt bool) error {
 		pkg = ir.FoldConstants(pkg).(*ir.Package)
 	}
 
-	ir.RegAlloc(pkg)
 	c.CGen(w, pkg)
 
 	return nil
