@@ -64,22 +64,20 @@ func (a *allocator) alloc(o ir.Object) {
 
 		// set parameter offsets (bp+offset)
 		offset := a.ptrSz * 3 // starting offset = size(BP) + size(IP) + size(ptr)
+		tmp := fnStackAllocs[a.curFn]
 		for _, p := range t.Params {
-			tmp := fnStackAllocs[a.curFn]
 			tmp.offsets[p.Name()] = offset
-			fnStackAllocs[a.curFn] = tmp
-			offset += a.ptrSz // typeSize(p.Type())
+			offset += a.ptrSz
 		}
+
 		// locals
 		a.off = 0
 		for _, o := range t.Body {
 			a.walk(o)
 		}
-		tmp := fnStackAllocs[a.curFn]
-		tmp.stackSz = align(a.sz)
+		tmp.stackSz = align(a.sz + (len(t.Params) * a.ptrSz))
 		fnStackAllocs[a.curFn] = tmp
-		fmt.Printf("Function: %s @ %d - %v\n", a.curFn,
-			fnStackAllocs[a.curFn].stackSz, fnStackAllocs[a.curFn].offsets)
+
 		// reset
 		a.sz = 0
 	}
@@ -88,6 +86,7 @@ func (a *allocator) alloc(o ir.Object) {
 func (a *allocator) nextOffset() int { //t ir.Type) int {
 	o := a.off
 	a.off -= a.ptrSz //typeSize(t)
+	a.sz += a.ptrSz
 	return o
 }
 
@@ -99,9 +98,14 @@ func (a *allocator) walk(o ir.Object) {
 		a.walk(t.Lhs)
 		a.walk(t.Rhs)
 		// TODO: requests more stack space than is strictly necessary
-		tmp := fnStackAllocs[a.curFn]
-		tmp.offsets[fmt.Sprintf("%d", t.Rhs.ID())] = a.nextOffset()
-		fnStackAllocs[a.curFn] = tmp
+		switch t.Rhs.(type) {
+		case *ir.Constant, *ir.Var:
+			//no nothing
+		default:
+			tmp := fnStackAllocs[a.curFn]
+			tmp.offsets[fmt.Sprintf("%d", t.Rhs.ID())] = a.nextOffset()
+			fnStackAllocs[a.curFn] = tmp
+		}
 		//t.off = a.nextOffset(t.Rhs.Type())
 		//a.off += typeSize(t.Rhs.Type())
 	case *ir.Call:

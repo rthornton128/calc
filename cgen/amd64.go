@@ -129,14 +129,22 @@ func (c *Amd64) genBinary(b *ir.Binary, jump string) {
 			c.genObject(b.Rhs, "%edx")
 		}
 	default:
-		c.emitf("movl %%eax, %d(%%rsp)", c.offsets[b.Name()])
+		if c.offsets[b.Name()] == 0 {
+			c.emit("movl %eax, (%rbp)")
+		} else {
+			c.emitf("movl %%eax, %d(%%rbp)", c.offsets[b.Name()])
+		}
 		c.genObject(b.Rhs, "%eax")
 		if b.Op == token.QUO || b.Op == token.REM {
 			c.emit("movl %eax, %ecx")
 		} else {
 			c.emit("movl %eax, %edx")
 		}
-		c.emitf("movl %d(%%rsp), %%eax", c.offsets[b.Name()])
+		if c.offsets[b.Name()] == 0 {
+			c.emit("movl (%rbp), %eax")
+		} else {
+			c.emitf("movl %d(%%rbp), %%eax", c.offsets[b.Name()])
+		}
 	}
 	switch b.Op {
 	case token.ADD:
