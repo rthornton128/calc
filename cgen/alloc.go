@@ -36,7 +36,7 @@ func StackAlloc(pkg *ir.Package, sz int) {
 	}
 }
 
-func align(n int) int { return (n & -16) + 16 }
+func align16(n int) int { return (n & -16) + 16 }
 
 func typeSize(t ir.Type) int {
 	switch t {
@@ -75,7 +75,7 @@ func (a *allocator) alloc(o ir.Object) {
 		for _, o := range t.Body {
 			a.walk(o)
 		}
-		tmp.stackSz = align(a.sz + (len(t.Params) * a.ptrSz))
+		tmp.stackSz = align16(a.sz + (len(t.Params) * a.ptrSz))
 		fnStackAllocs[a.curFn] = tmp
 
 		// reset

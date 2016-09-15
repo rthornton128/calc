@@ -29,6 +29,19 @@ func (c *Amd64) emit(args ...interface{}) {
 func (c *Amd64) emitf(f string, args ...interface{}) {
 	fmt.Fprintf(c.Writer, f+"\n", args...)
 }
+
+func (c *Amd64) emitPrologue(sz int) {
+	c.emit("pushq %rbp")
+	c.emit("movq %rsp, %rbp")
+	c.emitf("subq $%d, %%rsp", sz)
+}
+
+func (c *Amd64) emitPostlogue(sz int) {
+	c.emitf("addq $%d, %%rsp", sz)
+	c.emit("popq %rbp")
+	c.emit("ret")
+}
+
 func (c *Amd64) CGen(w io.Writer, pkg *ir.Package) {
 	c.Writer = w
 
@@ -46,22 +59,19 @@ func (c *Amd64) CGen(w io.Writer, pkg *ir.Package) {
 			if f, ok := d.Body.(*ir.Function); ok {
 				c.emitf(".global _%s", name)
 				defer func(name string) {
+					sz := stackSize(fnStackAllocs[name].stackSz)
 					// label
 					c.emitf("_%s:", name)
 
 					// pre
-					c.emit("pushq %rbp")
-					c.emit("movq %rsp, %rbp")
-					c.emitf("subq $%d, %%rsp", fnStackAllocs[name].stackSz)
+					c.emitPrologue(sz)
 
 					// body
 					c.offsets = fnStackAllocs[name].offsets
 					c.genObject(f, "%eax")
 
 					// post
-					c.emit("movq %rbp, %rsp")
-					c.emit("popq %rbp")
-					c.emit("ret")
+					c.emitPostlogue(sz)
 					c.emit()
 				}(name)
 			}
@@ -78,10 +88,22 @@ func (c *Amd64) genObject(o ir.Object, dest string) {
 	case *ir.Binary:
 		c.genBinary(t, "")
 	case *ir.Call:
-		sz := 8 * len(t.Args)
+		offset := 0
 		for i, arg := range t.Args {
-			c.genObject(arg, "%eax")
-			c.emitf("movl %%eax, %d(%%rsp)", sz-(i*8))
+			var dest string
+			if i < len(t.Args) {
+				dest = argRegisters[i]
+			} else {
+				dest = fmt.Sprintf("$%d(%%rsp)", minStack+offset)
+				offset += 8
+			}
+			switch arg.(type) {
+			case *ir.Constant, *ir.Var:
+				c.genObject(arg, dest)
+			default:
+				c.genObject(arg, "%eax")
+				c.emitf("movl %%eax, %s", dest)
+			}
 		}
 		c.emitf("call _%s", t.Name())
 	case *ir.Constant:
@@ -99,7 +121,11 @@ func (c *Amd64) genObject(o ir.Object, dest string) {
 	case *ir.If:
 		c.genIf(t)
 	case *ir.Function:
-		// enter
+		//
+		for i := 0; i < len(argRegisters) && i < len(t.Params); i++ {
+			c.emitf("movl %s, $d(%%rbp)", argRegisters[i])
+		}
+
 		for _, e := range t.Body {
 			c.genObject(e, "%eax")
 		}
