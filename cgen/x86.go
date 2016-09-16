@@ -20,15 +20,12 @@ import (
 
 type X86 struct {
 	io.Writer
-	offsets map[string]int
+	a *allocator
 }
 
 func (c *X86) emitMain() {
 	c.emit("_start:")
-	c.emit("pushl %ebp")
-	c.emit("movl %esp, %ebp")
-	c.emit("andl $-16, %esp") // align to 16 bytes
-	c.emitf("subl $32, %%esp")
+	c.emitPrologue(32)
 	c.emit("call main")
 	c.emit("movl %eax, 4(%esp)")
 	c.emit("movl $fmt, (%esp)")
@@ -38,6 +35,7 @@ func (c *X86) emitMain() {
 	c.emit("movl $1, %eax") // exit system call
 	c.emit("movl $0, %ebx") // exit code
 	c.emit("int $0x80")     // syscall: exit(0)
+	c.emitPostlogue(32)
 }
 
 func (c *X86) emit(args ...interface{}) {
@@ -47,11 +45,25 @@ func (c *X86) emit(args ...interface{}) {
 func (c *X86) emitf(f string, args ...interface{}) {
 	fmt.Fprintf(c.Writer, f+"\n", args...)
 }
+
+func (c *X86) emitPrologue(sz int) {
+	c.emit("pushl %ebp")
+	c.emit("movl %esp, %ebp")
+	c.emit("andl $-16, %esp")
+	c.emitf("subl $%d, %%esp", sz)
+}
+
+func (c *X86) emitPostlogue(sz int) {
+	c.emitf("addl $%d, %%esp", sz)
+	c.emit("popl %ebp")
+	c.emit("ret")
+}
+
 func (c *X86) CGen(w io.Writer, pkg *ir.Package) {
 	c.Writer = w
 
 	// set stack offsets and function stack sizes
-	StackAlloc(pkg, 4)
+	c.a = StackAlloc(pkg, &stack32{})
 
 	//c.emit(".file %s\n", "xxx.calc")
 	c.emit(".global main")
@@ -61,16 +73,11 @@ func (c *X86) CGen(w io.Writer, pkg *ir.Package) {
 				c.emitf(".global _%s", name)
 				defer func(name string) {
 					c.emitf("_%s:", name)
-					c.emit("pushl %ebp")
-					c.emit("movl %esp, %ebp")
-					c.emit("andl $-16, %esp")
-					c.emitf("subl $%d, %%esp", fnStackAllocs[name].stackSz)
+					c.emitPostlogue(c.a.stackSize())
 
-					c.offsets = fnStackAllocs[name].offsets
 					c.genObject(f, "%eax")
 
-					c.emit("movl %ebp, %esp")
-					c.emit("popl %ebp")
+					c.emitPostlogue(c.a.stackSize())
 					c.emit("ret")
 					c.emit()
 				}(name)
@@ -88,14 +95,18 @@ func (c *X86) genObject(o ir.Object, dest string) {
 	switch t := o.(type) {
 	case *ir.Assignment:
 		c.genObject(t.Rhs, "%eax")
-		c.emitf("movl %%eax, %d(%%ebp)", c.offsets[t.Name()])
+		c.emitf("movl %%eax, %s", c.a.getByName(t.Name()))
 	case *ir.Binary:
 		c.genBinary(t, "")
 	case *ir.Call:
-		sz := 4 * len(t.Args)
 		for i, arg := range t.Args {
-			c.genObject(arg, "%eax") // TODO eliminate extra move
-			c.emitf("movl %%eax, %d(%%esp)", sz-(i*4))
+			switch arg.(type) {
+			case *ir.Constant, *ir.Var:
+				c.genObject(arg, c.a.ArgumentLoc(i))
+			default:
+				c.genObject(arg, "%eax")
+				c.emitf("movl %%eax, %s", c.a.ArgumentLoc(i))
+			}
 		}
 		c.emitf("call _%s", t.Name())
 	case *ir.Constant:
@@ -120,8 +131,7 @@ func (c *X86) genObject(o ir.Object, dest string) {
 		c.genObject(t.Rhs, "%eax")
 		c.emit("neg %eax")
 	case *ir.Var:
-		//o := t.Scope().Lookup(t.Name())
-		c.emitf("mov %d(%%ebp), %s", c.offsets[t.Name()], dest)
+		c.emitf("mov %s, %s", c.a.getByName(t.Name()), dest)
 	case *ir.Variable:
 		for _, e := range t.Body {
 			c.genObject(e, "%eax")
@@ -139,14 +149,14 @@ func (c *X86) genBinary(b *ir.Binary, jump string) {
 			c.genObject(b.Rhs, "%edx")
 		}
 	default:
-		c.emitf("movl %%eax, %d(%%esp)", c.offsets[b.Name()])
+		c.emitf("movl %%eax, %s", c.a.getByID(b.Rhs.ID()))
 		c.genObject(b.Rhs, "%eax")
 		if b.Op == token.QUO || b.Op == token.REM {
 			c.emit("movl %eax, %ecx")
 		} else {
 			c.emit("movl %eax, %edx")
 		}
-		c.emitf("movl %d(%%esp), %%eax", c.offsets[b.Name()])
+		c.emitf("movl %s, %%eax", c.a.getByID(b.Rhs.ID()))
 	}
 	switch b.Op {
 	case token.ADD:

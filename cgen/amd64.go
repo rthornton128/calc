@@ -17,11 +17,9 @@ import (
 
 type Amd64 struct {
 	io.Writer
-	offsets map[string]int
+	a *allocator
 }
 
-func (c *Amd64) genEnter(sz int) {
-}
 func (c *Amd64) emit(args ...interface{}) {
 	fmt.Fprintln(c.Writer, args...)
 }
@@ -46,7 +44,7 @@ func (c *Amd64) CGen(w io.Writer, pkg *ir.Package) {
 	c.Writer = w
 
 	// set stack offsets and function stack sizes
-	StackAlloc(pkg, 8)
+	c.a = StackAlloc(pkg, &stack64{})
 
 	//c.emit(".file %s\n", "xxx.calc")
 	c.emit(".data")
@@ -59,20 +57,22 @@ func (c *Amd64) CGen(w io.Writer, pkg *ir.Package) {
 			if f, ok := d.Body.(*ir.Function); ok {
 				c.emitf(".global _%s", name)
 				defer func(name string) {
-					sz := stackSize(fnStackAllocs[name].stackSz)
+					//sz := stackSize(fnStackAllocs[name].stackSz)
+					c.a.openScope(name)
+
 					// label
 					c.emitf("_%s:", name)
 
 					// pre
-					c.emitPrologue(sz)
+					c.emitPrologue(c.a.stackSize())
 
 					// body
-					c.offsets = fnStackAllocs[name].offsets
 					c.genObject(f, "%eax")
 
 					// post
-					c.emitPostlogue(sz)
+					c.emitPostlogue(c.a.stackSize())
 					c.emit()
+					c.a.closeScope()
 				}(name)
 			}
 		}
@@ -84,25 +84,17 @@ func (c *Amd64) genObject(o ir.Object, dest string) {
 	switch t := o.(type) {
 	case *ir.Assignment:
 		c.genObject(t.Rhs, "%eax")
-		c.emitf("movl %%eax, %d(%%rbp)", c.offsets[t.Name()])
+		c.emitf("movl %%eax, %s)", c.a.getByName(t.Name()))
 	case *ir.Binary:
 		c.genBinary(t, "")
 	case *ir.Call:
-		offset := 0
 		for i, arg := range t.Args {
-			var dest string
-			if i < len(t.Args) {
-				dest = argRegisters[i]
-			} else {
-				dest = fmt.Sprintf("$%d(%%rsp)", minStack+offset)
-				offset += 8
-			}
 			switch arg.(type) {
 			case *ir.Constant, *ir.Var:
-				c.genObject(arg, dest)
+				c.genObject(arg, c.a.ArgumentLoc(i))
 			default:
 				c.genObject(arg, "%eax")
-				c.emitf("movl %%eax, %s", dest)
+				c.emitf("movq %%rax, %s", c.a.ArgumentLoc(i))
 			}
 		}
 		c.emitf("call _%s", t.Name())
@@ -121,9 +113,10 @@ func (c *Amd64) genObject(o ir.Object, dest string) {
 	case *ir.If:
 		c.genIf(t)
 	case *ir.Function:
-		//
-		for i := 0; i < len(argRegisters) && i < len(t.Params); i++ {
-			c.emitf("movl %s, $d(%%rbp)", argRegisters[i])
+		// inefficient but necessary when liveness testing isn't done to ensure
+		// volitile registers are not overwritten
+		for i, _ := range t.Params {
+			c.emitf("movq %s, %s", c.a.ParameterLoc(i), c.a.CallStackOffset(i))
 		}
 
 		for _, e := range t.Body {
@@ -133,9 +126,7 @@ func (c *Amd64) genObject(o ir.Object, dest string) {
 		c.genObject(t.Rhs, "%eax")
 		c.emit("neg %eax")
 	case *ir.Var:
-		//o := t.Scope().Lookup(t.Name())
-
-		c.emitf("movl %d(%%rbp), %s", c.offsets[t.Name()], dest)
+		c.emitf("movl %s, %s", c.a.getByName(t.Name()), dest)
 	case *ir.Variable:
 		for _, e := range t.Body {
 			c.genObject(e, "%eax")
@@ -155,22 +146,14 @@ func (c *Amd64) genBinary(b *ir.Binary, jump string) {
 			c.genObject(b.Rhs, "%edx")
 		}
 	default:
-		if c.offsets[b.Name()] == 0 {
-			c.emit("movl %eax, (%rbp)")
-		} else {
-			c.emitf("movl %%eax, %d(%%rbp)", c.offsets[b.Name()])
-		}
+		c.emitf("movl %%eax, %s", c.a.getByID(b.Rhs.ID()))
 		c.genObject(b.Rhs, "%eax")
 		if b.Op == token.QUO || b.Op == token.REM {
 			c.emit("movl %eax, %ecx")
 		} else {
 			c.emit("movl %eax, %edx")
 		}
-		if c.offsets[b.Name()] == 0 {
-			c.emit("movl (%rbp), %eax")
-		} else {
-			c.emitf("movl %d(%%rbp), %%eax", c.offsets[b.Name()])
-		}
+		c.emitf("movl %s, %%eax", c.a.getByID(b.Rhs.ID()))
 	}
 	switch b.Op {
 	case token.ADD:
@@ -239,7 +222,7 @@ func (c *Amd64) genIf(i *ir.If) {
 	case *ir.Binary:
 		c.genBinary(t, i.ElseLabel)
 	default:
-		c.genObject(t, "%eax") // s/b genConstant() or genBoolean()
+		c.genObject(t, "%eax") // TODO s/b genConstant() or genBoolean()
 		c.emit("cmpl $0, %eax")
 		c.emitf("jz %s", i.ElseLabel)
 	}

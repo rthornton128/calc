@@ -13,81 +13,110 @@ import (
 	"github.com/rthornton128/calc/ir"
 )
 
-type funcAllocs struct {
-	stackSz int
-	offsets map[string]int
+type regAllocs struct {
+	locs     map[string]string
+	szParams int
+	szLocals int
 }
 
-var fnStackAllocs = make(map[string]funcAllocs)
+type Stack interface {
+	ArgumentLoc(i int) string
+	CallStackOffset(i int) string
+	ParameterLoc(i int) string
+	Size() int
+}
 
 // StackAlloc sets stack offsets for all expressions needing one. It does is a
 // rudimentary register allocator that mainly just spills everything to the
 // stack and does little to no optimization
-func StackAlloc(pkg *ir.Package, sz int) {
-	a := allocator{ptrSz: sz}
+func StackAlloc(pkg *ir.Package, s Stack) *allocator {
+	a := allocator{
+		top:        make(map[string]regAllocs),
+		nextOffset: 0 - s.Size(),
+		Stack:      s,
+	}
 
 	// assign offsets to parameters of all functions first
 	for _, f := range pkg.Scope().Names() {
 		if t, ok := pkg.Lookup(f).(*ir.Define); ok {
-			a.curFn = f
-			fnStackAllocs[f] = funcAllocs{}
+			a.openScope(f)
 			a.alloc(t.Body)
+			a.closeScope()
 		}
 	}
+	return &a
 }
 
 func align16(n int) int { return (n & -16) + 16 }
 
-func typeSize(t ir.Type) int {
-	switch t {
-	case ir.Int:
-		return 4
-	case ir.Bool:
-		return 1
-	}
-	// not reachable
-	return 0
-}
-
 // allocator is a rudimentary register allocator that mainly just spills
 // everything to the stack and does little to no optimization
 type allocator struct {
-	ptrSz int
-	curFn string
-	off   int
-	sz    int
+	Stack
+	current    regAllocs
+	top        map[string]regAllocs
+	fn         string
+	nextOffset int
+}
+
+func (a *allocator) closeScope() {
+	a.top[a.fn] = a.current
+}
+
+func (a *allocator) openScope(fn string) {
+	if s, ok := a.top[fn]; ok {
+		a.current = s
+	} else {
+		a.current = regAllocs{locs: make(map[string]string)}
+	}
+	a.fn = fn
+}
+
+func (a *allocator) getByID(id int) string {
+	return a.getByName(fmt.Sprintf("%d", id))
+}
+
+func (a *allocator) getByName(name string) string {
+	fmt.Printf("get: %s = %s\n", name, a.current.locs[name])
+	return a.current.locs[name]
+}
+
+func (a *allocator) insertByID(id int, loc string) {
+	a.insertByName(fmt.Sprintf("%d", id), loc)
+}
+
+func (a *allocator) insertByName(name string, loc string) {
+	fmt.Printf("insert: %s = %s\n", name, loc)
+	a.current.locs[name] = loc
+}
+
+func (a *allocator) nextLoc() string {
+	s := fmt.Sprintf("%d(%%rbp)", a.nextOffset) // TODO amd64 only
+	a.nextOffset -= a.Size()
+	return s
+}
+
+// TODO amd64 only
+func (a *allocator) stackSize() int {
+	fmt.Printf("params: %d, locals: %d, aligned: %d\n",
+		a.current.szParams, a.current.szLocals,
+		align16(16+a.current.szParams+(a.current.szLocals+a.Size())))
+	return align16(16 + a.current.szParams + (a.current.szLocals + a.Size()))
 }
 
 func (a *allocator) alloc(o ir.Object) {
 	if t, ok := o.(*ir.Function); ok {
-		fnStackAllocs[a.curFn] = funcAllocs{0, make(map[string]int)}
-
-		// set parameter offsets (bp+offset)
-		offset := a.ptrSz * 3 // starting offset = size(BP) + size(IP) + size(ptr)
-		tmp := fnStackAllocs[a.curFn]
-		for _, p := range t.Params {
-			tmp.offsets[p.Name()] = offset
-			offset += a.ptrSz
+		// set parameter registers and offsets
+		for i, p := range t.Params {
+			a.insertByName(p.Name(), a.CallStackOffset(i))
 		}
 
 		// locals
-		a.off = 0
 		for _, o := range t.Body {
 			a.walk(o)
 		}
-		tmp.stackSz = align16(a.sz + (len(t.Params) * a.ptrSz))
-		fnStackAllocs[a.curFn] = tmp
-
-		// reset
-		a.sz = 0
 	}
-}
-
-func (a *allocator) nextOffset() int { //t ir.Type) int {
-	o := a.off
-	a.off -= a.ptrSz //typeSize(t)
-	a.sz += a.ptrSz
-	return o
+	fmt.Println(a.current)
 }
 
 func (a *allocator) walk(o ir.Object) {
@@ -97,51 +126,34 @@ func (a *allocator) walk(o ir.Object) {
 	case *ir.Binary:
 		a.walk(t.Lhs)
 		a.walk(t.Rhs)
-		// TODO: requests more stack space than is strictly necessary
 		switch t.Rhs.(type) {
 		case *ir.Constant, *ir.Var:
 			//no nothing
 		default:
-			tmp := fnStackAllocs[a.curFn]
-			tmp.offsets[fmt.Sprintf("%d", t.Rhs.ID())] = a.nextOffset()
-			fnStackAllocs[a.curFn] = tmp
+			a.insertByID(t.Rhs.ID(), a.nextLoc())
 		}
-		//t.off = a.nextOffset(t.Rhs.Type())
-		//a.off += typeSize(t.Rhs.Type())
 	case *ir.Call:
-		// arguments for functions are placed in reverse order (right to left)
-		// and are relative to the bp-(a.sz+(i*a.ptrSz)) OR
-		// sp+((len(args)*a.ptrSz)-(i*a.ptrSz)). Size a.sz is unknown during
-		// an initial pass, the latter method is used
-		a.sz = a.ptrSz * len(t.Args)
-		//a.sz += sz
-		//tmp := fnStackAllocs[a.curFn]
-		for _, arg := range t.Args {
+		for i, arg := range t.Args {
 			a.walk(arg)
-			//tmp.offsets[arg.ID()] = sz - (i * a.ptrSz)
+
+			// ensure enough stack space available for params stored on stack
+			if i >= len(t.Args) {
+				a.current.szParams += a.Size()
+			}
 		}
-		//fnStackAllocs[a.curFn] = tmp
-	case *ir.Function:
-		// unreachable
 	case *ir.If:
 		a.walk(t.Cond)
 		a.walk(t.Then)
 		if t.Else != nil {
 			a.walk(t.Else)
 		}
-	case *ir.Var:
 	case *ir.Variable:
 		for _, p := range t.Params {
-			tmp := fnStackAllocs[a.curFn]
-			tmp.offsets[p.Name()] = a.nextOffset()
-			fnStackAllocs[a.curFn] = tmp
-			//a.sz += typeSize(p.Type())
+			a.insertByName(p.Name(), a.nextLoc())
 		}
-		//a.sz += len(t.Params) * 4
+		a.current.szLocals = len(t.Params) * a.Size()
 		for _, o := range t.Body {
 			a.walk(o)
 		}
-	case *ir.Unary:
-		// operates directly on .ax, nothing to do
 	}
 }
