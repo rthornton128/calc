@@ -10,6 +10,7 @@
 package cgen
 
 import (
+	"fmt"
 	"io"
 	"path/filepath"
 
@@ -20,7 +21,22 @@ import (
 )
 
 type CodeGenerator interface {
-	CGen(w io.Writer, pkg *ir.Package)
+	CGen(io.Writer, *ir.Package)
+}
+
+type Emitter interface {
+	Emit(...interface{})
+	Emitf(string, ...interface{})
+}
+
+type Writer struct{ io.Writer }
+
+func (w *Writer) Emit(a ...interface{}) {
+	fmt.Fprintln(w, a...)
+}
+
+func (w *Writer) Emitf(format string, a ...interface{}) {
+	fmt.Fprintf(w, format+"\n", a...)
 }
 
 // CompileFile generates a C source file for the corresponding file

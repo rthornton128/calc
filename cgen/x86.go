@@ -8,107 +8,74 @@
 package cgen
 
 import (
-	"fmt"
-	"io"
-
 	"github.com/rthornton128/calc/ir"
 	"github.com/rthornton128/calc/token"
 )
 
-// This is a rudimentary, unoptimized x86 assembly code generator. It is
-// highly unstable and a work in progress
-
 type X86 struct {
-	io.Writer
+	Emitter
+	Arch
 	a *allocator
 }
 
-func (c *X86) emitMain() {
-	c.emit("_start:")
-	c.emitPrologue(32)
-	c.emit("call main")
-	c.emit("movl %eax, 4(%esp)")
-	c.emit("movl $fmt, (%esp)")
-	c.emit("call printf")
-	c.emit("movl %ebp, %esp")
-	c.emit("popl %ebp")
-	c.emit("movl $1, %eax") // exit system call
-	c.emit("movl $0, %ebx") // exit code
-	c.emit("int $0x80")     // syscall: exit(0)
-	c.emitPostlogue(32)
+func (c *X86) EmitPrologue(sz int) {
+	c.Emit(c.Instruction(PUSH), c.Register(BP))
+	c.Emitf("%s %s, %s", c.Instruction(MOV), c.Register(SP), c.Register(BP))
+	//c.Emitf("%s $-16, %s", c.Instruction(AND), c.Register(SP))
+	c.Emitf("%s $%d, %s", c.Instruction(SUB), sz, c.Register(SP))
 }
 
-func (c *X86) emit(args ...interface{}) {
-	fmt.Fprintln(c.Writer, args...)
+func (c *X86) EmitEpilogue(sz int) {
+	c.Emitf("%s $%d, %s", c.Instruction(ADD), sz, c.Register(SP))
+	c.Emit(c.Instruction(POP), c.Register(BP))
 }
 
-func (c *X86) emitf(f string, args ...interface{}) {
-	fmt.Fprintf(c.Writer, f+"\n", args...)
-}
-
-func (c *X86) emitPrologue(sz int) {
-	c.emit("pushl %ebp")
-	c.emit("movl %esp, %ebp")
-	c.emit("andl $-16, %esp")
-	c.emitf("subl $%d, %%esp", sz)
-}
-
-func (c *X86) emitPostlogue(sz int) {
-	c.emitf("addl $%d, %%esp", sz)
-	c.emit("popl %ebp")
-	c.emit("ret")
-}
-
-func (c *X86) CGen(w io.Writer, pkg *ir.Package) {
-	c.Writer = w
+func (c *X86) CGen(e Emitter, pkg *ir.Package) {
 
 	// set stack offsets and function stack sizes
-	c.a = StackAlloc(pkg, &stack32{})
+	c.a = StackAlloc(pkg, c.Arch)
 
-	//c.emit(".file %s\n", "xxx.calc")
-	c.emit(".global main")
 	for _, name := range pkg.Scope().Names() {
 		if d, ok := pkg.Scope().Lookup(name).(*ir.Define); ok {
 			if f, ok := d.Body.(*ir.Function); ok {
-				c.emitf(".global _%s", name)
+				c.Emitf(".global _%s", name)
 				defer func(name string) {
-					c.emitf("_%s:", name)
-					c.emitPostlogue(c.a.stackSize())
+					c.Emitf("# %s @function, locals: %x, params: %x", name,
+						c.a.current.szLocals, c.a.current.szParams)
+					c.Emitf("_%s:", name)
+					c.EmitPrologue(c.a.stackSize())
 
-					c.genObject(f, "%eax")
+					c.a.openScope(name)
+					c.genObject(f, false, "%eax")
+					c.a.closeScope()
 
-					c.emitPostlogue(c.a.stackSize())
-					c.emit("ret")
-					c.emit()
+					c.EmitEpilogue(c.a.stackSize())
+					c.Emit("ret")
+					c.Emit()
 				}(name)
 			}
 		}
 	}
-	c.emit(".data")
-	c.emitf("fmt: .asciz \"%%d\\12\"")
-	c.emit("")
-	c.emit(".text")
-	c.emitMain()
 }
 
-func (c *X86) genObject(o ir.Object, dest string) {
+func (c *X86) genObject(o ir.Object, jmp bool, dest string) {
 	switch t := o.(type) {
 	case *ir.Assignment:
-		c.genObject(t.Rhs, "%eax")
-		c.emitf("movl %%eax, %s", c.a.getByName(t.Name()))
+		c.genObject(t.Rhs, false, dest) //"%eax")
+		c.Emitf("movl %s, %s", dest, c.a.getByName(t.Name()))
 	case *ir.Binary:
-		c.genBinary(t, "")
+		c.genBinary(t, jmp, dest)
 	case *ir.Call:
 		for i, arg := range t.Args {
 			switch arg.(type) {
 			case *ir.Constant, *ir.Var:
-				c.genObject(arg, c.a.ArgumentLoc(i))
+				c.genObject(arg, false, c.a.ArgumentLoc(i))
 			default:
-				c.genObject(arg, "%eax")
-				c.emitf("movl %%eax, %s", c.a.ArgumentLoc(i))
+				c.genObject(arg, false, dest) //"%eax")
+				c.Emitf("movl %s, %s", dest, c.a.ArgumentLoc(i))
 			}
 		}
-		c.emitf("call _%s", t.Name())
+		c.Emitf("call _%s", t.Name())
 	case *ir.Constant:
 		var val string
 		switch t.String() {
@@ -119,119 +86,115 @@ func (c *X86) genObject(o ir.Object, dest string) {
 		default:
 			val = t.String()
 		}
-		c.emitf("movl $%s, %s", val, dest)
+		c.Emitf("movl $%s, %s", val, dest)
 	case *ir.For:
 	case *ir.If:
 		c.genIf(t)
 	case *ir.Function:
 		for _, e := range t.Body {
-			c.genObject(e, "%eax")
+			c.genObject(e, false, "%eax")
 		}
 	case *ir.Unary:
-		c.genObject(t.Rhs, "%eax")
-		c.emit("neg %eax")
+		c.genObject(t.Rhs, false, dest) //"%eax")
+		c.Emitf("neg %s", dest)
 	case *ir.Var:
-		c.emitf("mov %s, %s", c.a.getByName(t.Name()), dest)
+		c.Emitf("mov %s, %s", c.a.getByName(t.Name()), dest)
 	case *ir.Variable:
 		for _, e := range t.Body {
-			c.genObject(e, "%eax")
+			c.genObject(e, false, "%eax")
 		}
 	}
 }
 
-func (c *X86) genBinary(b *ir.Binary, jump string) {
-	c.genObject(b.Lhs, "%eax")
+func (c *X86) genBinary(b *ir.Binary, jump bool, dest string) {
+	c.genObject(b.Lhs, false, "%eax")
+
 	switch b.Rhs.(type) {
 	case *ir.Constant, *ir.Var:
 		if b.Op == token.QUO || b.Op == token.REM {
-			c.genObject(b.Rhs, "%ecx")
+			c.genObject(b.Rhs, false, "%ecx")
 		} else {
-			c.genObject(b.Rhs, "%edx")
+			c.genObject(b.Rhs, false, "%edx")
 		}
 	default:
-		c.emitf("movl %%eax, %s", c.a.getByID(b.Rhs.ID()))
-		c.genObject(b.Rhs, "%eax")
+		c.Emitf("movl %%eax, %s", c.a.getByID(b.Rhs.ID()))
+		c.genObject(b.Rhs, false, "%eax")
 		if b.Op == token.QUO || b.Op == token.REM {
-			c.emit("movl %eax, %ecx")
+			c.Emit("movl %eax, %ecx")
 		} else {
-			c.emit("movl %eax, %edx")
+			c.Emit("movl %eax, %edx")
 		}
-		c.emitf("movl %s, %%eax", c.a.getByID(b.Rhs.ID()))
+		c.Emitf("movl %s, %%eax", c.a.getByID(b.Rhs.ID()))
 	}
 	switch b.Op {
 	case token.ADD:
-		c.emit("addl %edx, %eax")
+		c.Emit("addl %edx, %eax")
 	case token.SUB:
-		c.emit("subl %edx, %eax")
+		c.Emit("subl %edx, %eax")
 	case token.MUL:
-		c.emit("imul %edx, %eax")
+		c.Emit("imul %edx, %eax")
 	case token.QUO:
-		c.emit("cdq")
-		c.emit("idiv %ecx")
+		c.Emit("cdq")
+		c.Emit("idiv %ecx")
 	case token.REM:
-		c.emit("cdq")
-		c.emit("idiv %ecx, %eax")
-		c.emit("movl %edx, %eax")
+		c.Emit("cdq")
+		c.Emit("idiv %ecx, %eax")
+		c.Emit("movl %edx, %eax")
 	default:
-		c.emit("cmpl %edx, %eax")
+		c.Emit("cmpl %edx, %eax")
+		if jump {
+			c.genJump(b, dest)
+			return
+		}
 		switch b.Op {
 		case token.EQL:
-			if len(jump) > 0 {
-				c.emitf("jne %s", jump)
-				return
-			}
-			c.emit("sete %al")
-			c.emit("movzbl %al, %eax")
+			c.Emit("sete %al")
 		case token.NEQ:
-			if len(jump) > 0 {
-				c.emitf("je %s", jump)
-			}
-			c.emit("setne %al")
-			c.emit("movzbl %al, %eax")
+			c.Emit("setne %al")
 		case token.LST:
-			if len(jump) > 0 {
-				c.emitf("jge %s", jump)
-				return
-			}
-			c.emit("setl %al")
-			c.emit("movzbl %al, %eax")
+			c.Emit("setl %al")
 		case token.LTE:
-			if len(jump) > 0 {
-				c.emitf("jg %s", jump)
-				return
-			}
-			c.emit("setle %al")
-			c.emit("movzbl %al, %eax")
+			c.Emit("setle %al")
 		case token.GTT:
-			if len(jump) > 0 {
-				c.emitf("jle %s", jump)
-				return
-			}
-			c.emit("setg %al")
-			c.emit("movzbl %al, %eax")
+			c.Emit("setg %al")
 		case token.GTE:
-			if len(jump) > 0 {
-				c.emitf("jl %s", jump)
-				return
-			}
-			c.emit("setge %al")
-			c.emit("movzbl %al, %eax")
+			c.Emit("setge %al")
 		}
+		c.Emit("movzbl %al, %eax")
 	}
+}
+
+func (c *X86) genJump(b *ir.Binary, label string) {
+	var inst string
+	switch b.Op {
+	case token.EQL:
+		inst = "jne"
+	case token.NEQ:
+		inst = "je"
+	case token.LST:
+		inst = "jge"
+	case token.LTE:
+		inst = "jg"
+	case token.GTT:
+		inst = "jle"
+	case token.GTE:
+		inst = "jl"
+	}
+	c.Emitf("%s %s", inst, label)
 }
 
 func (c *X86) genIf(i *ir.If) {
 	switch t := i.Cond.(type) {
 	case *ir.Binary:
-		c.genBinary(t, i.ElseLabel)
+		c.genBinary(t, true, i.ElseLabel)
 	default:
-		c.genObject(t, "%eax") // s/b genConstant() or genBoolean()
-		c.emit("cmpl $0, %eax")
-		c.emitf("jz %s", i.ElseLabel)
+		c.genObject(t, false, "%eax") // s/b genConstant() or genBoolean()
+		c.Emit("cmpl $0, %eax")
+		c.Emitf("jz %s", i.ElseLabel)
 	}
-	c.genObject(i.Then, "%eax")
-	c.emitf("jmp %s", i.EndLabel)
-	c.emitf("%s:", i.ElseLabel)
-	c.genObject(i.Else, "%eax")
-	c.emitf("%s:", i.EndLabel)
+	c.genObject(i.Then, false, "%eax")
+	c.Emitf("jmp %s", i.EndLabel)
+	c.Emitf("%s:", i.ElseLabel)
+	c.genObject(i.Else, false, "%eax")
+	c.Emitf("%s:", i.EndLabel)
 }

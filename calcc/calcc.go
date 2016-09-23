@@ -16,6 +16,10 @@ import (
 	"runtime"
 
 	"github.com/rthornton128/calc/cgen"
+	"github.com/rthornton128/calc/cgen/posix32"
+	"github.com/rthornton128/calc/cgen/posix64"
+	"github.com/rthornton128/calc/cgen/win32"
+	"github.com/rthornton128/calc/cgen/win64"
 )
 
 var binExt = ""    // binary extension
@@ -49,8 +53,9 @@ func main() {
 	}
 
 	var (
-		interOnly   = flag.Bool("s", false, "compile intermediate code")
-		backEnd     = flag.String("t", "c", "target: amd64, c, x86")
+		interOnly   = flag.Bool("s", false, "compile to intermediate code")
+		backEnd     = flag.String("b", "c", "backend: amd64, c, x86")
+		target      = flag.String("t", runtime.GOOS, "target platform/OS")
 		compileOnly = flag.Bool("c", false, "compile to object code, no linking")
 		optimize    = flag.Bool("opt", true, "run optimization pass")
 	)
@@ -71,13 +76,21 @@ func main() {
 	var c cgen.CodeGenerator
 	switch *backEnd {
 	case "amd64":
-		c = &cgen.Amd64{}
+		if *target == "windows" {
+			c = &win64.Win64Gen{}
+		} else {
+			c = &pos64.Pos64{}
+		}
 		cgenExt = ".s"
 	case "c":
 		cflags = append(cflags, "-std=gnu99")
 		c = &cgen.StdC{}
 	case "x86":
-		c = &cgen.X86{}
+		if *target == "windows" {
+			c = &win32.Win32Gen{}
+		} else {
+			c = &pos32.Pos32{}
+		}
 		cgenExt = ".s"
 	default:
 		fmt.Println("invalid code generator backend selected")

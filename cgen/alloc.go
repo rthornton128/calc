@@ -19,21 +19,37 @@ type regAllocs struct {
 	szLocals int
 }
 
-type Stack interface {
-	ArgumentLoc(i int) string
-	CallStackOffset(i int) string
-	ParameterLoc(i int) string
-	Size() int
+type Register int
+type Instruction int
+
+const (
+	AX Register = iota // Register A
+	BP                 // Base Pointer
+	SP                 // Stack Pointer
+)
+
+const (
+	ADD  Instruction = iota // Addition
+	MOV                     // Move
+	POP                     // Pop
+	PUSH                    // Push
+	SUB                     // Subtraction
+)
+
+type Arch interface {
+	Instruction(Instruction) string
+	Register(Register) string
+	Width() int
 }
 
 // StackAlloc sets stack offsets for all expressions needing one. It does is a
 // rudimentary register allocator that mainly just spills everything to the
 // stack and does little to no optimization
-func StackAlloc(pkg *ir.Package, s Stack) *allocator {
+func StackAlloc(pkg *ir.Package, arch Arch) *allocator {
 	a := allocator{
 		top:        make(map[string]regAllocs),
-		nextOffset: 0 - s.Size(),
-		Stack:      s,
+		nextOffset: 0 - arch.Width(),
+		Arch:       arch,
 	}
 
 	// assign offsets to parameters of all functions first
@@ -52,11 +68,23 @@ func align16(n int) int { return (n & -16) + 16 }
 // allocator is a rudimentary register allocator that mainly just spills
 // everything to the stack and does little to no optimization
 type allocator struct {
-	Stack
+	Arch
 	current    regAllocs
 	top        map[string]regAllocs
 	fn         string
 	nextOffset int
+}
+
+func (a *allocator) ArgumentLoc(i int) string {
+	return fmt.Sprintf("%d(%s)", (i+1)*a.Width(), a.Register(SP))
+}
+
+func (a *allocator) CallStackOffset(i int) string {
+	return fmt.Sprintf("%d(%s)", (i*a.Width())+(a.Width()*2), a.Register(BP))
+}
+
+func (a *allocator) ParameterLoc(i int) string {
+	return a.CallStackOffset(i)
 }
 
 func (a *allocator) closeScope() {
@@ -91,17 +119,16 @@ func (a *allocator) insertByName(name string, loc string) {
 }
 
 func (a *allocator) nextLoc() string {
-	s := fmt.Sprintf("%d(%%rbp)", a.nextOffset) // TODO amd64 only
-	a.nextOffset -= a.Size()
+	s := fmt.Sprintf("%d(%s)", a.nextOffset, a.Register(BP))
+	a.nextOffset -= a.Width()
 	return s
 }
 
-// TODO amd64 only
 func (a *allocator) stackSize() int {
-	fmt.Printf("params: %d, locals: %d, aligned: %d\n",
-		a.current.szParams, a.current.szLocals,
-		align16(16+a.current.szParams+(a.current.szLocals+a.Size())))
-	return align16(16 + a.current.szParams + (a.current.szLocals + a.Size()))
+	//fmt.Printf("params: %d, locals: %d, aligned: %d\n",
+	//a.current.szParams, a.current.szLocals,
+	//align16(16+a.current.szParams+(a.current.szLocals+a.Width())))
+	return align16(16 + a.current.szParams + (a.current.szLocals + a.Width()))
 }
 
 func (a *allocator) alloc(o ir.Object) {
@@ -138,7 +165,7 @@ func (a *allocator) walk(o ir.Object) {
 
 			// ensure enough stack space available for params stored on stack
 			if i >= len(t.Args) {
-				a.current.szParams += a.Size()
+				a.current.szParams += a.Width()
 			}
 		}
 	case *ir.If:
@@ -151,7 +178,7 @@ func (a *allocator) walk(o ir.Object) {
 		for _, p := range t.Params {
 			a.insertByName(p.Name(), a.nextLoc())
 		}
-		a.current.szLocals = len(t.Params) * a.Size()
+		a.current.szLocals = len(t.Params) * a.Width()
 		for _, o := range t.Body {
 			a.walk(o)
 		}
