@@ -47,7 +47,7 @@ type Arch interface {
 // stack and does little to no optimization
 func StackAlloc(pkg *ir.Package, arch Arch) *allocator {
 	a := allocator{
-		top:        make(map[string]regAllocs),
+		top:        make(map[string]*regAllocs),
 		nextOffset: 0 - arch.Width(),
 		Arch:       arch,
 	}
@@ -69,8 +69,8 @@ func align16(n int) int { return (n & -16) + 16 }
 // everything to the stack and does little to no optimization
 type allocator struct {
 	Arch
-	current    regAllocs
-	top        map[string]regAllocs
+	current    *regAllocs
+	top        map[string]*regAllocs
 	fn         string
 	nextOffset int
 }
@@ -95,7 +95,7 @@ func (a *allocator) openScope(fn string) {
 	if s, ok := a.top[fn]; ok {
 		a.current = s
 	} else {
-		a.current = regAllocs{locs: make(map[string]string)}
+		a.current = &regAllocs{locs: make(map[string]string)}
 	}
 	a.fn = fn
 }
@@ -121,6 +121,8 @@ func (a *allocator) insertByName(name string, loc string) {
 func (a *allocator) nextLoc() string {
 	s := fmt.Sprintf("%d(%s)", a.nextOffset, a.Register(BP))
 	a.nextOffset -= a.Width()
+	a.current.szLocals += a.Width()
+	fmt.Println("szLocals:", a.current.szLocals)
 	return s
 }
 
@@ -129,7 +131,8 @@ func (a *allocator) stackSize() int {
 }
 
 func (a *allocator) alloc(o ir.Object) {
-	if t, ok := o.(*ir.Function); ok {
+	switch t := o.(type) {
+	case *ir.Function:
 		// set parameter registers and offsets
 		for i, p := range t.Params {
 			a.insertByName(p.Name(), a.CallStackOffset(i))
@@ -139,6 +142,8 @@ func (a *allocator) alloc(o ir.Object) {
 		for _, o := range t.Body {
 			a.walk(o)
 		}
+	case *ir.Variable:
+		a.walk(t)
 	}
 	fmt.Println(a.current)
 }
@@ -177,10 +182,12 @@ func (a *allocator) walk(o ir.Object) {
 			a.walk(t.Else)
 		}
 	case *ir.Variable:
+		fmt.Println("var ID:", t.ID(), "name:", t.Name())
+		a.insertByID(t.ID(), a.nextLoc())
 		for _, p := range t.Params {
 			a.insertByName(p.Name(), a.nextLoc())
 		}
-		a.current.szLocals = len(t.Params) * a.Width()
+		//a.current.szLocals = len(t.Params) * a.Width()
 		for _, o := range t.Body {
 			a.walk(o)
 		}

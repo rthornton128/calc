@@ -65,8 +65,7 @@ func (c *X86) genObject(o ir.Object, jmp bool, dest string) {
 		// TODO optimize to allow constant/variable to be directly moved into
 		// location
 		c.genObject(t.Rhs, false, dest) //"%eax")
-		fmt.Println("getByName:", t.Name(), ",", c.a.getByName(t.Name()), ",",
-			t.ID())
+		fmt.Println("getByName:", t.Lhs, ",", c.a.getByName(t.Lhs))
 		c.Emitf("movl %s, %s", dest, c.a.getByName(t.Lhs))
 	case *ir.Binary:
 		c.genBinary(t, jmp, dest)
@@ -110,8 +109,19 @@ func (c *X86) genObject(o ir.Object, jmp bool, dest string) {
 		c.genObject(t.Rhs, false, dest) //"%eax")
 		c.Emitf("neg %s", dest)
 	case *ir.Var:
+		s := t.Scope()
+		v := s.Lookup(t.Name())
+		//fmt.Println("scope:", s, "v:", v)
+		if x, ok := v.(*ir.Define); ok {
+			fmt.Println("seems to be a variable!")
+			fmt.Println("id:", v.ID(), "name:", v.Name())
+			c.genObject(x.Body, false, c.a.getByName(v.Name()))
+		}
 		c.Emitf("movl %s, %s", c.a.getByName(t.Name()), dest)
 	case *ir.Variable:
+		for _, p := range t.Params {
+			c.Emitf("movl $0, %s", c.a.getByName(p.Name()))
+		}
 		for _, e := range t.Body {
 			c.genObject(e, false, "%eax")
 		}
