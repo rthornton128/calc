@@ -26,6 +26,14 @@ func makeFor(pkg *Package, f *ast.ForExpr) *For {
 	}
 }
 
+func (f *For) CondLabel() string {
+	return fmt.Sprintf("L%d", f.Cond.ID())
+}
+
+func (f *For) BodyLabel() string {
+	return fmt.Sprintf("L%d", f.ID())
+}
+
 func (f *For) String() string {
 	body := make([]string, len(f.Body))
 	for i, o := range f.Body {

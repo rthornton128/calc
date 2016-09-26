@@ -22,17 +22,17 @@ func (gen *Pos32) CGen(w io.Writer, pkg *ir.Package) {
 	e := &cgen.Writer{w}
 
 	e.Emit(".data # .section rodata")
-	e.Emit("fmt: .asciz \"%%d\\12\"")
+	e.Emit("fmt: .asciz \"%d\\12\"")
 	e.Emit()
 
 	e.Emit(".text")
-	e.Emit("global main")
+	e.Emit(".global _start")
 
 	// generate sources
 	c := cgen.X86{Emitter: e, Arch: new(cgen.Arch32)}
 	c.CGen(e, pkg)
 
-	e.Emit("main:")
+	e.Emit("_start:")
 	// prologue
 	e.Emit("pushl %ebp")
 	e.Emit("movl %esp, %ebp")

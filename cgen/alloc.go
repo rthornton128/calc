@@ -125,10 +125,7 @@ func (a *allocator) nextLoc() string {
 }
 
 func (a *allocator) stackSize() int {
-	//fmt.Printf("params: %d, locals: %d, aligned: %d\n",
-	//a.current.szParams, a.current.szLocals,
-	//align16(16+a.current.szParams+(a.current.szLocals+a.Width())))
-	return align16(16 + a.current.szParams + (a.current.szLocals + a.Width()))
+	return align16(a.current.szParams + (a.current.szLocals + a.Width()))
 }
 
 func (a *allocator) alloc(o ir.Object) {
@@ -167,6 +164,11 @@ func (a *allocator) walk(o ir.Object) {
 			if i >= len(t.Args) {
 				a.current.szParams += a.Width()
 			}
+		}
+	case *ir.For:
+		a.walk(t.Cond)
+		for _, e := range t.Body {
+			a.walk(e)
 		}
 	case *ir.If:
 		a.walk(t.Cond)

@@ -8,6 +8,8 @@
 package cgen
 
 import (
+	"fmt"
+
 	"github.com/rthornton128/calc/ir"
 	"github.com/rthornton128/calc/token"
 )
@@ -21,7 +23,6 @@ type X86 struct {
 func (c *X86) EmitPrologue(sz int) {
 	c.Emit(c.Instruction(PUSH), c.Register(BP))
 	c.Emitf("%s %s, %s", c.Instruction(MOV), c.Register(SP), c.Register(BP))
-	//c.Emitf("%s $-16, %s", c.Instruction(AND), c.Register(SP))
 	c.Emitf("%s $%d, %s", c.Instruction(SUB), sz, c.Register(SP))
 }
 
@@ -61,8 +62,12 @@ func (c *X86) CGen(e Emitter, pkg *ir.Package) {
 func (c *X86) genObject(o ir.Object, jmp bool, dest string) {
 	switch t := o.(type) {
 	case *ir.Assignment:
+		// TODO optimize to allow constant/variable to be directly moved into
+		// location
 		c.genObject(t.Rhs, false, dest) //"%eax")
-		c.Emitf("movl %s, %s", dest, c.a.getByName(t.Name()))
+		fmt.Println("getByName:", t.Name(), ",", c.a.getByName(t.Name()), ",",
+			t.ID())
+		c.Emitf("movl %s, %s", dest, c.a.getByName(t.Lhs))
 	case *ir.Binary:
 		c.genBinary(t, jmp, dest)
 	case *ir.Call:
@@ -88,6 +93,13 @@ func (c *X86) genObject(o ir.Object, jmp bool, dest string) {
 		}
 		c.Emitf("movl $%s, %s", val, dest)
 	case *ir.For:
+		c.Emitf("jmp %s", t.CondLabel())
+		c.Emitf("%s:", t.BodyLabel())
+		for _, e := range t.Body {
+			c.genObject(e, false, "%eax")
+		}
+		c.Emitf("%s:", t.CondLabel())
+		c.genObject(t.Cond, true, t.BodyLabel())
 	case *ir.If:
 		c.genIf(t)
 	case *ir.Function:
@@ -98,7 +110,7 @@ func (c *X86) genObject(o ir.Object, jmp bool, dest string) {
 		c.genObject(t.Rhs, false, dest) //"%eax")
 		c.Emitf("neg %s", dest)
 	case *ir.Var:
-		c.Emitf("mov %s, %s", c.a.getByName(t.Name()), dest)
+		c.Emitf("movl %s, %s", c.a.getByName(t.Name()), dest)
 	case *ir.Variable:
 		for _, e := range t.Body {
 			c.genObject(e, false, "%eax")
@@ -168,17 +180,17 @@ func (c *X86) genJump(b *ir.Binary, label string) {
 	var inst string
 	switch b.Op {
 	case token.EQL:
-		inst = "jne"
-	case token.NEQ:
 		inst = "je"
+	case token.NEQ:
+		inst = "jne"
 	case token.LST:
-		inst = "jge"
-	case token.LTE:
-		inst = "jg"
-	case token.GTT:
-		inst = "jle"
-	case token.GTE:
 		inst = "jl"
+	case token.LTE:
+		inst = "jle"
+	case token.GTT:
+		inst = "jg"
+	case token.GTE:
+		inst = "jge"
 	}
 	c.Emitf("%s %s", inst, label)
 }
