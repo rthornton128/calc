@@ -41,18 +41,20 @@ func (c *X86) CGen(e Emitter, pkg *ir.Package) {
 			if f, ok := d.Body.(*ir.Function); ok {
 				c.Emitf(".global _%s", name)
 				defer func(name string) {
+					c.a.openScope(name)
+
 					c.Emitf("# %s @function, locals: %x, params: %x", name,
 						c.a.current.szLocals, c.a.current.szParams)
 					c.Emitf("_%s:", name)
 					c.EmitPrologue(c.a.stackSize())
 
-					c.a.openScope(name)
 					c.genObject(f, false, "%eax")
-					c.a.closeScope()
 
 					c.EmitEpilogue(c.a.stackSize())
 					c.Emit("ret")
 					c.Emit()
+
+					c.a.closeScope()
 				}(name)
 			}
 		}
@@ -190,17 +192,17 @@ func (c *X86) genJump(b *ir.Binary, label string) {
 	var inst string
 	switch b.Op {
 	case token.EQL:
-		inst = "je"
-	case token.NEQ:
 		inst = "jne"
+	case token.NEQ:
+		inst = "je"
 	case token.LST:
-		inst = "jl"
-	case token.LTE:
-		inst = "jle"
-	case token.GTT:
-		inst = "jg"
-	case token.GTE:
 		inst = "jge"
+	case token.LTE:
+		inst = "jg"
+	case token.GTT:
+		inst = "jle"
+	case token.GTE:
+		inst = "jl"
 	}
 	c.Emitf("%s %s", inst, label)
 }

@@ -76,7 +76,7 @@ type allocator struct {
 }
 
 func (a *allocator) ArgumentLoc(i int) string {
-	return fmt.Sprintf("%d(%s)", (i+1)*a.Width(), a.Register(SP))
+	return fmt.Sprintf("%d(%s)", i*a.Width(), a.Register(SP))
 }
 
 func (a *allocator) CallStackOffset(i int) string {
@@ -88,13 +88,21 @@ func (a *allocator) ParameterLoc(i int) string {
 }
 
 func (a *allocator) closeScope() {
+	fmt.Println("close:", a.fn, a.current.szLocals, a.current.szParams)
 	a.top[a.fn] = a.current
 }
 
 func (a *allocator) openScope(fn string) {
+	if fn == a.fn {
+		fmt.Println("same scope:", a.current)
+		return
+	}
+
 	if s, ok := a.top[fn]; ok {
+		fmt.Println("existing scope:", s)
 		a.current = s
 	} else {
+		fmt.Println("new scope:", fn)
 		a.current = &regAllocs{locs: make(map[string]string)}
 	}
 	a.fn = fn
@@ -127,7 +135,7 @@ func (a *allocator) nextLoc() string {
 }
 
 func (a *allocator) stackSize() int {
-	return align16(a.current.szParams + (a.current.szLocals + a.Width()))
+	return align16(a.current.szParams) + align16(a.current.szLocals)
 }
 
 func (a *allocator) alloc(o ir.Object) {
