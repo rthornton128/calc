@@ -26,13 +26,13 @@ func (gen *Pos64) CGen(w io.Writer, pkg *ir.Package) {
 	e.Emit()
 
 	e.Emit(".text")
-	e.Emit(".global _start")
+	e.Emit(".global main")
 
 	// generate sources
 	c := cgen.X86{Emitter: e, Arch: new(cgen.Arch64)}
 	c.CGen(e, pkg)
 
-	e.Emit("_start:")
+	e.Emit("main:")
 	// prologue
 	e.Emit("pushq %rbp")
 	e.Emit("movq %rsp, %rbp")
@@ -41,8 +41,8 @@ func (gen *Pos64) CGen(w io.Writer, pkg *ir.Package) {
 	e.Emit("callq _main")
 
 	// display result
-	e.Emit("movq %eax, %rsi")
-	e.Emit("movq $fmt, %rdi)")
+	e.Emit("movq %rax, %rsi")
+	e.Emit("movq $fmt, %rdi")
 	e.Emit("callq printf")
 
 	// exit
