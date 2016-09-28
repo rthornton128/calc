@@ -74,7 +74,7 @@ func (c *X86) genObject(o ir.Object, jmp bool, dest string) {
 	case *ir.Call:
 		for i, arg := range t.Args {
 			switch arg.(type) {
-			case *ir.Constant, *ir.Var:
+			case *ir.Constant:
 				c.genObject(arg, false, c.a.ArgumentLoc(i))
 			default:
 				c.genObject(arg, false, dest) //"%eax")
