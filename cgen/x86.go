@@ -192,17 +192,17 @@ func (c *X86) genJump(b *ir.Binary, label string) {
 	var inst string
 	switch b.Op {
 	case token.EQL:
-		inst = "jne"
-	case token.NEQ:
 		inst = "je"
+	case token.NEQ:
+		inst = "jne"
 	case token.LST:
-		inst = "jge"
-	case token.LTE:
-		inst = "jg"
-	case token.GTT:
-		inst = "jle"
-	case token.GTE:
 		inst = "jl"
+	case token.LTE:
+		inst = "jle"
+	case token.GTT:
+		inst = "jg"
+	case token.GTE:
+		inst = "jge"
 	}
 	c.Emitf("%s %s", inst, label)
 }
@@ -210,15 +210,15 @@ func (c *X86) genJump(b *ir.Binary, label string) {
 func (c *X86) genIf(i *ir.If) {
 	switch t := i.Cond.(type) {
 	case *ir.Binary:
-		c.genBinary(t, true, i.ElseLabel)
+		c.genBinary(t, true, i.ThenLabel)
 	default:
 		c.genObject(t, false, "%eax") // s/b genConstant() or genBoolean()
 		c.Emit("cmpl $0, %eax")
-		c.Emitf("jz %s", i.ElseLabel)
+		c.Emitf("jnz %s", i.ThenLabel)
 	}
-	c.genObject(i.Then, false, "%eax")
-	c.Emitf("jmp %s", i.EndLabel)
-	c.Emitf("%s:", i.ElseLabel)
 	c.genObject(i.Else, false, "%eax")
+	c.Emitf("jmp %s", i.EndLabel)
+	c.Emitf("%s:", i.ThenLabel)
+	c.genObject(i.Then, false, "%eax")
 	c.Emitf("%s:", i.EndLabel)
 }
