@@ -1,3 +1,4 @@
+; expects: 50
 (define a 0) ; bind constant 0 to a; infer type
 (define b (+ 3 4)) ; bind binary expr to b
 (define c (if true :int 1)) ; bind if expr to c

@@ -111,15 +111,17 @@ func (c *X86) genObject(o ir.Object, jmp bool, dest string) {
 		c.genObject(t.Rhs, false, dest) //"%eax")
 		c.Emitf("neg %s", dest)
 	case *ir.Var:
-		s := t.Scope()
-		v := s.Lookup(t.Name())
+		name := t.Name()
+		v := t.Scope().Lookup(t.Name())
 		//fmt.Println("scope:", s, "v:", v)
-		if x, ok := v.(*ir.Define); ok {
-			fmt.Println("seems to be a variable!")
+		if d, ok := v.(*ir.Define); ok {
+			name = v.Name()
+			fmt.Println("seems to be a define!")
 			fmt.Println("id:", v.ID(), "name:", v.Name())
-			c.genObject(x.Body, false, c.a.getByName(v.Name()))
+			c.genObject(d.Body, false, c.a.getByName(v.Name()))
 		}
-		c.Emitf("movl %s, %s", c.a.getByName(t.Name()), dest)
+		fmt.Println("name:", name)
+		c.Emitf("movl %s, %s", c.a.getByName(name), dest)
 	case *ir.Variable:
 		for _, p := range t.Params {
 			c.Emitf("movl $0, %s", c.a.getByName(p.Name()))
@@ -127,6 +129,8 @@ func (c *X86) genObject(o ir.Object, jmp bool, dest string) {
 		for _, e := range t.Body {
 			c.genObject(e, false, "%eax")
 		}
+		fmt.Println("variable: id:", t.ID())
+		c.Emitf("movl %%eax, %s", c.a.getByID(t.ID()))
 	}
 }
 

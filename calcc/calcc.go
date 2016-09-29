@@ -108,7 +108,9 @@ func main() {
 	}
 	if fi.IsDir() {
 		err = cgen.CompileDir(w, c, path, *optimize)
+		fmt.Println("path start:", path)
 		path = filepath.Join(path, filepath.Base(path))
+		fmt.Println("path path after:", path)
 	} else {
 		err = cgen.CompileFile(w, c, path, *optimize)
 	}

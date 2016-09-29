@@ -13,12 +13,6 @@ import (
 	"github.com/rthornton128/calc/ir"
 )
 
-type regAllocs struct {
-	locs     map[string]string
-	szParams int
-	szLocals int
-}
-
 type Register int
 type Instruction int
 
@@ -54,16 +48,27 @@ func StackAlloc(pkg *ir.Package, arch Arch) *allocator {
 
 	// assign offsets to parameters of all functions first
 	for _, f := range pkg.Scope().Names() {
-		if t, ok := pkg.Lookup(f).(*ir.Define); ok {
-			a.openScope(f)
-			a.alloc(t.Body)
-			a.closeScope()
+		if d, ok := pkg.Lookup(f).(*ir.Define); ok {
+			switch t := d.Body.(type) {
+			case *ir.Function:
+				a.openScope(f)
+				a.alloc(t)
+				a.closeScope()
+				//case *ir.Variable:
+				//a.alloc(t)
+			}
 		}
 	}
 	return &a
 }
 
 func align16(n int) int { return (n & -16) + 16 }
+
+type regAllocs struct {
+	locs     map[string]string
+	szParams int
+	szLocals int
+}
 
 // allocator is a rudimentary register allocator that mainly just spills
 // everything to the stack and does little to no optimization
@@ -144,6 +149,7 @@ func (a *allocator) alloc(o ir.Object) {
 		// set parameter registers and offsets
 		for i, p := range t.Params {
 			a.insertByName(p.Name(), a.CallStackOffset(i))
+			a.current.szParams += a.Width()
 		}
 
 		// locals
@@ -153,7 +159,7 @@ func (a *allocator) alloc(o ir.Object) {
 	case *ir.Variable:
 		a.walk(t)
 	}
-	fmt.Println(a.current)
+	fmt.Println("current:", a.current)
 }
 
 func (a *allocator) walk(o ir.Object) {
@@ -189,13 +195,28 @@ func (a *allocator) walk(o ir.Object) {
 		if t.Else != nil {
 			a.walk(t.Else)
 		}
+	case *ir.Var:
+		v := t.Scope().Lookup(t.Name())
+		if d, ok := v.(*ir.Define); ok {
+			fmt.Println("alloc define")
+			switch t := d.Body.(type) {
+			case *ir.Variable:
+				fmt.Println("define variable, id:", t.ID())
+				loc := a.nextLoc()
+				a.insertByName(d.Name(), loc)
+				a.insertByID(t.ID(), loc)
+				a.walk(t)
+			default:
+				fmt.Println("define other:", t)
+				a.insertByName(d.Name(), a.nextLoc())
+			}
+		}
 	case *ir.Variable:
 		fmt.Println("var ID:", t.ID(), "name:", t.Name())
 		a.insertByID(t.ID(), a.nextLoc())
 		for _, p := range t.Params {
 			a.insertByName(p.Name(), a.nextLoc())
 		}
-		//a.current.szLocals = len(t.Params) * a.Width()
 		for _, o := range t.Body {
 			a.walk(o)
 		}
