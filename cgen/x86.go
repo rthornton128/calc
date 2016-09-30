@@ -41,10 +41,10 @@ func (c *X86) CGen(e Emitter, pkg *ir.Package) {
 			if f, ok := d.Body.(*ir.Function); ok {
 				c.Emitf(".global _%s", name)
 				defer func(name string) {
-					c.a.openScope(name)
+					//c.a.openScope(name)
 
-					c.Emitf("# %s @function, locals: %x, params: %x", name,
-						c.a.current.szLocals, c.a.current.szParams)
+					//c.Emitf("# %s @function, locals: %x, params: %x", name,
+					//c.a.current.szLocals, c.a.current.szParams)
 					c.Emitf("_%s:", name)
 					c.EmitPrologue(c.a.stackSize())
 
@@ -54,7 +54,7 @@ func (c *X86) CGen(e Emitter, pkg *ir.Package) {
 					c.Emit("ret")
 					c.Emit()
 
-					c.a.closeScope()
+					//c.a.closeScope()
 				}(name)
 			}
 		}

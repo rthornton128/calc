@@ -18,11 +18,11 @@ type Object interface {
 	ID() int
 	Kind() ast.Kind
 	Name() string
-	Offset() int
 	Package() *Package
-	Register() string
+	Loc() string
 	Pos() token.Pos
 	Scope() *Scope
+	SetLoc(string)
 	String() string
 	Type() Type
 }
@@ -31,10 +31,9 @@ type object struct {
 	id    int
 	kind  ast.Kind
 	name  string
-	off   int
 	pkg   *Package
 	pos   token.Pos
-	reg   string
+	loc   string
 	scope *Scope
 	typ   Type
 }
@@ -42,16 +41,16 @@ type object struct {
 func (o object) ID() int           { return o.id }
 func (o object) Kind() ast.Kind    { return o.kind }
 func (o object) Name() string      { return o.name }
-func (o object) Offset() int       { return o.off }
 func (o object) Package() *Package { return o.pkg }
 func (o object) Pos() token.Pos    { return o.pos }
-func (o object) Register() string  { return o.reg }
+func (o object) Loc() string       { return o.loc }
 func (o object) Scope() *Scope {
 	if o.scope == nil {
 		return o.pkg.Scope()
 	}
 	return o.scope
 }
+func (o object) SetLoc(loc string) { o.loc = loc}
 func (o object) Type() Type { return o.typ }
 func (o object) String() string {
 	if o.id != 0 {

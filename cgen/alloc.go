@@ -41,7 +41,6 @@ type Arch interface {
 // stack and does little to no optimization
 func StackAlloc(pkg *ir.Package, arch Arch) *allocator {
 	a := allocator{
-		top:        make(map[string]*regAllocs),
 		nextOffset: 0 - arch.Width(),
 		Arch:       arch,
 	}
@@ -51,11 +50,7 @@ func StackAlloc(pkg *ir.Package, arch Arch) *allocator {
 		if d, ok := pkg.Lookup(f).(*ir.Define); ok {
 			switch t := d.Body.(type) {
 			case *ir.Function:
-				a.openScope(f)
 				a.alloc(t)
-				a.closeScope()
-				//case *ir.Variable:
-				//a.alloc(t)
 			}
 		}
 	}
@@ -64,19 +59,10 @@ func StackAlloc(pkg *ir.Package, arch Arch) *allocator {
 
 func align16(n int) int { return (n & -16) + 16 }
 
-type regAllocs struct {
-	locs     map[string]string
-	szParams int
-	szLocals int
-}
-
 // allocator is a rudimentary register allocator that mainly just spills
 // everything to the stack and does little to no optimization
 type allocator struct {
 	Arch
-	current    *regAllocs
-	top        map[string]*regAllocs
-	fn         string
 	nextOffset int
 }
 
@@ -92,55 +78,32 @@ func (a *allocator) ParameterLoc(i int) string {
 	return a.CallStackOffset(i)
 }
 
-func (a *allocator) closeScope() {
-	fmt.Println("close:", a.fn, a.current.szLocals, a.current.szParams)
-	a.top[a.fn] = a.current
-}
-
-func (a *allocator) openScope(fn string) {
-	if fn == a.fn {
-		fmt.Println("same scope:", a.current)
-		return
-	}
-
-	if s, ok := a.top[fn]; ok {
-		fmt.Println("existing scope:", s)
-		a.current = s
-	} else {
-		fmt.Println("new scope:", fn)
-		a.current = &regAllocs{locs: make(map[string]string)}
-	}
-	a.fn = fn
-}
-
 func (a *allocator) getByID(id int) string {
-	return a.getByName(fmt.Sprintf("%d", id))
+	return "" //a.getByName(fmt.Sprintf("%d", id))
 }
 
 func (a *allocator) getByName(name string) string {
-	fmt.Printf("get: %s = %s\n", name, a.current.locs[name])
-	return a.current.locs[name]
+	//fmt.Printf("get: %s = %s\n", name, a.current.locs[name])
+	return "" //a.current.locs[name]
 }
 
 func (a *allocator) insertByID(id int, loc string) {
-	a.insertByName(fmt.Sprintf("%d", id), loc)
+	//a.insertByName(fmt.Sprintf("%d", id), loc)
 }
 
 func (a *allocator) insertByName(name string, loc string) {
-	fmt.Printf("insert: %s = %s\n", name, loc)
-	a.current.locs[name] = loc
+	//fmt.Printf("insert: %s = %s\n", name, loc)
+	//a.current.locs[name] = loc
 }
 
 func (a *allocator) nextLoc() string {
 	s := fmt.Sprintf("%d(%s)", a.nextOffset, a.Register(BP))
 	a.nextOffset -= a.Width()
-	a.current.szLocals += a.Width()
-	fmt.Println("szLocals:", a.current.szLocals)
 	return s
 }
 
 func (a *allocator) stackSize() int {
-	return align16(a.current.szParams) + align16(a.current.szLocals)
+	return 0 //align16(a.current.szParams) + align16(a.current.szLocals)
 }
 
 func (a *allocator) alloc(o ir.Object) {
@@ -149,7 +112,7 @@ func (a *allocator) alloc(o ir.Object) {
 		// set parameter registers and offsets
 		for i, p := range t.Params {
 			a.insertByName(p.Name(), a.CallStackOffset(i))
-			a.current.szParams += a.Width()
+			//a.current.szParams += a.Width()
 		}
 
 		// locals
@@ -159,7 +122,7 @@ func (a *allocator) alloc(o ir.Object) {
 	case *ir.Variable:
 		a.walk(t)
 	}
-	fmt.Println("current:", a.current)
+	//fmt.Println("current:", a.current)
 }
 
 func (a *allocator) walk(o ir.Object) {
@@ -181,7 +144,7 @@ func (a *allocator) walk(o ir.Object) {
 
 			// ensure enough stack space available for params stored on stack
 			if i >= len(t.Args) {
-				a.current.szParams += a.Width()
+				//a.current.szParams += a.Width()
 			}
 		}
 	case *ir.For:
@@ -203,7 +166,7 @@ func (a *allocator) walk(o ir.Object) {
 			case *ir.Variable:
 				fmt.Println("define variable, id:", t.ID())
 				loc := a.nextLoc()
-				a.insertByName(d.Name(), loc)
+				//a.insertByName(d.Name(), loc)
 				a.insertByID(t.ID(), loc)
 				a.walk(t)
 			default:

@@ -19,6 +19,7 @@ type Var struct{ object }
 func makeVar(pkg *Package, i *ast.Ident) *Var {
 	return &Var{
 		object: object{
+			id: pkg.getID(),
 			kind:  ast.VarDecl,
 			name:  i.Name,
 			pos:   i.Pos(),
