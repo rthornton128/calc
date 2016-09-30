@@ -50,8 +50,8 @@ func (o object) Scope() *Scope {
 	}
 	return o.scope
 }
-func (o object) SetLoc(loc string) { o.loc = loc}
-func (o object) Type() Type { return o.typ }
+func (o *object) SetLoc(loc string) { o.loc = loc }
+func (o object) Type() Type         { return o.typ }
 func (o object) String() string {
 	if o.id != 0 {
 		return fmt.Sprintf("%s%d", o.name, o.id)

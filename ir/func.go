@@ -16,8 +16,10 @@ import (
 
 type Function struct {
 	object
-	Params []*Param
-	Body   []Object
+	Params      []*Param
+	Body        []Object
+	SizeLocals  int
+	SizeMaxArgs int
 }
 
 func makeFunc(pkg *Package, f *ast.FuncExpr) *Function {
@@ -69,6 +71,16 @@ func makeParam(pkg *Package, p *ast.Param) *Param {
 		name: p.Name.Name,
 		pos:  p.Pos(),
 		typ:  typeFromString(p.Type.Name),
+	}}
+}
+
+func (p *Param) Copy() *Param {
+	return &Param{object{
+		id:   p.ID(),
+		kind: ast.VarDecl,
+		name: p.Name(),
+		pos:  p.Pos(),
+		typ:  p.Type(),
 	}}
 }
 

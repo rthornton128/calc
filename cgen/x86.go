@@ -41,20 +41,17 @@ func (c *X86) CGen(e Emitter, pkg *ir.Package) {
 			if f, ok := d.Body.(*ir.Function); ok {
 				c.Emitf(".global _%s", name)
 				defer func(name string) {
-					//c.a.openScope(name)
-
-					//c.Emitf("# %s @function, locals: %x, params: %x", name,
-					//c.a.current.szLocals, c.a.current.szParams)
+					c.Emitf("# %s @function, locals: %x, params: %x", name,
+						f.SizeLocals, f.SizeMaxArgs)
+					szStack := align16(f.SizeLocals + f.SizeMaxArgs)
 					c.Emitf("_%s:", name)
-					c.EmitPrologue(c.a.stackSize())
+					c.EmitPrologue(szStack)
 
 					c.genObject(f, false, "%eax")
 
-					c.EmitEpilogue(c.a.stackSize())
+					c.EmitEpilogue(szStack)
 					c.Emit("ret")
 					c.Emit()
-
-					//c.a.closeScope()
 				}(name)
 			}
 		}
@@ -66,9 +63,8 @@ func (c *X86) genObject(o ir.Object, jmp bool, dest string) {
 	case *ir.Assignment:
 		// TODO optimize to allow constant/variable to be directly moved into
 		// location
-		c.genObject(t.Rhs, false, dest) //"%eax")
-		fmt.Println("getByName:", t.Lhs, ",", c.a.getByName(t.Lhs))
-		c.Emitf("movl %s, %s", dest, c.a.getByName(t.Lhs))
+		c.genObject(t.Rhs, false, dest)
+		c.Emitf("movl %s, %s", dest, t.Scope().Lookup(t.Lhs).Loc())
 	case *ir.Binary:
 		c.genBinary(t, jmp, dest)
 	case *ir.Call:
@@ -108,29 +104,26 @@ func (c *X86) genObject(o ir.Object, jmp bool, dest string) {
 			c.genObject(e, false, "%eax")
 		}
 	case *ir.Unary:
-		c.genObject(t.Rhs, false, dest) //"%eax")
+		c.genObject(t.Rhs, false, dest)
 		c.Emitf("neg %s", dest)
 	case *ir.Var:
-		name := t.Name()
-		v := t.Scope().Lookup(t.Name())
-		//fmt.Println("scope:", s, "v:", v)
-		if d, ok := v.(*ir.Define); ok {
-			name = v.Name()
-			fmt.Println("seems to be a define!")
-			fmt.Println("id:", v.ID(), "name:", v.Name())
-			c.genObject(d.Body, false, c.a.getByName(v.Name()))
+		v := t.Scope().Lookup(fmt.Sprint(t.Name(), t.ID()))
+		if o, ok := v.(*ir.Variable); ok {
+			c.genObject(o, false, o.Loc())
+			return
 		}
-		fmt.Println("name:", name)
-		c.Emitf("movl %s, %s", c.a.getByName(name), dest)
+		v = t.Scope().Lookup(t.Name())
+		c.Emitf("movl %s, %s", v.Loc(), dest)
 	case *ir.Variable:
+		c.Emitf("# variable %d start", t.ID())
 		for _, p := range t.Params {
-			c.Emitf("movl $0, %s", c.a.getByName(p.Name()))
+			c.Emitf("movl $0, %s", p.Loc())
 		}
 		for _, e := range t.Body {
 			c.genObject(e, false, "%eax")
 		}
-		fmt.Println("variable: id:", t.ID())
-		c.Emitf("movl %%eax, %s", c.a.getByID(t.ID()))
+		c.Emitf("movl %%eax, %s", t.Loc())
+		c.Emitf("# variable %d end", t.ID())
 	}
 }
 
@@ -145,14 +138,14 @@ func (c *X86) genBinary(b *ir.Binary, jump bool, dest string) {
 			c.genObject(b.Rhs, false, "%edx")
 		}
 	default:
-		c.Emitf("movl %%eax, %s", c.a.getByID(b.Rhs.ID()))
+		c.Emitf("movl %%eax, %s", b.Rhs.Loc())
 		c.genObject(b.Rhs, false, "%eax")
 		if b.Op == token.QUO || b.Op == token.REM {
 			c.Emit("movl %eax, %ecx")
 		} else {
 			c.Emit("movl %eax, %edx")
 		}
-		c.Emitf("movl %s, %%eax", c.a.getByID(b.Rhs.ID()))
+		c.Emitf("movl %s, %%eax", b.Rhs.Loc())
 	}
 	switch b.Op {
 	case token.ADD:

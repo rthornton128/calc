@@ -2,7 +2,7 @@
 (define a (var (b:int):int (= b (if true:int 42)) b))
 
 ; define c as a function which adds b (zero value) and a, returning the result
-(define c (func :int (var (b:int):int (+ a b))))
+(define c (func :int (var (b:int):int (+ a a b))))
 
 ; call c; result should be 42
 (define main (func:int (c)))

@@ -50,7 +50,7 @@ func StackAlloc(pkg *ir.Package, arch Arch) *allocator {
 		if d, ok := pkg.Lookup(f).(*ir.Define); ok {
 			switch t := d.Body.(type) {
 			case *ir.Function:
-				a.alloc(t)
+				a.walk(t)
 			}
 		}
 	}
@@ -64,6 +64,8 @@ func align16(n int) int { return (n & -16) + 16 }
 type allocator struct {
 	Arch
 	nextOffset int
+	locals     int
+	maxArgs    int
 }
 
 func (a *allocator) ArgumentLoc(i int) string {
@@ -78,51 +80,11 @@ func (a *allocator) ParameterLoc(i int) string {
 	return a.CallStackOffset(i)
 }
 
-func (a *allocator) getByID(id int) string {
-	return "" //a.getByName(fmt.Sprintf("%d", id))
-}
-
-func (a *allocator) getByName(name string) string {
-	//fmt.Printf("get: %s = %s\n", name, a.current.locs[name])
-	return "" //a.current.locs[name]
-}
-
-func (a *allocator) insertByID(id int, loc string) {
-	//a.insertByName(fmt.Sprintf("%d", id), loc)
-}
-
-func (a *allocator) insertByName(name string, loc string) {
-	//fmt.Printf("insert: %s = %s\n", name, loc)
-	//a.current.locs[name] = loc
-}
-
 func (a *allocator) nextLoc() string {
 	s := fmt.Sprintf("%d(%s)", a.nextOffset, a.Register(BP))
 	a.nextOffset -= a.Width()
+	a.locals++
 	return s
-}
-
-func (a *allocator) stackSize() int {
-	return 0 //align16(a.current.szParams) + align16(a.current.szLocals)
-}
-
-func (a *allocator) alloc(o ir.Object) {
-	switch t := o.(type) {
-	case *ir.Function:
-		// set parameter registers and offsets
-		for i, p := range t.Params {
-			a.insertByName(p.Name(), a.CallStackOffset(i))
-			//a.current.szParams += a.Width()
-		}
-
-		// locals
-		for _, o := range t.Body {
-			a.walk(o)
-		}
-	case *ir.Variable:
-		a.walk(t)
-	}
-	//fmt.Println("current:", a.current)
 }
 
 func (a *allocator) walk(o ir.Object) {
@@ -136,17 +98,29 @@ func (a *allocator) walk(o ir.Object) {
 		case *ir.Constant, *ir.Var:
 			//no nothing
 		default:
-			a.insertByID(t.Rhs.ID(), a.nextLoc())
+			t.Rhs.SetLoc(a.nextLoc())
 		}
 	case *ir.Call:
-		for i, arg := range t.Args {
+		for _, arg := range t.Args {
 			a.walk(arg)
 
-			// ensure enough stack space available for params stored on stack
-			if i >= len(t.Args) {
-				//a.current.szParams += a.Width()
-			}
 		}
+		if a.maxArgs < len(t.Args) {
+			a.maxArgs = len(t.Args)
+		}
+	case *ir.Function:
+		// set parameter offsets
+		for i, p := range t.Params {
+			p.SetLoc(a.CallStackOffset(i))
+		}
+
+		// locals
+		for _, o := range t.Body {
+			a.walk(o)
+		}
+		t.SizeLocals = a.locals * a.Width()
+		t.SizeMaxArgs = a.maxArgs * a.Width()
+		a.locals, a.maxArgs = 0, 0
 	case *ir.For:
 		a.walk(t.Cond)
 		for _, e := range t.Body {
@@ -159,26 +133,22 @@ func (a *allocator) walk(o ir.Object) {
 			a.walk(t.Else)
 		}
 	case *ir.Var:
-		v := t.Scope().Lookup(t.Name())
-		if d, ok := v.(*ir.Define); ok {
-			fmt.Println("alloc define")
-			switch t := d.Body.(type) {
+		if d, ok := t.Scope().Lookup(t.Name()).(*ir.Define); ok {
+			switch b := d.Body.(type) {
 			case *ir.Variable:
-				fmt.Println("define variable, id:", t.ID())
-				loc := a.nextLoc()
-				//a.insertByName(d.Name(), loc)
-				a.insertByID(t.ID(), loc)
-				a.walk(t)
+				x := b.Copy(t.Name(), t.ID())
+				t.Scope().Insert(x)
+				a.walk(x)
 			default:
-				fmt.Println("define other:", t)
-				a.insertByName(d.Name(), a.nextLoc())
+				t.SetLoc(a.nextLoc())
 			}
 		}
 	case *ir.Variable:
-		fmt.Println("var ID:", t.ID(), "name:", t.Name())
-		a.insertByID(t.ID(), a.nextLoc())
+		t.SetLoc(a.nextLoc())
 		for _, p := range t.Params {
-			a.insertByName(p.Name(), a.nextLoc())
+			loc := a.nextLoc()
+			p.SetLoc(loc)
+			t.Scope().Lookup(p.Name()).SetLoc(loc)
 		}
 		for _, o := range t.Body {
 			a.walk(o)

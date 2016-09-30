@@ -19,7 +19,7 @@ type Var struct{ object }
 func makeVar(pkg *Package, i *ast.Ident) *Var {
 	return &Var{
 		object: object{
-			id: pkg.getID(),
+			id:    pkg.getID(),
 			kind:  ast.VarDecl,
 			name:  i.Name,
 			pos:   i.Pos(),
@@ -56,6 +56,30 @@ func makeVariable(pkg *Package, ve *ast.VarExpr) *Variable {
 	}
 
 	return v
+}
+
+func (v *Variable) Copy(name string, id int) *Variable {
+	params := make([]*Param, len(v.Params))
+	for i, p := range v.Params {
+		params[i] = p.Copy()
+	}
+	return &Variable{
+		object: object{
+			id:    id,
+			kind:  ast.VarDecl,
+			name:  name,
+			pos:   v.Pos(),
+			scope: v.Scope(),
+			typ:   v.Type(),
+		},
+		Params: params,
+		Body:   v.Body,
+	}
+
+}
+
+func (v *Variable) Name() string {
+	return fmt.Sprintf("%s%d", v.name, v.id)
 }
 
 func (v *Variable) String() string {
