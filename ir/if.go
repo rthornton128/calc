@@ -44,7 +44,30 @@ func makeIf(pkg *Package, ie *ast.IfExpr) *If {
 	return i
 }
 
+// Copy makes a deep copy of the Unary object
+func (i *If) Copy() Object {
+	var e Object
+	if i.Else != nil {
+		e = i.Else.Copy()
+	}
+	//id := i.Package().getID()
+	//fmt.Println("if with new id:", id)
+	return &If{
+		object:    i.object.copy(i.Package().getID()), //id),
+		Cond:      i.Cond.Copy(),
+		Then:      i.Then.Copy(),
+		Else:      e,
+		ThenLabel: fmt.Sprintf("L%d", i.Package().getID()),
+		EndLabel:  fmt.Sprintf("L%d", id),
+	}
+}
+
 func (i *If) String() string {
-	return fmt.Sprintf("{if[%s] %s then %s else %s}", i.typ, i.Cond, i.Then,
+	if i.Else == nil {
+		return fmt.Sprintf("{if[%d]:%s (%s) then %s}", i.id, i.typ, i.Cond,
+			i.Then)
+
+	}
+	return fmt.Sprintf("{if[%d]:%s (%s) then %s else %s}", i.id, i.typ, i.Cond, i.Then,
 		i.Else)
 }

@@ -40,10 +40,13 @@ func makeFunc(pkg *Package, f *ast.FuncExpr) *Function {
 		Body:   MakeExprList(pkg, f.Body),
 	}
 
-	pkg.InsertTop(fn)
+	//pkg.InsertTop(fn)
 
 	return fn
 }
+
+// Copy returns nil, functions should not be copied
+func (f *Function) Copy() Object { return nil }
 
 func (f *Function) String() string {
 	params := make([]string, len(f.Params))
@@ -56,32 +59,29 @@ func (f *Function) String() string {
 		exprs[i] = s.String()
 	}
 
-	return fmt.Sprintf("func:%s (%s) {%s}", f.typ, strings.Join(params, ","),
+	return fmt.Sprintf("func:%s (%s) => %s", f.typ, strings.Join(params, ","),
 		strings.Join(exprs, ","))
 }
 
-type Param struct {
-	object
-}
+// Param represent a parameter in a function or var expression
+type Param struct{ object }
 
 func makeParam(pkg *Package, p *ast.Param) *Param {
 	return &Param{object{
 		id:   pkg.getID(),
 		kind: ast.VarDecl,
 		name: p.Name.Name,
+		pkg:  pkg,
 		pos:  p.Pos(),
 		typ:  typeFromString(p.Type.Name),
 	}}
 }
 
-func (p *Param) Copy() *Param {
-	return &Param{object{
-		id:   p.ID(),
-		kind: ast.VarDecl,
-		name: p.Name(),
-		pos:  p.Pos(),
-		typ:  p.Type(),
-	}}
+// Copy is a deep copy of a parameter
+func (p *Param) Copy() Object {
+	//id := p.Package().getID()
+	//fmt.Println("copying Param", p.Name(), "with new id", id)
+	return &Param{p.object.copy(p.Package().getID())} //id)}
 }
 
 func (p *Param) String() string {

@@ -14,6 +14,8 @@ import (
 	"github.com/rthornton128/calc/ast"
 )
 
+// Call is a function call of the form (function [args...]) where args is
+// zero or more optional arguments.
 type Call struct {
 	object
 	Args []Object
@@ -26,6 +28,18 @@ func makeCall(pkg *Package, c *ast.CallExpr) *Call {
 	}
 	return &Call{
 		object: object{name: c.Name.Name, pkg: pkg, pos: c.Pos(), scope: pkg.scope},
+		Args:   args,
+	}
+}
+
+// Copy makes a deep copy of the Call object
+func (c *Call) Copy() Object {
+	args := make([]Object, len(c.Args))
+	for i, a := range c.Args {
+		args[i] = a.Copy()
+	}
+	return &Call{
+		object: c.object.copy(0),
 		Args:   args,
 	}
 }

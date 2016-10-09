@@ -14,7 +14,7 @@ func MakeExpr(pkg *Package, e ast.Expr) Object {
 	case *ast.AssignExpr:
 		return makeAssignment(pkg, t)
 	case *ast.BasicLit:
-		return makeConstant(t)
+		return makeConstant(pkg, t)
 	case *ast.BinaryExpr:
 		return makeBinary(pkg, t)
 	case *ast.CallExpr:
@@ -37,9 +37,13 @@ func MakeExpr(pkg *Package, e ast.Expr) Object {
 }
 
 func MakeExprList(pkg *Package, el []ast.Expr) []Object {
-	ol := make([]Object, 0)
+	var ol []Object
 	for _, e := range el {
 		ol = append(ol, MakeExpr(pkg, e))
 	}
 	return ol
+}
+
+func makeDefine(pkg *Package, d *ast.DefineStmt) Object {
+	return MakeExpr(pkg, d.Body)
 }

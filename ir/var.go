@@ -14,6 +14,7 @@ import (
 	"github.com/rthornton128/calc/ast"
 )
 
+// Var should really be Ident but isn't for some reason
 type Var struct{ object }
 
 func makeVar(pkg *Package, i *ast.Ident) *Var {
@@ -22,14 +23,25 @@ func makeVar(pkg *Package, i *ast.Ident) *Var {
 			id:    pkg.getID(),
 			kind:  ast.VarDecl,
 			name:  i.Name,
+			pkg:   pkg,
 			pos:   i.Pos(),
 			scope: pkg.scope,
 		},
 	}
 }
 
+// Copy makes a deep copy of the Var object
+func (v *Var) Copy() Object {
+	return &Var{object: v.object.copy(v.Package().getID())}
+}
+
+/*
+func (v *Var) Name() string {
+	return fmt.Sprintf("%s%d", v.name, v.id)
+}*/
+
 func (i *Var) String() string {
-	return i.Name()
+	return fmt.Sprintf("%s[%d]", i.Name(), i.ID())
 }
 
 type Variable struct {
@@ -47,6 +59,7 @@ func makeVariable(pkg *Package, ve *ast.VarExpr) *Variable {
 			id:    pkg.getID(),
 			kind:  ast.VarDecl,
 			name:  "var",
+			pkg:   pkg,
 			pos:   ve.Pos(),
 			scope: pkg.scope,
 			typ:   typeFromString(ve.Type.Name),
@@ -58,24 +71,27 @@ func makeVariable(pkg *Package, ve *ast.VarExpr) *Variable {
 	return v
 }
 
-func (v *Variable) Copy(name string, id int) *Variable {
-	params := make([]*Param, len(v.Params))
-	for i, p := range v.Params {
-		params[i] = p.Copy()
-	}
-	return &Variable{
-		object: object{
-			id:    id,
-			kind:  ast.VarDecl,
-			name:  name,
-			pos:   v.Pos(),
-			scope: v.Scope(),
-			typ:   v.Type(),
-		},
-		Params: params,
-		Body:   v.Body,
-	}
+// Copy is a deep copy of (var [params] expr...)
+func (v *Variable) Copy() Object {
+	v.Package().newScope()
+	defer v.Package().closeScope()
 
+	nVariable := &Variable{
+		object: v.object.copy(v.Package().getID()),
+		//Params: params,
+		//Body: v.Body.Copy(),
+	}
+	nVariable.scope = v.Package().scope //NewScope(v.Package().Scope().parent)
+	nVariable.Params = make([]*Param, len(v.Params))
+	for i, p := range v.Params {
+		nVariable.Params[i] = p.Copy().(*Param)
+		nVariable.Scope().Insert(nVariable.Params[i], p.Name())
+	}
+	for _, e := range v.Body {
+		//fmt.Println("copying", e)
+		nVariable.Body = append(nVariable.Body, e.Copy())
+	}
+	return nVariable
 }
 
 func (v *Variable) Name() string {
@@ -93,6 +109,6 @@ func (v *Variable) String() string {
 		body[i] = e.String()
 	}
 
-	return fmt.Sprintf("var:%s (%s) {%s}", v.Type(), strings.Join(params, ","),
+	return fmt.Sprintf("var[%d]:%s (%s) {%s}", v.ID(), v.Type(), strings.Join(params, ","),
 		strings.Join(body, ","))
 }

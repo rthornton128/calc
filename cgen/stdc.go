@@ -1,3 +1,10 @@
+// Copyright (c) 2014, Rob Thornton
+// All rights reserved.
+// This source code is governed by a Simplied BSD-License. Please see the
+// LICENSE included in this distribution for a copy of the full license
+// or, if one is not included, you may also find a copy at
+// http://opensource.org/licenses/BSD-2-Clause
+
 package cgen
 
 import (
@@ -8,7 +15,7 @@ import (
 	"github.com/rthornton128/calc/ir"
 )
 
-type StdC struct{ io.Writer }
+type StdC struct{ io.Writer } // TODO chanage to cgen.Writer
 
 /* Utility */
 
@@ -23,11 +30,11 @@ func cType(t ir.Type) string {
 	}
 }
 
-func (cc *StdC) emit(f string, args ...interface{}) {
+func (cc *StdC) emit(f string, args ...interface{}) { // TODO remove
 	fmt.Fprintf(cc.Writer, f, args...)
 }
 
-func (cc *StdC) emitln(args ...interface{}) {
+func (cc *StdC) emitln(args ...interface{}) { // TODO remove
 	fmt.Fprintln(cc.Writer, args...)
 }
 
@@ -96,6 +103,7 @@ func (c *StdC) compConstant(con *ir.Constant) string {
 	return con.String()
 }
 
+/*
 func (c *StdC) compDefine(d *ir.Define) string {
 	switch t := d.Body.(type) {
 	case *ir.Function:
@@ -105,7 +113,7 @@ func (c *StdC) compDefine(d *ir.Define) string {
 	default:
 		return c.compObject(t)
 	}
-}
+}*/
 
 func (c *StdC) compFor(f *ir.For) string {
 	c.emit("%s %s%d = 0;\n", cType(f.Type()), f.Name(), f.ID())
@@ -144,22 +152,23 @@ func (c *StdC) compIf(i *ir.If) string {
 func (c *StdC) CGen(w io.Writer, p *ir.Package) {
 	c.Writer = w
 	c.emitHeaders()
-	names := p.Scope().Names()
-	for _, name := range names {
-		// later, this may need to check for import clauses
-		if d, ok := p.Scope().Lookup(name).(*ir.Define); ok {
-			if f, ok := d.Body.(*ir.Function); ok {
-				c.emit("%s;\n", c.compSignature(f))
-				params := make([]string, len(f.Params))
-				for i, p := range f.Params {
-					params[i] = cType(f.Scope().Lookup(p.Name()).(*ir.Param).Type())
+	/*
+		names := p.Scope().Names()
+		for _, name := range names {
+			// later, this may need to check for import clauses
+			if d, ok := p.Scope().Lookup(name).(*ir.Define); ok {
+				if f, ok := d.Body.(*ir.Function); ok {
+					c.emit("%s;\n", c.compSignature(f))
+					params := make([]string, len(f.Params))
+					for i, p := range f.Params {
+						params[i] = cType(f.Scope().Lookup(p.Name()).(*ir.Param).Type())
+					}
+					c.emit("%s (*_%s)(%s) = f%d;\n", cType(f.Type()), d.Name(),
+						strings.Join(params, ","), f.ID())
+					defer c.compDefine(d)
 				}
-				c.emit("%s (*_%s)(%s) = f%d;\n", cType(f.Type()), d.Name(),
-					strings.Join(params, ","), f.ID())
-				defer c.compDefine(d)
 			}
-		}
-	}
+		}*/
 	c.emitMain()
 }
 
@@ -180,8 +189,8 @@ func (c *StdC) compUnary(u *ir.Unary) string {
 
 func (c *StdC) compVar(v *ir.Var) string {
 	switch t := v.Scope().Lookup(v.Name()).(type) {
-	case *ir.Define:
-		return c.compDefine(t)
+	//case *ir.Define:
+	//return c.compDefine(t)
 	case *ir.Param:
 		return fmt.Sprintf("%s%d", t.Name(), t.ID())
 	}

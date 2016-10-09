@@ -14,6 +14,7 @@ import (
 	"github.com/rthornton128/calc/token"
 )
 
+// Binary is the expression (operator arg0, args1 [, args...])
 type Binary struct {
 	object
 	Op  token.Token
@@ -48,10 +49,21 @@ func binaryType(t token.Token) Type {
 	}
 }
 
+// Copy makes a deep copy of the Binary object
+func (b *Binary) Copy() Object {
+	return &Binary{
+		object: b.object.copy(b.Package().getID()),
+		Op:     b.Op,
+		Lhs:    b.Lhs.Copy(),
+		Rhs:    b.Rhs.Copy(),
+	}
+}
+
 func (b *Binary) String() string {
 	return fmt.Sprintf("(%s %s %s)", b.Lhs.String(), b.Op, b.Rhs.String())
 }
 
+// Unary is the expreesion -expr
 type Unary struct {
 	object
 	Op  string
@@ -63,6 +75,15 @@ func makeUnary(pkg *Package, u *ast.UnaryExpr) *Unary {
 		object: object{pkg: pkg, pos: u.Pos(), scope: pkg.scope, typ: Int},
 		Op:     u.Op,
 		Rhs:    MakeExpr(pkg, u.Value),
+	}
+}
+
+// Copy makes a deep copy of the Unary object
+func (u *Unary) Copy() Object {
+	return &Unary{
+		object: u.object.copy(0),
+		Op:     u.Op,
+		Rhs:    u.Rhs.Copy(),
 	}
 }
 

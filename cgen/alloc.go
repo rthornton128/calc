@@ -46,13 +46,18 @@ func StackAlloc(pkg *ir.Package, arch Arch) *allocator {
 	}
 
 	// assign offsets to parameters of all functions first
-	for _, f := range pkg.Scope().Names() {
-		if d, ok := pkg.Lookup(f).(*ir.Define); ok {
+	// TODO why Names? Avoid lookup and do full map return
+	for _, n := range pkg.Scope().Names() {
+		if f, ok := pkg.Lookup(n).(*ir.Function); ok {
+			a.walk(f)
+		}
+		//fmt.Println("scope for", f, pkg.Lookup(f).Scope())
+		/*if d, ok := pkg.Lookup(f).(*ir.Define); ok {
 			switch t := d.Body.(type) {
 			case *ir.Function:
 				a.walk(t)
 			}
-		}
+		}*/
 	}
 	return &a
 }
@@ -95,7 +100,7 @@ func (a *allocator) walk(o ir.Object) {
 		a.walk(t.Lhs)
 		a.walk(t.Rhs)
 		switch t.Rhs.(type) {
-		case *ir.Constant, *ir.Var:
+		case *ir.Constant, *ir.Param, *ir.Var:
 			//no nothing
 		default:
 			t.Rhs.SetLoc(a.nextLoc())
@@ -113,7 +118,6 @@ func (a *allocator) walk(o ir.Object) {
 		for i, p := range t.Params {
 			p.SetLoc(a.CallStackOffset(i))
 		}
-
 		// locals
 		for _, o := range t.Body {
 			a.walk(o)
@@ -133,16 +137,9 @@ func (a *allocator) walk(o ir.Object) {
 			a.walk(t.Else)
 		}
 	case *ir.Var:
-		if d, ok := t.Scope().Lookup(t.Name()).(*ir.Define); ok {
-			switch b := d.Body.(type) {
-			case *ir.Variable:
-				x := b.Copy(t.Name(), t.ID())
-				t.Scope().Insert(x)
-				a.walk(x)
-			default:
-				t.SetLoc(a.nextLoc())
-			}
-		}
+		//fmt.Printf("var: %s%d\n", t.Name(), t.ID())
+		t.SetLoc(a.nextLoc())
+		//fmt.Printf("var: %s%d set to %s\n", t.Name(), t.ID(), t.Loc())
 	case *ir.Variable:
 		t.SetLoc(a.nextLoc())
 		for _, p := range t.Params {
@@ -153,5 +150,6 @@ func (a *allocator) walk(o ir.Object) {
 		for _, o := range t.Body {
 			a.walk(o)
 		}
+		//fmt.Println("scope for var", t.Scope())
 	}
 }

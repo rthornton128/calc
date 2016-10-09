@@ -19,11 +19,11 @@ func NewScope(p *Scope) *Scope {
 	}
 }
 
-func (s *Scope) Insert(o Object) Object {
-	if prev, ok := s.m[o.Name()]; ok {
+func (s *Scope) Insert(o Object, name string) Object {
+	if prev, ok := s.m[name]; ok {
 		return prev
 	}
-	s.m[o.Name()] = o
+	s.m[name] = o
 	return nil
 }
 
@@ -36,7 +36,7 @@ func (s *Scope) Lookup(name string) Object {
 }
 
 func (s *Scope) Names() []string {
-	names := make([]string, 0)
+	var names []string
 	for k := range s.m {
 		names = append(names, k)
 	}

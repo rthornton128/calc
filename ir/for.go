@@ -7,6 +7,7 @@ import (
 	"github.com/rthornton128/calc/ast"
 )
 
+// For is the expression (for cond body...)
 type For struct {
 	object
 	Cond Object
@@ -32,6 +33,19 @@ func (f *For) CondLabel() string {
 
 func (f *For) BodyLabel() string {
 	return fmt.Sprintf("L%d", f.ID())
+}
+
+// Copy makes a deep copy of the Unary object
+func (f *For) Copy() Object {
+	body := make([]Object, len(f.Body))
+	for i, e := range f.Body {
+		body[i] = e.Copy()
+	}
+	return &For{
+		object: f.object.copy(f.Package().getID()),
+		Cond: f.Cond.Copy(),
+		Body: body,
+	}
 }
 
 func (f *For) String() string {

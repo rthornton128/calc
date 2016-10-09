@@ -15,6 +15,7 @@ import (
 )
 
 type Object interface {
+	Copy() Object
 	ID() int
 	Kind() ast.Kind
 	Name() string
@@ -36,6 +37,19 @@ type object struct {
 	loc   string
 	scope *Scope
 	typ   Type
+}
+
+func (o object) copy(id int) object {
+	return object{
+		id:    id,
+		kind:  o.kind,
+		name:  o.name,
+		pkg:   o.pkg,
+		pos:   o.pos,
+		loc:   o.loc,
+		scope: o.Package().scope,
+		typ:   o.typ,
+	}
 }
 
 func (o object) ID() int           { return o.id }

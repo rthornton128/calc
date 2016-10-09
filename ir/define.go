@@ -7,20 +7,17 @@
 
 package ir
 
-import (
-	"fmt"
+/*
+import "github.com/rthornton128/calc/ast"
 
-	"github.com/rthornton128/calc/ast"
-)
 
 type Define struct {
 	object
 	Body Object
 }
+*/
 
-func MakeDefine(pkg *Package, d *ast.DefineStmt) *Define {
-	body := MakeExpr(pkg, d.Body)
-	t := body.Type()
+/*t := body.Type()
 	if d.Type != nil {
 		t = typeFromString(d.Type.Name)
 	}
@@ -37,6 +34,12 @@ func MakeDefine(pkg *Package, d *ast.DefineStmt) *Define {
 	}
 }
 
+func (u *Unary) Copy() Object {
+	return nil
+
+}
+
 func (d *Define) String() string {
 	return fmt.Sprintf("define %s[%s] {%s}", d.Name(), d.Type(), d.Body)
 }
+*/

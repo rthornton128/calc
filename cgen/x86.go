@@ -8,8 +8,6 @@
 package cgen
 
 import (
-	"fmt"
-
 	"github.com/rthornton128/calc/ir"
 	"github.com/rthornton128/calc/token"
 )
@@ -37,25 +35,28 @@ func (c *X86) CGen(e Emitter, pkg *ir.Package) {
 	c.a = StackAlloc(pkg, c.Arch)
 
 	for _, name := range pkg.Scope().Names() {
-		if d, ok := pkg.Scope().Lookup(name).(*ir.Define); ok {
-			if f, ok := d.Body.(*ir.Function); ok {
-				c.Emitf(".global _%s", name)
-				defer func(name string) {
-					c.Emitf("# %s @function, locals: %x, params: %x", name,
-						f.SizeLocals, f.SizeMaxArgs)
-					szStack := align16(f.SizeLocals + f.SizeMaxArgs)
-					c.Emitf("_%s:", name)
-					c.EmitPrologue(szStack)
+		//fmt.Println("x86: gen:", name)
+		if f, ok := pkg.Scope().Lookup(name).(*ir.Function); ok {
+			//fmt.Println("gen fun")
+			//if f, ok := d.Body.(*ir.Function); ok {
+			c.Emitf(".global _%s", name)
+			defer func(name string) {
+				c.Emitf("# %s @function, locals: %x, params: %x", name,
+					f.SizeLocals, f.SizeMaxArgs)
+				szStack := align16(f.SizeLocals + f.SizeMaxArgs)
+				c.Emitf("_%s:", name)
+				c.EmitPrologue(szStack)
 
-					c.genObject(f, false, "%eax")
+				c.genObject(f, false, "%eax")
 
-					c.EmitEpilogue(szStack)
-					c.Emit("ret")
-					c.Emit()
-				}(name)
-			}
+				c.EmitEpilogue(szStack)
+				c.Emit("ret")
+				c.Emit()
+			}(name)
+			//}
 		}
 	}
+	c.Emit()
 }
 
 func (c *X86) genObject(o ir.Object, jmp bool, dest string) {
@@ -69,6 +70,7 @@ func (c *X86) genObject(o ir.Object, jmp bool, dest string) {
 		c.genBinary(t, jmp, dest)
 	case *ir.Call:
 		for i, arg := range t.Args {
+			//fmt.Println("call: processing argument", i, "-", arg)
 			switch arg.(type) {
 			case *ir.Constant:
 				c.genObject(arg, false, c.a.ArgumentLoc(i))
@@ -107,7 +109,9 @@ func (c *X86) genObject(o ir.Object, jmp bool, dest string) {
 		c.genObject(t.Rhs, false, dest)
 		c.Emitf("neg %s", dest)
 	case *ir.Var:
-		v := t.Scope().Lookup(fmt.Sprint(t.Name(), t.ID()))
+		//fmt.Println("looking up var:", t.Name(), t.ID(), t.Loc())
+		v := t.Scope().Lookup(t.Name()) //fmt.Sprint(t.Name(), t.ID()))
+		//fmt.Println("found:", v, v.ID(), "Loc:", v.Loc())
 		if o, ok := v.(*ir.Variable); ok {
 			c.genObject(o, false, o.Loc())
 			return
@@ -120,6 +124,7 @@ func (c *X86) genObject(o ir.Object, jmp bool, dest string) {
 			c.Emitf("movl $0, %s", p.Loc())
 		}
 		for _, e := range t.Body {
+			//fmt.Println("variable: processing body expr", i, "-", e)
 			c.genObject(e, false, "%eax")
 		}
 		c.Emitf("movl %%eax, %s", t.Loc())
@@ -205,6 +210,7 @@ func (c *X86) genJump(b *ir.Binary, label string) {
 }
 
 func (c *X86) genIf(i *ir.If) {
+	//fmt.Println("if:", i.ID(), i.ThenLabel, i.EndLabel)
 	switch t := i.Cond.(type) {
 	case *ir.Binary:
 		c.genBinary(t, true, i.ThenLabel)

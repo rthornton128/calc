@@ -81,7 +81,7 @@ func (tc *typeChecker) check(o Object) {
 			tc.error(t.Pos(), "call expects function got '%s'", o.Kind())
 			return
 		}
-		f := o.(*Define).Body.(*Function)
+		f := o.(*Function)
 
 		if len(t.Args) != len(f.Params) {
 			tc.error(t.Pos(), "function '%s' expects '%d' arguments but received %d",
@@ -98,8 +98,6 @@ func (tc *typeChecker) check(o Object) {
 			}
 		}
 		t.object.typ = f.Type()
-	case *Define:
-		tc.check(t.Body)
 	case *For:
 		tc.check(t.Cond)
 		if t.Cond.Type() != Bool {

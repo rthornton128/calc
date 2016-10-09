@@ -13,6 +13,7 @@ import (
 	"github.com/rthornton128/calc/ast"
 )
 
+// Assignment is an object representing the (= ident expr) expression
 type Assignment struct {
 	object
 	Lhs string
@@ -24,6 +25,15 @@ func makeAssignment(pkg *Package, a *ast.AssignExpr) *Assignment {
 		object: object{name: "assign", pkg: pkg, pos: a.Pos(), scope: pkg.scope},
 		Lhs:    a.Name.Name,
 		Rhs:    MakeExpr(pkg, a.Value),
+	}
+}
+
+// Copy makes a deep copy of the Assignment object
+func (a *Assignment) Copy() Object {
+	return &Assignment{
+		object: a.object.copy(0),
+		Lhs:    a.Lhs,
+		Rhs:    a.Rhs.Copy(),
 	}
 }
 

@@ -30,7 +30,7 @@ type Constant struct {
 	value Value
 }
 
-func makeConstant(b *ast.BasicLit) *Constant {
+func makeConstant(pkg *Package, b *ast.BasicLit) *Constant {
 	var v Value
 	switch b.Kind {
 	case token.BOOL:
@@ -39,8 +39,16 @@ func makeConstant(b *ast.BasicLit) *Constant {
 		v, _ = makeInt(b.Lit) // TODO handle error
 	}
 	return &Constant{
-		object: object{name: v.String(), pos: b.Pos(), typ: v.Type()},
+		object: object{name: v.String(), pkg: pkg, pos: b.Pos(), typ: v.Type()},
 		value:  v,
+	}
+}
+
+// Copy makes a deep copy of the Constant object
+func (c *Constant) Copy() Object {
+	return &Constant{
+		object: c.object.copy(0),
+		value:  c.value,
 	}
 }
 

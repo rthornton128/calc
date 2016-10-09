@@ -30,6 +30,9 @@ func MakePackage(pkg *ast.Package, name string) *Package {
 	return p
 }
 
+// Copy does nothing
+func (p *Package) Copy() Object { return nil }
+
 func (p *Package) closeScope() {
 	if p.scope != nil {
 		p.scope = p.scope.parent
@@ -42,11 +45,11 @@ func (p *Package) getID() int {
 }
 
 func (p *Package) Insert(o Object) {
-	p.scope.Insert(o)
+	p.scope.Insert(o, o.Name())
 }
 
-func (p *Package) InsertTop(o Object) {
-	p.top.Insert(o)
+func (p *Package) InsertTop(name string, o Object) {
+	p.top.Insert(o, name)
 }
 
 func (p *Package) Lookup(name string) Object {
@@ -64,6 +67,6 @@ func (p *Package) String() string {
 
 func MakeFile(pkg *Package, f *ast.File) {
 	for _, d := range f.Defs {
-		pkg.InsertTop(MakeDefine(pkg, d))
+		pkg.InsertTop(d.Name.Name, makeDefine(pkg, d))
 	}
 }

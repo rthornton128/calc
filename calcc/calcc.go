@@ -54,7 +54,7 @@ func main() {
 
 	var (
 		interOnly   = flag.Bool("s", false, "compile to intermediate code")
-		backEnd     = flag.String("b", "c", "backend: amd64, c, x86")
+		backEnd     = flag.String("a", "c", "architecture: amd64, c, x86")
 		target      = flag.String("t", runtime.GOOS, "target platform/OS")
 		compileOnly = flag.Bool("c", false, "compile to object code, no linking")
 		optimize    = flag.Bool("opt", true, "run optimization pass")
