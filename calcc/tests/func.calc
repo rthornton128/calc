@@ -1,0 +1,2 @@
+(define add (func (a:int b:int) :int (+ a b)))
+(define main (func :int (add 5 8)))

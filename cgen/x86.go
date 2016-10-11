@@ -102,6 +102,10 @@ func (c *X86) genObject(o ir.Object, jmp bool, dest string) {
 	case *ir.If:
 		c.genIf(t)
 	case *ir.Function:
+		if len(t.Body) == 0 {
+			c.Emit("xorl %eax, %eax")
+			return
+		}
 		for _, e := range t.Body {
 			c.genObject(e, false, "%eax")
 		}

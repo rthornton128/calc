@@ -50,10 +50,10 @@ func (i *If) Copy() Object {
 	if i.Else != nil {
 		e = i.Else.Copy()
 	}
-	//id := i.Package().getID()
+	id := i.Package().getID()
 	//fmt.Println("if with new id:", id)
 	return &If{
-		object:    i.object.copy(i.Package().getID()), //id),
+		object:    i.object.copy(id),
 		Cond:      i.Cond.Copy(),
 		Then:      i.Then.Copy(),
 		Else:      e,

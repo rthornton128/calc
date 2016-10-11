@@ -1,0 +1,6 @@
+(define main (func :int 
+	(if (<= 2 4) :int 
+		(if false :int (* 3 8) (/ 84 2))
+		128
+	)
+))

@@ -3,4 +3,6 @@
 *.a
 *.exe
 *.out
+*.s
+*.o
 test

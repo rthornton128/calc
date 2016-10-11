@@ -149,6 +149,12 @@ func (tc *typeChecker) check(o Object) {
 }
 
 func (tc *typeChecker) checkBody(o Object, body []Object) {
+	// body may be nil, like in the case of an empty function
+	// or else clause, and can be skipped
+	if body == nil || len(body) == 0 {
+		return
+	}
+
 	for _, e := range body {
 		tc.check(e)
 	}

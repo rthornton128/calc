@@ -1,0 +1,1 @@
+(define main (func :int (var (a:int b:int) :int (= a 3) (= b 5) (+ a b))))
