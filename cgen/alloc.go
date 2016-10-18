@@ -130,6 +130,7 @@ func (a *allocator) walk(o ir.Object) {
 		for _, e := range t.Body {
 			a.walk(e)
 		}
+		t.SetLoc(a.nextLoc())
 	case *ir.If:
 		a.walk(t.Cond)
 		a.walk(t.Then)

@@ -97,8 +97,10 @@ func (c *X86) genObject(o ir.Object, jmp bool, dest string) {
 		for _, e := range t.Body {
 			c.genObject(e, false, "%eax")
 		}
+		c.Emitf("mov %%eax, %s", t.Loc())
 		c.Emitf("%s:", t.CondLabel())
 		c.genObject(t.Cond, true, t.BodyLabel())
+		c.Emitf("mov %s, %%eax", t.Loc())
 	case *ir.If:
 		c.genIf(t)
 	case *ir.Function:

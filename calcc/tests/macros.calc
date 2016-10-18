@@ -1,0 +1,8 @@
+(define const 42) ; => 42
+(define macro (var (i :int) :int 
+	(for (< i 2) :int 
+		(= i (+ i 1))
+		(+ const const)
+	)
+)) ; => 84
+(define main (func :int (* macro macro))) ; => 7056

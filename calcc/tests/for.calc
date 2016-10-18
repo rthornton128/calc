@@ -1,7 +1,8 @@
 (define main (func :int 
-	(var (n:int) :int 
+	(var (i:int n:int) :int 
 		(= n 2) 
-		(for (< n 50) :int
+		(for (< i 8) :int
+			(= i (+ i 1))
 			(= n (* n 2))
 		)
 	)
