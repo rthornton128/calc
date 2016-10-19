@@ -22,6 +22,7 @@ func makeFor(pkg *Package, f *ast.ForExpr) *For {
 	return &For{
 		object: object{
 			id:    pkg.getID(),
+			name:  "for",
 			pkg:   pkg,
 			pos:   f.Pos(),
 			scope: pkg.scope,
